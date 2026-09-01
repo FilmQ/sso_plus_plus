@@ -9,6 +9,7 @@
 *.swp
 .buildlog/
 .history
+.idea/
 
 
 
