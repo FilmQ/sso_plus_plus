@@ -1,24 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-void main() async {
-  runApp(ProviderScope(child: MyApp()));
+import 'providers/patient_router.dart';
+import 'widgets/app_theme.dart';
+
+/// The entry point of the patient application.
+///
+/// This build runs on a phone. The officer and the consultant use the web
+/// console, which starts at `lib/main_console.dart`.
+void main() {
+  runApp(const ProviderScope(child: PatientApp()));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// The root of the patient application.
+class PatientApp extends ConsumerWidget {
+  const PatientApp({super.key});
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp.router(
+      title: 'SST Claims',
       debugShowCheckedModeBanner: false,
-      title: 'SSO Plus Plus',
-      theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.deepPurple)),
-      home: Scaffold(),
-      routes: {
-        /* insert route here */
-      },
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      routerConfig: ref.watch(patientRouterProvider),
     );
   }
 }

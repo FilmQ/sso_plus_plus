@@ -63,16 +63,20 @@ pages do not change.
 
 ### 3.3 Repositories
 
-Split the repositories by aggregate, not by use case. Six interfaces:
+Split the repositories by aggregate, not by use case. Five interfaces:
 
 | Interface | Holds |
 | --- | --- |
 | `ClaimRepository` | Claims, documents, drafts |
 | `InsuredRegisterRepository` | The SSO Section 33 register (UC-02) |
-| `SchedulingRepository` | Consultants, slots, appointments, waiting list |
+| `SchedulingRepository` | Consultants, slots, appointments, treatment dates |
 | `ConsultationRepository` | Sessions and reports |
-| `TreatmentRepository` | Treatment types, facilities, bookings |
 | `NoticeRepository` | The user inbox |
+
+An earlier draft of this plan named a sixth interface, `TreatmentRepository`.
+It is not necessary. One `Appointment` entity carries the `kind` field, so
+`SchedulingRepository` holds a treatment date and a consultation date in the
+same way.
 
 All six hardcoded implementations share one mutable `DemoStore`. Put them in
 `lib/repository/memory/`. Put the seed data in `lib/repository/memory/seed_data.dart`.
@@ -346,33 +350,35 @@ Done:
   `flutter build ios --debug --no-codesign`, because the CI holds no signing certificate.
   The job waits for the Linux job (`needs: test`), because a macOS runner costs much more.
 
+- `go_router` is in the pubspec, `app_theme.dart` supplies the light and dark themes, and
+  `lib/main.dart` is the patient `MaterialApp.router`.
+
 Still to do:
-- Add `go_router` to the pubspec.
-- Add `app_theme.dart`.
-- Change `lib/main.dart` to the patient `MaterialApp.router`.
 - Add `lib/main_console.dart` with the console `MaterialApp.router`.
 - Add `flutter build web --release -t lib/main_console.dart` to the workflow. **Add this
   step only after `lib/main_console.dart` exists.** The step fails without that file. The
   existing APK and appbundle steps already build the patient app from the default target.
 
-**P1 — Data.** The models, the six interfaces, the hardcoded implementations, and the seed
-data. Unit tests. No change to the UI. Build the injected `clock` in this phase.
+**P1 — Data. Done.** The models, the five interfaces, the hardcoded implementations, and
+the seed data. The injected `clock` reads from `DemoStore.now`, which a demo can move
+forward with `advanceBy`.
 
-**P2 — First use cases.** UC-01 to UC-03, their providers, and the patient router with
-placeholder pages.
+**P2 — Patient use cases. Done.** UC-01, UC-03 and UC-05, their providers, and the patient
+router. UC-02, UC-04 and UC-06 to UC-11 are officer and consultant work. They arrive with
+the console.
 
-**P3 — Patient screens.** M1 to M5, built from the shared widgets of section 8. The patient
-app is complete enough to demo after this phase.
+**P3 — Patient screens. Done.** All nine screens, M1 to M9, built from the shared widgets
+of section 8. The patient application is complete and demonstrable.
 
-**P4 — Officer console.** UC-04 to UC-07, the console router and rail, the verification,
-scheduling and unconfirmed worklists, and `TwoPaneScaffold`. Then M6 and M7 on the patient
-side. **Read Figma page 02 before this phase starts.**
+**P4 — Officer console.** UC-02, UC-04, UC-06, UC-07 and UC-08, `lib/main_console.dart`,
+the console router and rail, the verification, scheduling and unconfirmed worklists, and
+`TwoPaneScaffold`. **Read Figma page 02 before this phase starts.**
 
-**P5 — Clinical.** UC-08 to UC-11, the consultant queue, the report signature and the
-treatment booking on the console. Then M8 and M9 on the patient side.
+**P5 — Clinical console.** UC-09, UC-10 and UC-11: the consultant queue, the session, the
+report signature and the treatment booking.
 
-**P6 — Finish.** The dark theme, the empty states and error states, the demo controls, and
-the comparison against Figma page 02.
+**P6 — Finish.** The empty states and error states that remain, the demo controls, and the
+comparison against Figma page 02.
 
 Run `dart format . && flutter analyze && flutter test` before each commit. The CI fails on
 format alone.
@@ -431,6 +437,10 @@ Point 6 was "iOS is not built". It is closed. See section 10, phase P0.
 4. `flutter run` on an Android emulator or an iOS simulator — the patient flow runs from M1
    to M9 with the bottom navigation bar. To start an iOS simulator first, use
    `xcrun simctl boot 'iPhone 17 Pro'` and then `open -a Simulator`.
+   To open the application at one screen, give the route on the command line:
+   `flutter run --dart-define=START_AT=/appointments/APT-0143-1`.
+   The seed supplies `/claims/CLM-2569-0143` (waiting), `/claims/CLM-2569-0118` (refused),
+   `/claims/CLM-2569-0091/report` (signed) and `/appointments/APT-0091-2` (treatment).
 5. `flutter run -d chrome -t lib/main_console.dart` — the console opens with its rail and
    two panes. The URL changes with the page. The browser back button works.
 6. Change the staff actor in the console. The rail changes between the officer branches and
