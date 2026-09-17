@@ -33,3 +33,23 @@ jobs:
       - run: flutter test
       - run: flutter build apk --debug
       - run: flutter build appbundle --debug
+
+  ios:
+    name: Build iOS
+    # Wait for the cheap Linux job. A macOS runner costs much more, so it must
+    # not start while the analysis or the tests fail.
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          cache: true
+
+      - run: flutter pub get
+      # CI holds no signing certificate, so the build must not sign the binary.
+      - run: flutter build ios --debug --no-codesign
