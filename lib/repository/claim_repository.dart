@@ -1,4 +1,5 @@
 import '../models/claim.dart';
+import '../models/claim_status.dart';
 
 /// Reads and writes claims.
 ///
@@ -24,4 +25,12 @@ abstract interface class ClaimRepository {
   /// UC-01 (4a) offers to add the new facts to this claim, instead of a
   /// second claim for one injury.
   Future<Claim?> openClaimForInjury(String personId, DateTime injuryDate);
+
+  // --- The console needs this ---
+
+  /// Every claim in one of [statuses], oldest submission first.
+  ///
+  /// The officer worklists are built from this call. The design sorts the
+  /// verification worklist by the oldest submission.
+  Future<List<Claim>> byStatuses(Set<ClaimStatus> statuses);
 }

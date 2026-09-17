@@ -55,10 +55,13 @@ class Appointment {
     this.room = '',
     this.treatmentType,
     this.reportId,
+    this.slotId,
     this.channel,
     this.confirmedAt,
     this.provisional = false,
     this.declineReason,
+    this.rescheduleCount = 0,
+    this.recordedBy,
   });
 
   final String id;
@@ -83,8 +86,18 @@ class Appointment {
   /// It is null for a consultation.
   final String? reportId;
 
+  /// The slot that this appointment holds (BR-12).
+  final String? slotId;
+
   final ConfirmationChannel? channel;
   final DateTime? confirmedAt;
+
+  /// The number of times the office moved this date (BR-20).
+  final int rescheduleCount;
+
+  /// The officer who recorded the reply on the telephone (BR-16).
+  /// It is null for a self-confirmation.
+  final String? recordedBy;
 
   /// True while the date was set without the agreement of the patient
   /// (UC-07, BR-21).
@@ -116,10 +129,13 @@ class Appointment {
     String? room,
     String? treatmentType,
     String? reportId,
+    String? slotId,
     ConfirmationChannel? channel,
     DateTime? confirmedAt,
     bool? provisional,
     String? declineReason,
+    int? rescheduleCount,
+    String? recordedBy,
   }) {
     return Appointment(
       id: id ?? this.id,
@@ -135,10 +151,13 @@ class Appointment {
       room: room ?? this.room,
       treatmentType: treatmentType ?? this.treatmentType,
       reportId: reportId ?? this.reportId,
+      slotId: slotId ?? this.slotId,
       channel: channel ?? this.channel,
       confirmedAt: confirmedAt ?? this.confirmedAt,
       provisional: provisional ?? this.provisional,
       declineReason: declineReason ?? this.declineReason,
+      rescheduleCount: rescheduleCount ?? this.rescheduleCount,
+      recordedBy: recordedBy ?? this.recordedBy,
     );
   }
 
@@ -159,10 +178,13 @@ class Appointment {
           other.room == room &&
           other.treatmentType == treatmentType &&
           other.reportId == reportId &&
+          other.slotId == slotId &&
           other.channel == channel &&
           other.confirmedAt == confirmedAt &&
           other.provisional == provisional &&
-          other.declineReason == declineReason;
+          other.declineReason == declineReason &&
+          other.rescheduleCount == rescheduleCount &&
+          other.recordedBy == recordedBy;
 
   @override
   int get hashCode => Object.hashAll(<Object?>[
@@ -179,9 +201,12 @@ class Appointment {
     room,
     treatmentType,
     reportId,
+    slotId,
     channel,
     confirmedAt,
     provisional,
     declineReason,
+    rescheduleCount,
+    recordedBy,
   ]);
 }

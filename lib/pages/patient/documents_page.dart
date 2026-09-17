@@ -7,10 +7,10 @@ import '../../models/claim_document.dart';
 import '../../providers/new_claim_provider.dart';
 import '../../use-cases/uc_01_submit_injury_application.dart';
 import '../../widgets/patient/action_bar.dart';
-import '../../widgets/patient/notice_banner.dart';
 import '../../widgets/patient/step_progress_header.dart';
 import '../../widgets/shared/document_checklist_row.dart';
 import '../../widgets/shared/info_card.dart';
+import '../../widgets/shared/notice_banner.dart';
 import '../../widgets/shared/section_heading.dart';
 
 /// M3 · Submit claim — documents (UC-01, steps 3 and 4).

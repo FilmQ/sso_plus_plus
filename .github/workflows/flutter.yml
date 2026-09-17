@@ -31,8 +31,13 @@ jobs:
       - run: dart format --output=none --set-exit-if-changed .
       - run: flutter analyze
       - run: flutter test
+      # The default target is lib/main.dart, the patient mobile app.
       - run: flutter build apk --debug
       - run: flutter build appbundle --debug
+      # The staff console is a separate entry point. Without -t this would
+      # build the patient app for the browser, which is not a supported
+      # surface.
+      - run: flutter build web --release -t lib/main_console.dart
 
   ios:
     name: Build iOS

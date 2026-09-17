@@ -9,13 +9,13 @@ import '../../models/claim_status.dart';
 import '../../providers/appointment_providers.dart';
 import '../../providers/claim_providers.dart';
 import '../../providers/person_provider.dart';
-import '../../widgets/patient/notice_banner.dart';
 import '../../widgets/shared/async_value_view.dart';
 import '../../widgets/shared/claim_status_badge.dart';
 import '../../widgets/shared/detail_row.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/formats.dart';
 import '../../widgets/shared/info_card.dart';
+import '../../widgets/shared/notice_banner.dart';
 import '../../widgets/shared/progress_stepper.dart';
 import '../../widgets/shared/section_heading.dart';
 

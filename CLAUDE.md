@@ -4,7 +4,11 @@ Follow the Material 3 design guide for this Flutter project. The project WILL be
 
 Reuse components if possible, keep file length short, don't hesitate to create new file for new components.
 
-Implement design as described in this Figma scheme: https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=0-1&p=f&t=Kgji38gs7CX98m6b-0
+Implement design as described in this Figma scheme: 
+
+Mobile UI (for patients): https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=0-1&p=f&t=Kgji38gs7CX98m6b-0
+
+Web UI (for officers): https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=6-2&p=f&t=6lpLzh4IpfxoNqiL-0
 
 Implement the use-cases in the directory `lib/use-cases` with the following link as a reference: https://docs.google.com/presentation/d/1ssIeYEtg86tsbc_oEOzbAf2tJUGJ24CcHsabxIloHgs/edit?slide=id.p1#slide=id.p1
 

@@ -1,6 +1,7 @@
 import 'package:sso_plus_plus/repository/memory/demo_store.dart';
 import 'package:sso_plus_plus/repository/memory/in_memory_claim_repository.dart';
 import 'package:sso_plus_plus/repository/memory/in_memory_consultation_repository.dart';
+import 'package:sso_plus_plus/repository/memory/in_memory_insured_register_repository.dart';
 import 'package:sso_plus_plus/repository/memory/in_memory_notice_repository.dart';
 import 'package:sso_plus_plus/repository/memory/in_memory_scheduling_repository.dart';
 import 'package:sso_plus_plus/repository/memory/seed_data.dart';
@@ -15,6 +16,7 @@ class TestContext {
     scheduling = InMemorySchedulingRepository(store);
     consultation = InMemoryConsultationRepository(store);
     notices = InMemoryNoticeRepository(store);
+    register = InMemoryInsuredRegisterRepository(store);
   }
 
   final DemoStore store;
@@ -22,6 +24,7 @@ class TestContext {
   late final InMemorySchedulingRepository scheduling;
   late final InMemoryConsultationRepository consultation;
   late final InMemoryNoticeRepository notices;
+  late final InMemoryInsuredRegisterRepository register;
 
   /// The clock that the use cases read. It follows the store.
   DateTime clock() => store.now;

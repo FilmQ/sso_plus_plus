@@ -41,11 +41,16 @@ class ClaimStatusBadge extends StatelessWidget {
             Icon(icon, size: 14, color: foreground),
             const SizedBox(width: 6),
           ],
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w600,
+          // A badge sits inside a table column, so the label must be able to
+          // shrink instead of overflowing the row.
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

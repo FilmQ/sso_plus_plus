@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../models/claim.dart';
-import '../../widgets/patient/notice_banner.dart';
 import '../../widgets/shared/formats.dart';
 import '../../widgets/shared/info_card.dart';
+import '../../widgets/shared/notice_banner.dart';
 import '../../widgets/shared/section_heading.dart';
 
 /// M4 · Claim submitted — the eligibility check runs (UC-01 → UC-02).

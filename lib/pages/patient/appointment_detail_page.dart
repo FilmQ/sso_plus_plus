@@ -10,13 +10,13 @@ import '../../providers/use_case_providers.dart';
 import '../../use-cases/uc_05_confirm_appointment.dart';
 import '../../widgets/patient/action_stack.dart';
 import '../../widgets/patient/appointment_card.dart';
-import '../../widgets/patient/notice_banner.dart';
 import '../../widgets/shared/async_value_view.dart';
 import '../../widgets/shared/claim_status_badge.dart';
 import '../../widgets/shared/detail_row.dart';
 import '../../widgets/shared/empty_state.dart';
 import '../../widgets/shared/formats.dart';
 import '../../widgets/shared/info_card.dart';
+import '../../widgets/shared/notice_banner.dart';
 import '../../widgets/shared/section_heading.dart';
 
 /// M6, M7 and M9 · the appointment screen (UC-05, and UC-11 for treatment).

@@ -1,5 +1,8 @@
 import '../../models/appointment.dart';
+import '../../models/appointment_slot.dart';
 import '../../models/claim.dart';
+import '../../models/consultant.dart';
+import '../../models/contact_attempt.dart';
 import '../scheduling_repository.dart';
 import 'demo_store.dart';
 
@@ -66,5 +69,110 @@ class InMemorySchedulingRepository implements SchedulingRepository {
       _store.appointments.add(appointment);
     }
     return appointment;
+  }
+
+  // --- The console needs these ---
+
+  @override
+  Future<List<Appointment>> awaitingConfirmation() async {
+    final List<Appointment> found = _store.appointments
+        .where((Appointment a) => a.needsReply)
+        .toList();
+    found.sort(
+      (Appointment a, Appointment b) => a.replyBy.compareTo(b.replyBy),
+    );
+    return found;
+  }
+
+  @override
+  Future<List<Appointment>> pastDeadline(DateTime now) async {
+    final List<Appointment> waiting = await awaitingConfirmation();
+    return waiting
+        .where((Appointment a) => a.hasExpiredAt(now))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<Consultant>> consultants({String? specialty}) async {
+    if (specialty == null) {
+      return List<Consultant>.from(_store.consultants);
+    }
+    return _store.consultants
+        .where((Consultant c) => c.specialty == specialty)
+        .toList();
+  }
+
+  @override
+  Future<Consultant?> consultantById(String id) async {
+    for (final Consultant consultant in _store.consultants) {
+      if (consultant.id == id) {
+        return consultant;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<List<AppointmentSlot>> freeSlots({
+    String? specialty,
+    bool treatment = false,
+  }) async {
+    final Set<String> matching = specialty == null
+        ? _store.consultants.map((Consultant c) => c.id).toSet()
+        : _store.consultants
+              .where((Consultant c) => c.specialty == specialty)
+              .map((Consultant c) => c.id)
+              .toSet();
+
+    final List<AppointmentSlot> found = _store.slots
+        .where(
+          (AppointmentSlot s) =>
+              s.isFree &&
+              s.isTreatment == treatment &&
+              matching.contains(s.consultantId),
+        )
+        .toList();
+    found.sort(
+      (AppointmentSlot a, AppointmentSlot b) => a.start.compareTo(b.start),
+    );
+    return found;
+  }
+
+  @override
+  Future<AppointmentSlot?> slotById(String id) async {
+    for (final AppointmentSlot slot in _store.slots) {
+      if (slot.id == id) {
+        return slot;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<AppointmentSlot> saveSlot(AppointmentSlot slot) async {
+    final int index = _store.slots.indexWhere(
+      (AppointmentSlot s) => s.id == slot.id,
+    );
+    if (index >= 0) {
+      _store.slots[index] = slot;
+    } else {
+      _store.slots.add(slot);
+    }
+    return slot;
+  }
+
+  @override
+  Future<List<ContactAttempt>> attemptsFor(String appointmentId) async {
+    final List<ContactAttempt> found = _store.attempts
+        .where((ContactAttempt a) => a.appointmentId == appointmentId)
+        .toList();
+    found.sort((ContactAttempt a, ContactAttempt b) => a.at.compareTo(b.at));
+    return found;
+  }
+
+  @override
+  Future<ContactAttempt> addAttempt(ContactAttempt attempt) async {
+    _store.attempts.add(attempt);
+    return attempt;
   }
 }

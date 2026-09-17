@@ -55,6 +55,20 @@ class InMemoryClaimRepository implements ClaimRepository {
   Future<String> nextClaimNumber() async => _store.nextClaimNumber();
 
   @override
+  Future<List<Claim>> byStatuses(Set<ClaimStatus> statuses) async {
+    final List<Claim> found = _store.claims
+        .where((Claim c) => statuses.contains(c.status))
+        .toList();
+    // The design sorts the verification worklist by the oldest submission.
+    found.sort((Claim a, Claim b) {
+      final DateTime left = a.submittedAt ?? a.createdAt ?? DateTime(0);
+      final DateTime right = b.submittedAt ?? b.createdAt ?? DateTime(0);
+      return left.compareTo(right);
+    });
+    return found;
+  }
+
+  @override
   Future<Claim?> openClaimForInjury(
     String personId,
     DateTime injuryDate,

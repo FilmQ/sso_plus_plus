@@ -8,8 +8,9 @@ import '../../models/injury_details.dart';
 import '../../models/insured_person.dart';
 import '../../models/notice.dart';
 import '../../models/rejection_notice.dart';
+import 'seed_people.dart';
 
-/// The hardcoded data of the demonstration.
+/// The hardcoded data of the patient.
 ///
 /// The seed holds one claim at each interesting stage. A demonstration must
 /// not have to build a state by many taps, because the data does not survive
@@ -18,30 +19,24 @@ import '../../models/rejection_notice.dart';
 /// * `CLM-2569-0143` waits for the person to confirm an appointment.
 /// * `CLM-2569-0118` was refused, so the appeal route is open.
 /// * `CLM-2569-0091` has a signed report and a treatment date.
+///
+/// `SeedConsole` holds the claims of the other people, which fill the
+/// officer and consultant worklists.
 abstract final class SeedData {
-  /// The moment at which the demonstration starts.
-  ///
-  /// A fixed time keeps the demonstration the same at every run.
-  static final DateTime demoStart = DateTime(2026, 9, 14, 9, 0);
+  static final DateTime demoStart = SeedPeople.demoStart;
 
   /// The sequence number of the newest seeded claim.
   static const int lastClaimSequence = 143;
 
   static const String consultant = 'Dr. Anong Wattana';
   static const String specialty = 'Orthopaedics';
-  static const String facility = 'Bangkok Rehabilitation Centre';
-  static const String officer = 'K. Siriwan';
-  static const String register = 'SSO insured register';
+  static const String facility = SeedPeople.facility;
+  static const String officer = 'P. Chaiyaporn';
+  static const String register = SeedPeople.register;
 
-  static const InsuredPerson person = InsuredPerson(
-    id: 'USR-001',
-    fullName: 'Somchai Prasert',
-    nationalId: '1100967890451',
-    employer: 'Siam Logistics Co., Ltd.',
-    telephone: '081-234-5678',
-  );
+  static const InsuredPerson person = SeedPeople.patient;
 
-  static List<ClaimDocument> _allAttached() => <ClaimDocument>[
+  static List<ClaimDocument> allAttached() => <ClaimDocument>[
     const ClaimDocument(
       type: DocumentType.medicalCertificate,
       fileName: 'cert_bangkok_hosp.pdf',
@@ -72,12 +67,12 @@ abstract final class SeedData {
         employer: person.employer,
         category: InjuryCategory.fracture,
       ),
-      documents: _allAttached(),
+      documents: allAttached(),
       verification: EligibilityVerification(
         result: EligibilityResult.covered,
         decidedAt: DateTime(2026, 9, 11, 11, 2),
         officerName: officer,
-        evidence: '$register · contributions from 03/2021',
+        evidence: '$register · contributions from 06/2019',
       ),
     ),
     Claim(
@@ -95,7 +90,7 @@ abstract final class SeedData {
         employer: 'Thai Freight Partners',
         category: InjuryCategory.sprain,
       ),
-      documents: _allAttached(),
+      documents: allAttached(),
       verification: EligibilityVerification(
         result: EligibilityResult.notCovered,
         decidedAt: DateTime(2026, 8, 21, 9, 30),
@@ -127,12 +122,12 @@ abstract final class SeedData {
         employer: person.employer,
         category: InjuryCategory.fracture,
       ),
-      documents: _allAttached(),
+      documents: allAttached(),
       verification: EligibilityVerification(
         result: EligibilityResult.covered,
         decidedAt: DateTime(2026, 8, 25, 10, 10),
         officerName: officer,
-        evidence: '$register · contributions from 03/2021',
+        evidence: '$register · contributions from 06/2019',
       ),
     ),
   ];
@@ -150,6 +145,7 @@ abstract final class SeedData {
       specialty: specialty,
       facility: facility,
       room: 'Room 4, 2nd floor',
+      slotId: 'SLT-CON-001-18-1030',
     ),
     Appointment(
       id: 'APT-0091-1',
@@ -197,8 +193,12 @@ abstract final class SeedData {
       recommendedTreatment:
           'Cast immobilisation for six weeks. A review follows at three '
           'weeks.',
+      fitnessForWork:
+          'Unfit for manual duty for six weeks. Light office duty is '
+          'permitted from the third week.',
       consultantName: consultant,
       specialty: specialty,
+      consultedOn: DateTime(2026, 9, 4, 10, 30),
       signedAt: DateTime(2026, 9, 4, 11, 45),
     ),
   ];

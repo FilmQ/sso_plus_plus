@@ -12,6 +12,8 @@ class ConsultationReport {
     required this.recommendedTreatment,
     required this.consultantName,
     required this.specialty,
+    this.fitnessForWork = '',
+    this.consultedOn,
     this.signedAt,
     this.superseded = false,
     this.treatmentRequired = true,
@@ -28,6 +30,13 @@ class ConsultationReport {
   final String recommendedTreatment;
   final String consultantName;
   final String specialty;
+
+  /// What work the person may do now. Screen D7 shows this part of the
+  /// report. The use-case deck does not name it; the design demands it.
+  final String fitnessForWork;
+
+  /// The date of the consultation that the report describes.
+  final DateTime? consultedOn;
 
   /// The moment the consultant signed the report (BR-29).
   /// It is null while the report is a draft.
@@ -53,6 +62,8 @@ class ConsultationReport {
     String? recommendedTreatment,
     String? consultantName,
     String? specialty,
+    String? fitnessForWork,
+    DateTime? consultedOn,
     DateTime? signedAt,
     bool? superseded,
     bool? treatmentRequired,
@@ -66,6 +77,8 @@ class ConsultationReport {
       recommendedTreatment: recommendedTreatment ?? this.recommendedTreatment,
       consultantName: consultantName ?? this.consultantName,
       specialty: specialty ?? this.specialty,
+      fitnessForWork: fitnessForWork ?? this.fitnessForWork,
+      consultedOn: consultedOn ?? this.consultedOn,
       signedAt: signedAt ?? this.signedAt,
       superseded: superseded ?? this.superseded,
       treatmentRequired: treatmentRequired ?? this.treatmentRequired,
@@ -84,6 +97,8 @@ class ConsultationReport {
           other.recommendedTreatment == recommendedTreatment &&
           other.consultantName == consultantName &&
           other.specialty == specialty &&
+          other.fitnessForWork == fitnessForWork &&
+          other.consultedOn == consultedOn &&
           other.signedAt == signedAt &&
           other.superseded == superseded &&
           other.treatmentRequired == treatmentRequired;
@@ -98,6 +113,8 @@ class ConsultationReport {
     recommendedTreatment,
     consultantName,
     specialty,
+    fitnessForWork,
+    consultedOn,
     signedAt,
     superseded,
     treatmentRequired,

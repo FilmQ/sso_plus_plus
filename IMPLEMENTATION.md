@@ -13,7 +13,7 @@ Three sources hold the requirements. The code holds none of them yet.
 | --- | --- |
 | `CLAUDE.md` | Material 3, web and mobile, short files, component reuse, repository rule |
 | Figma, page `01 · Mobile — User App` | 9 patient screens, M1 to M9 |
-| Figma, page 02 | The officer and consultant web console. **Not read yet.** See section 12. |
+| Figma, page `02 · Desktop — Officer & Consultant Console` (node `6:2`) | 8 console screens, D1 to D8, at 1440x900 |
 | Google Slides deck | 11 use cases (UC-01 to UC-11), 3 actors, rules BR-01 to BR-33 |
 
 ## 2. Actors, surfaces and scope
@@ -30,8 +30,9 @@ A patient never uses a browser. An officer and a consultant never use the mobile
 officer and the consultant share one console and one set of console widgets. They see
 different route sets in it.
 
-Build all 11 use cases as service classes. Build the 9 patient screens from the Figma
-design. Build the console from the deck, then compare it with Figma page 02.
+Build all 11 use cases as service classes. The Figma file supplies every screen: page 01
+holds the 9 patient screens (M1 to M9) and page 02 holds the 8 console screens (D1 to D8).
+The 17 screens cover the 11 use cases with nothing left to invent.
 
 ## 3. Architecture
 
@@ -199,16 +200,16 @@ only the ones its actor needs.
 | ID | File | Primary actor | Surface and screen |
 | --- | --- | --- | --- |
 | UC-01 | `uc_01_submit_injury_application.dart` | User | Patient: M2, M3, M4 |
-| UC-02 | `uc_02_verify_section_33_eligibility.dart` | Officer | Console: verification worklist |
-| UC-03 | `uc_03_reject_application.dart` | System | Console: officer action. Patient: M5 |
-| UC-04 | `uc_04_schedule_appointment.dart` | Officer | Console: scheduling |
+| UC-02 | `uc_02_verify_section_33_eligibility.dart` | Officer | Console: D1, D2 |
+| UC-03 | `uc_03_reject_application.dart` | System | Console: D2. Patient: M5 |
+| UC-04 | `uc_04_schedule_appointment.dart` | Officer | Console: D3 |
 | UC-05 | `uc_05_confirm_appointment.dart` | User | Patient: M6, M7 |
-| UC-06 | `uc_06_confirm_appointment_by_phone.dart` | Officer | Console: unconfirmed list |
-| UC-07 | `uc_07_reschedule_appointment.dart` | Officer | Console: unconfirmed list |
-| UC-08 | `uc_08_arrange_consultation.dart` | Officer | Console: claim detail |
-| UC-09 | `uc_09_conduct_consultation.dart` | Consultant | Console: clinic session |
-| UC-10 | `uc_10_generate_consultation_report.dart` | System | Console: signature. Patient: M8 |
-| UC-11 | `uc_11_schedule_treatment.dart` | Consultant | Console: booking. Patient: M9 |
+| UC-06 | `uc_06_confirm_appointment_by_phone.dart` | Officer | Console: D4 |
+| UC-07 | `uc_07_reschedule_appointment.dart` | Officer | Console: D4 |
+| UC-08 | `uc_08_arrange_consultation.dart` | Officer | Console: D5 |
+| UC-09 | `uc_09_conduct_consultation.dart` | Consultant | Console: D6 |
+| UC-10 | `uc_10_generate_consultation_report.dart` | System | Console: D7. Patient: M8 |
+| UC-11 | `uc_11_schedule_treatment.dart` | Consultant | Console: D8. Patient: M9 |
 
 Put the shared business rules in `lib/use-cases/claim_rules.dart`. Do not repeat a rule in
 11 files. This file holds the confirmation window, the reschedule limit, the call attempt
@@ -243,9 +244,14 @@ These facts come from the installed `riverpod-3.4.2` package. They are not from 
 | --- | --- | --- |
 | `repository_providers.dart` | Both | `demoStoreProvider`, and one provider for each repository |
 | `use_case_providers.dart` | Both | 11 providers, one line each |
-| `session_provider.dart` | Console | The current staff actor: officer or consultant |
+| `session_provider.dart` | Console | The staff member whom the rail names, and whom a decision is recorded against |
 | Patient read models | Patient | `claimListProvider`, `claimDetailProvider` (family), `inboxProvider`, `appointmentProvider` |
-| Console read models | Console | `verificationWorklistProvider`, `schedulingWorklistProvider`, `unconfirmedWorklistProvider`, `consultantQueueProvider` |
+| Console read models | Console | `verificationWorklistProvider`, `schedulingWorklistProvider`, `unconfirmedWorklistProvider`, `consultationQueueProvider`, `sessionQueueProvider`, `reportQueueProvider`, `treatmentQueueProvider`, `railCountsProvider` |
+
+`session_provider` supplies the identity that BR-06, BR-13 and BR-29 demand on a record. It
+does **not** select the rail, because section 7.2 shows every destination at all times.
+
+`railCountsProvider` supplies the seven numbers that the rail shows.
 
 The patient app needs no `session_provider`. It has one actor.
 
@@ -271,19 +277,122 @@ the target.
 
 ### 7.2 Staff console — desktop web only
 
-`lib/providers/console_router.dart`. Use `StatefulShellRoute.indexedStack` with the officer
-branches `/officer/verification`, `/officer/scheduling`, `/officer/unconfirmed`, and the
-clinic branches `/clinic/queue`, `/clinic/reports`.
+`lib/providers/console_router.dart`. Figma page 02 fixes the layout. The frames are
+1440x900, so the console assumes a window of **1024 pixels or more**. Build one layout.
+**Do not build a compact fallback.** Give the console a minimum content width of 1024 and
+let the page scroll sideways below that. A narrow window is not a supported case.
 
-The console assumes a window of **1024 pixels or more**. Build one layout: an extended
-`NavigationRail` and a two-pane list-and-detail body. **Do not build a compact fallback.**
-Give the console a minimum content width of 1024 and let the page scroll sideways below
-that. A narrow window is not a supported case.
+**The rail shows every destination at all times.** The design puts two labelled groups in
+one extended `NavigationRail`, and each destination carries a count:
 
-`session_provider` decides which branches appear in the rail. An officer sees the officer
-branches. A consultant sees the clinic branches.
+| Group | Destinations, with the count in the design |
+| --- | --- |
+| `EVALUATION OFFICER` | Verification 12, Scheduling 7, Confirmations 4, Consultations 5 |
+| `CONSULTANT` | Sessions 3, Reports 2, Treatment 1 |
 
-### 7.3 Breakpoints
+Above the groups the rail shows the words `SST Console · Social Security Office`. Below
+them it shows the person: a round monogram, a name, and the words
+`Evaluation Officer · Bangkok 3`, with a sign-out button.
+
+This corrects an earlier assumption in this plan. The rail does **not** change with the
+role, and `session_provider` does **not** hide a group. Access control stays where section
+13 puts it, in the repository (BR-22). The person is a label in the rail, not a filter on
+it.
+
+Routes, one for each destination and its detail:
+
+| Route | Screen |
+| --- | --- |
+| `/officer/verification` | D1 |
+| `/officer/verification/:claimNumber` | D2 |
+| `/officer/scheduling` and `/officer/scheduling/:claimNumber` | D3 |
+| `/officer/confirmations` | D4 |
+| `/officer/consultations/:claimNumber` | D5 |
+| `/clinic/sessions/:sessionId` | D6 |
+| `/clinic/reports/:reportId` | D7 |
+| `/clinic/treatment/:claimNumber` | D8 |
+
+### 7.3 The two console page shapes
+
+Every console screen is the rail, a top bar, and one of two bodies.
+
+The **top bar** holds a title and a subtitle. A worklist adds a search box. Every screen
+ends the bar with a notification button and a help button.
+
+**A worklist** (D1, D4) holds a row of KPI tiles, then one full-width panel. The panel has
+a heading, filter chips, a table, and a footer that reads
+`Showing 5 of 12 · sorted by oldest submission` with a page control.
+
+**A detail page** (D2, D3, D5, D6, D7, D8) starts with a breadcrumb, for example
+`← Verification › CLM-2569-0143`. Below it two columns stand side by side:
+
+- The **left column is the context**, and it is the wider one. It holds the claim summary,
+  the documents and the case file.
+- The **right column is the action**. It holds the decision, the slot picker or the form,
+  and it ends with a filled button and an outlined or red button.
+
+A worklist and its detail are **two pages, not two panes**. The earlier plan named a
+`TwoPaneScaffold` that holds a list beside a detail. The design does not work that way.
+The two columns of a detail page are context and action, not list and detail.
+
+### 7.4 The eight console screens
+
+Figma page 02 is `02 · Desktop — Officer & Consultant Console`. It holds eight frames at
+1440x900. They cover the eight use cases that the patient application does not.
+
+**D1 · Officer — verification worklist (UC-02).** Four KPI tiles: `Awaiting verification`,
+`Needs review`, `Register unavailable`, `Verified this week`. Then the panel
+`Claims awaiting verification` with the chips All, Needs review and Overdue, and a table.
+The columns are Claim / claimant, Injury date, Submitted, Docs, Register result, Status and
+an `Open` button. `Docs` reads `3 / 3` or `2 / 3`. `Register result` is a badge: Covered,
+Needs review, Not covered or Register down.
+
+**D2 · Officer — eligibility decision (UC-02 → UC-03).** Left: a `Claim summary` card with
+National ID, Employer on claim, Date of injury, Place, Cause and Part of body; then
+`Documents lodged with the claim`, each row with its file name, its size and a `View`
+button. Right: `Section 33 eligibility` with the automatic result and its evidence
+(contribution period, employer in register, when the register answered and how long it
+took). Below it `Officer decision` offers three choices — **Confirm — covered under Section
+33**, **Not covered**, **Needs review** — each with a line that says what follows, then an
+`Override reason` field and the buttons `Confirm result` and `Reject claim`.
+
+**D3 · Officer — schedule appointment (UC-04).** A `claim context` card that names the
+consultant specialty the injury needs, an `availability` panel of open slots, and an
+`offer` card that holds the appointment to offer.
+
+**D4 · Officer — phone confirmation fallback (UC-06 → UC-07).** A banner that reads
+`31 of 38 appointments…`, which is the measure the deck asks for. Then an `unconfirmed`
+table, and a `call panel` card with the claimant and the telephone number, an
+`Attempt history`, a `Reply as the claimant` part, a `Note` field, and two buttons.
+
+**D5 · Officer — arrange consultation (UC-08).** Cards for the confirmed appointment, the
+case file, the `Session` (with a segmented button for the format, room or
+tele-consultation) and `Assigned consultant`, with a release button.
+
+**D6 · Consultant — consultation session (UC-09).** A `In progress · 00:1…` badge that
+counts the session time. Cards for the patient, the injury and the case file. Then a
+`record` card that says `Only the attending…` (BR-25) with the fields `Findings *`,
+`Diagnosis *`, `Recommended treatment *` and `Fitness for work`. The star marks a mandatory
+field. An `Other outcomes` card carries non-attendance and referral back.
+
+**D7 · Consultant — report sign-off (UC-10).** A `Draft · unsigned` badge and a report
+preview with Findings, Diagnosis, Recommended treatment and **Fitness for work**. A
+`Before signing` card of checks, then sign and amend buttons. Two banners state that
+signing locks the version and that the patient then sees it.
+
+**D8 · Consultant — schedule treatment (UC-11).** A `recommendation` card that quotes the
+signed report, a `booking` card with a `Facility` field and slots, and a `Booking summary`.
+Banners state what happens when no slot falls inside the period, that the date is written
+into the application at once (BR-32), and that the UC-05 cycle applies if the patient
+cannot attend.
+
+**The design names its own rules.** D2 quotes BR-05 and BR-06, D6 quotes BR-25 and D8
+quotes BR-32. Keep that text. It agrees with `claim_rules.dart`.
+
+**One field is new.** `Fitness for work` appears on D6 and D7. The deck does not name it
+and `ConsultationReport` does not hold it. Add it in P5.
+
+### 7.5 Breakpoints
 
 There are none. Each surface has one layout. No file needs a width check.
 
@@ -323,10 +432,31 @@ the screens from them.
 
 ### 8.3 `widgets/console/` — web only
 
-`WorklistTile`, `TwoPaneScaffold`, `SlotPicker` (UC-04 and UC-11 share it),
-`ReasonCodePicker` (UC-03), `CallAttemptLog` (UC-06 and UC-07), `ConsoleRail`.
+Figma page 02 fixes this list. Build the frame widgets first, then the four screens of each
+role are mostly an arrangement of them.
 
-`TwoPaneScaffold` has one layout. It needs no compact branch.
+| Widget | Screens |
+| --- | --- |
+| `ConsoleRail` (brand, two labelled groups, counts, person card) | All |
+| `ConsoleTopBar` (title, subtitle, optional search, two icon buttons) | All |
+| `WorklistScaffold` (KPI row and one panel) | D1, D4 |
+| `DetailScaffold` (breadcrumb, then a context column and an action column) | D2, D3, D5, D6, D7, D8 |
+| `KpiTile` (label, large number, tone) | D1, four of them |
+| `WorklistTable`, with its header, rows and footer | D1, D4 |
+| `FilterChipRow` | D1 |
+| `TablePager` (`Showing 5 of 12` and the page control) | D1, D4 |
+| `DecisionCard` (choices, reason field, confirm and reject) | D2 |
+| `DocumentRow` (name, size, `View`) | D2, D5, D6 |
+| `SlotPicker` | D3, D8 |
+| `CallAttemptLog` | D4 |
+| `ClinicalFieldsForm` (the four fields of D6, with the mandatory mark) | D6 |
+| `ReportPreview` | D7 |
+
+`DetailScaffold` has one layout. It needs no compact branch.
+
+**Move `NoticeBanner` from `widgets/patient/` to `widgets/shared/`.** Every console screen
+carries at least one banner, and D7 and D8 carry two. The widget does not change, only its
+folder and the imports of the nine patient screens.
 
 ## 9. Theme
 
@@ -370,15 +500,33 @@ the console.
 **P3 — Patient screens. Done.** All nine screens, M1 to M9, built from the shared widgets
 of section 8. The patient application is complete and demonstrable.
 
-**P4 — Officer console.** UC-02, UC-04, UC-06, UC-07 and UC-08, `lib/main_console.dart`,
-the console router and rail, the verification, scheduling and unconfirmed worklists, and
-`TwoPaneScaffold`. **Read Figma page 02 before this phase starts.**
+**P4 — Officer console. Done.** `lib/main_console.dart`, the console router, `ConsoleRail`,
+`ConsoleTopBar`, `WorklistBody` and `DetailBody`. UC-02, UC-04, UC-06, UC-07 and UC-08 with
+screens D1 to D5. `NoticeBanner` moved to `widgets/shared/`. The CI now builds the web
+console.
 
-**P5 — Clinical console.** UC-09, UC-10 and UC-11: the consultant queue, the session, the
-report signature and the treatment booking.
+**P5 — Clinical console. Done.** UC-09, UC-10 and UC-11 with screens D6, D7 and D8.
+`ConsultationSession` and `ConsultationReport` carry the `Fitness for work` field that D6
+and D7 show.
 
-**P6 — Finish.** The empty states and error states that remain, the demo controls, and the
-comparison against Figma page 02.
+Three points where the build is not what this plan first said:
+
+- **`ShellRoute`, not `StatefulShellRoute.indexedStack`.** The console has seven
+  destinations and each one has a detail route. An indexed stack of seven branches is a
+  large amount of code for one gain: a scroll position that each branch keeps. The rail
+  reads the current location instead. The patient application still uses
+  `StatefulShellRoute`, where four branches and a bottom bar make it worth the code.
+- **Five queue screens are not in the design.** The design draws the detail of D3, D5, D6,
+  D7 and D8, but a rail destination must open a list first. `pages/console/queue_pages.dart`
+  holds all five, and they share one private layout and the same `WorklistPanel` as D1 and
+  D4.
+- **The console keeps the Flutter hash URL, for example `/#/officer/verification`.** A path
+  URL needs the web server to send every path to `index.html`. A demonstration is served
+  from a folder, where that rewrite does not exist and a reload of a deep link gives 404.
+  The URL is still readable, and the browser back button works.
+
+**P6 — Finish.** The empty states and error states that remain, and the demo control that
+moves the clock forward.
 
 Run `dart format . && flutter analyze && flutter test` before each commit. The CI fails on
 format alone.
@@ -409,19 +557,30 @@ Decide these points and record the decision. The deck does not answer them.
 3. An appeal reads as a reopen and also as a new claim. The fields `reopenedFrom` and
    `supersededBy` support both. Choose one for the demo.
 4. Nobody closes the claim after the treatment. Choose the owner of that step.
-5. **Figma page 02 is not read yet.** The page list from the Figma MCP showed page 01 only,
-   and the Starter plan call limit then stopped more calls. Read page 02 before P4. Until
-   then, build the console screens from the generic widgets of section 8.3 only. Do not
-   invent special officer components.
+5. **`Verified this week` counts from the demo clock.** The other six rail counts and
+   three KPI tiles count the rows of the screen they point at, so the rail and the screen
+   always agree. `Verified this week` has no such source: it counts the claims an officer
+   decided in the seven days before `DemoStore.now`. Confirm that the office measures it
+   the same way.
 
-Point 6 was "iOS is not built". It is closed. See section 10, phase P0.
+### Closed points
+
+**Figma page 02 cannot be read.** Closed. Page 02 is node `6:2` of the same file,
+`02 · Desktop — Officer & Consultant Console`. Sections 7.2 to 7.4 and 8.3 come from it.
+
+Keep the lesson. `get_metadata` with no node lists the pages of a document, and it listed
+page 01 only, twice, one hour apart. A node identifier from the browser address bar reached
+page 02 at once. The listing was incomplete, not the file. **Address a Figma page by its
+node identifier. Do not trust the page listing.**
+
+**iOS is not built.** Closed. See section 10, phase P0.
 
 ## 13. Risks
 
 | Risk | Answer |
 | --- | --- |
 | **The two builds cannot share state.** They are separate programs with separate in-memory stores. An officer who verifies a claim in the console will **never** see that change reach the patient app. | Seed both builds from the same `seed_data.dart`, with claims at every stage of the lifecycle. Show the patient submitting a claim, then open the console, where a claim is already waiting in the verification worklist. The story reads end-to-end even though no data crosses. Plan the demo script around this. |
-| The console still needs two actors | Officers and consultants share the console. Add a demo control in the console to change between them. The patient app needs no such control. |
+| The console rail shows the work of both roles at once | That is what the design does, so keep it. The rail names one person at its foot, and that identity goes on every record (BR-06, BR-13, BR-29). Add a demo control to change that person. The patient app needs no such control. |
 | Free actor changes hide the access control | Enforce BR-22 (a consultant sees only their own claims) **in the repository**, not only in the router. |
 | The deadline flow (UC-05 → UC-06 → UC-07) cannot run in real time | Use the injected `clock`. Add a console demo control that expires a deadline. Build this in P1, not in P6. |
 | Riverpod 3 retries a failed provider and hides a demo error | The UC-01 connection-loss flow throws on purpose. Set `retry:` to null on those providers. |
@@ -441,10 +600,12 @@ Point 6 was "iOS is not built". It is closed. See section 10, phase P0.
    `flutter run --dart-define=START_AT=/appointments/APT-0143-1`.
    The seed supplies `/claims/CLM-2569-0143` (waiting), `/claims/CLM-2569-0118` (refused),
    `/claims/CLM-2569-0091/report` (signed) and `/appointments/APT-0091-2` (treatment).
-5. `flutter run -d chrome -t lib/main_console.dart` — the console opens with its rail and
-   two panes. The URL changes with the page. The browser back button works.
-6. Change the staff actor in the console. The rail changes between the officer branches and
-   the clinic branches.
+5. `flutter run -d chrome -t lib/main_console.dart` — the console opens on the verification
+   worklist. The URL changes with the page and the browser back button works.
+6. Walk the console from end to end: open a claim from D1, confirm the result, give the
+   claim a date in Scheduling, record a telephone reply in Confirmations, release the case
+   file in Consultations, then change the member of staff at the foot of the rail to the
+   consultant and complete a session, sign its report and book the treatment.
 7. These builds all pass:
    - `flutter build apk --debug`
    - `flutter build ios --debug --no-codesign`

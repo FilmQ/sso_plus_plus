@@ -9,11 +9,11 @@ import '../../providers/notice_providers.dart';
 import '../../providers/use_case_providers.dart';
 import '../../use-cases/uc_03_reject_application.dart';
 import '../../widgets/patient/action_bar.dart';
-import '../../widgets/patient/notice_banner.dart';
 import '../../widgets/shared/claim_status_badge.dart';
 import '../../widgets/shared/detail_row.dart';
 import '../../widgets/shared/formats.dart';
 import '../../widgets/shared/info_card.dart';
+import '../../widgets/shared/notice_banner.dart';
 import '../../widgets/shared/section_heading.dart';
 
 /// M5 · Rejection notice (UC-03).
