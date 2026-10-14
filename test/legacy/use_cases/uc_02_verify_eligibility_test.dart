@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/models/claim.dart';
-import 'package:sso_plus_plus/models/claim_status.dart';
-import 'package:sso_plus_plus/models/eligibility.dart';
-import 'package:sso_plus_plus/models/register_record.dart';
-import 'package:sso_plus_plus/use-cases/uc_02_verify_section_33_eligibility.dart';
+import 'package:sso_plus_plus/legacy/models/claim.dart';
+import 'package:sso_plus_plus/legacy/models/claim_status.dart';
+import 'package:sso_plus_plus/legacy/models/eligibility.dart';
+import 'package:sso_plus_plus/legacy/models/register_record.dart';
+import 'package:sso_plus_plus/legacy/use-cases/uc_02_verify_section_33_eligibility.dart';
 
 import '../support/test_context.dart';
 

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/models/claim.dart';
-import 'package:sso_plus_plus/models/claim_status.dart';
-import 'package:sso_plus_plus/models/injury_details.dart';
+import 'package:sso_plus_plus/legacy/models/claim.dart';
+import 'package:sso_plus_plus/legacy/models/claim_status.dart';
+import 'package:sso_plus_plus/legacy/models/injury_details.dart';
 
 void main() {
   group('The claim transition table', () {

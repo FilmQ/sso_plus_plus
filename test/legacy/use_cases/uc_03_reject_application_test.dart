@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/models/claim.dart';
-import 'package:sso_plus_plus/models/claim_status.dart';
-import 'package:sso_plus_plus/use-cases/uc_03_reject_application.dart';
+import 'package:sso_plus_plus/legacy/models/claim.dart';
+import 'package:sso_plus_plus/legacy/models/claim_status.dart';
+import 'package:sso_plus_plus/legacy/use-cases/uc_03_reject_application.dart';
 
 import '../support/test_context.dart';
 

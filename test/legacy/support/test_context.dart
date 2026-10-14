@@ -1,10 +1,10 @@
-import 'package:sso_plus_plus/repository/memory/demo_store.dart';
-import 'package:sso_plus_plus/repository/memory/in_memory_claim_repository.dart';
-import 'package:sso_plus_plus/repository/memory/in_memory_consultation_repository.dart';
-import 'package:sso_plus_plus/repository/memory/in_memory_insured_register_repository.dart';
-import 'package:sso_plus_plus/repository/memory/in_memory_notice_repository.dart';
-import 'package:sso_plus_plus/repository/memory/in_memory_scheduling_repository.dart';
-import 'package:sso_plus_plus/repository/memory/seed_data.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/demo_store.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/in_memory_claim_repository.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/in_memory_consultation_repository.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/in_memory_insured_register_repository.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/in_memory_notice_repository.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/in_memory_scheduling_repository.dart';
+import 'package:sso_plus_plus/legacy/repository/memory/seed_data.dart';
 
 /// Builds a fresh store and its repositories for one test.
 ///

@@ -6,7 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/main_console.dart';
+import 'package:sso_plus_plus/legacy/main_console_legacy.dart';
 
 void main() {
   /// Starts the console at a desktop size and lets the read models settle.

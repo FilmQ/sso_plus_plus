@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/main.dart';
+import 'package:sso_plus_plus/legacy/main_patient_legacy.dart';
 
 void main() {
   /// Starts the application and lets the read models settle.

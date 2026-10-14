@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/models/appointment.dart';
-import 'package:sso_plus_plus/models/appointment_slot.dart';
-import 'package:sso_plus_plus/models/claim_status.dart';
-import 'package:sso_plus_plus/models/consultation_report.dart';
-import 'package:sso_plus_plus/use-cases/uc_11_schedule_treatment.dart';
+import 'package:sso_plus_plus/legacy/models/appointment.dart';
+import 'package:sso_plus_plus/legacy/models/appointment_slot.dart';
+import 'package:sso_plus_plus/legacy/models/claim_status.dart';
+import 'package:sso_plus_plus/legacy/models/consultation_report.dart';
+import 'package:sso_plus_plus/legacy/use-cases/uc_11_schedule_treatment.dart';
 
 import '../support/test_context.dart';
 

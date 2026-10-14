@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sso_plus_plus/models/claim_status.dart';
-import 'package:sso_plus_plus/models/consultation_report.dart';
-import 'package:sso_plus_plus/models/consultation_session.dart';
-import 'package:sso_plus_plus/use-cases/uc_09_conduct_consultation.dart';
-import 'package:sso_plus_plus/use-cases/uc_10_generate_consultation_report.dart';
+import 'package:sso_plus_plus/legacy/models/claim_status.dart';
+import 'package:sso_plus_plus/legacy/models/consultation_report.dart';
+import 'package:sso_plus_plus/legacy/models/consultation_session.dart';
+import 'package:sso_plus_plus/legacy/use-cases/uc_09_conduct_consultation.dart';
+import 'package:sso_plus_plus/legacy/use-cases/uc_10_generate_consultation_report.dart';
 
 import '../support/test_context.dart';
 
