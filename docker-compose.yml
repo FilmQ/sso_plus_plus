@@ -1,0 +1,26 @@
+# PostgreSQL 16 for the SST server. The time zone is Asia/Bangkok (brief, rule 8).
+# The server tool `dart run bin/migrate.dart` loads the schema and the seed.
+services:
+  db:
+    image: postgres:16
+    container_name: sst-db
+    environment:
+      POSTGRES_USER: sst
+      POSTGRES_PASSWORD: sst
+      POSTGRES_DB: sst
+      TZ: Asia/Bangkok
+      PGTZ: Asia/Bangkok
+    command: ["postgres", "-c", "timezone=Asia/Bangkok"]
+    ports:
+      - "5432:5432"
+    volumes:
+      - sst-db-data:/var/lib/postgresql/data
+      - ./server/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sst -d sst"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  sst-db-data:
