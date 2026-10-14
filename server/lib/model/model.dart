@@ -21,3 +21,13 @@ class ValidationFailedException implements Exception {
   @override
   String toString() => 'ValidationFailedException($fieldErrors)';
 }
+
+/// The row is not in a state that allows the change (HTTP 409).
+class StateConflictException implements Exception {
+  const StateConflictException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'StateConflictException: $message';
+}

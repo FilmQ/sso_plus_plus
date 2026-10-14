@@ -71,10 +71,16 @@ class ClaimRepository extends Repository {
   // Q1.10 [U1]
   Future<int> insertFirstStatus(int claimId) => execute(ClaimSql.q1_10, {'claim_id': claimId});
 
-  /// Not in the report (R-006): the newest claim of a user, for U1-5 and the
+  /// TEMPORARY, not in the report (R-006): the newest claim of a user, for U1-5 and the
   /// claim card of U2-1 Home page.
   Future<Row?> findLatestClaimOf(int insuredId) async =>
       (await query(InfrastructureSql.findHomeClaim, {'insured_id': insuredId})).firstOrNull;
+
+  /// TEMPORARY, not in the report (R-012): the status of the claim, with a
+  /// row lock. Null when the claim does not exist. Run it in a transaction.
+  Future<String?> findClaimStatusForUpdate(int claimId) async =>
+      (await query(InfrastructureSql.findClaimStatusForUpdate, {'claim_id': claimId})).firstOrNull?['claim_status']
+          as String?;
 
   // QO1.1 [O1]
   Future<List<Row>> findPendingClaims() async => (await query(ClaimSql.qO1_1)).rows;

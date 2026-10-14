@@ -105,7 +105,6 @@ class InsuredPersonModel extends Model {
     check('national_id', FieldRules.isNationalId(form.nationalId), FieldRules.nationalId);
     check('date_of_birth', _isAdultBirthDate(form.dateOfBirth), FieldRules.birthDate);
     check('phone_no', FieldRules.isPhone(form.phoneNo), FieldRules.phone);
-    check('phone_no', FieldRules.normalPhone(form.phoneNo).length <= 20, FieldRules.phone);
     check('gender', FieldRules.genders.contains(form.gender), FieldRules.gender);
     check('injury_datetime', _isPastDateTime(form.injuryDatetime), FieldRules.injuryDate);
     required('injury_place', form.injuryPlace, 255);

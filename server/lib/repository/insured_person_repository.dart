@@ -12,7 +12,7 @@ class InsuredPersonRepository extends Repository {
   Future<Row?> findInSSORegister(String nationalId) async =>
       (await query(InsuredPersonSql.q1_1, {'national_id': nationalId})).firstOrNull;
 
-  /// Not in the report (R-004): the employer and contribution data of an
+  /// TEMPORARY, not in the report (R-004): the employer and contribution data of an
   /// ACTIVE person in the register, for Q1.4 and Q1.5.
   Future<Row?> findRegisterDetail(String nationalId) async =>
       (await query(InfrastructureSql.findRegisterDetail, {'national_id': nationalId})).firstOrNull;

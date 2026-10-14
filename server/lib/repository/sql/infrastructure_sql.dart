@@ -26,6 +26,7 @@ VALUES ('USER', :login_name, crypt(:password, gen_salt('bf', 8)), :insured_id, N
 RETURNING account_id
 ''';
 
+  // TEMPORARY until the updated spec pack (R-004).
   // R-004: Q1.4 and Q1.5 need the employer and contribution data of the
   // register, but Q1.1 reads only the name.
   static const findRegisterDetail = r'''
@@ -39,6 +40,7 @@ WHERE national_id = :national_id
   AND coverage_status = 'ACTIVE'
 ''';
 
+  // TEMPORARY until the updated spec pack (R-006).
   // R-006: the Home page (U2-1) shows the claim of the user. No report query
   // gives it.
   static const findHomeClaim = r'''
@@ -55,5 +57,14 @@ FROM InjuryClaim ic
 WHERE ic.insured_id = :insured_id
 ORDER BY ic.submitted_at DESC
 LIMIT 1
+''';
+
+  // TEMPORARY until the report adds a status condition to QO2.1 and QO3.1
+  // (R-012). Locks the claim row for the decision.
+  static const findClaimStatusForUpdate = r'''
+SELECT claim_status
+FROM InjuryClaim
+WHERE claim_id = :claim_id
+FOR UPDATE
 ''';
 }

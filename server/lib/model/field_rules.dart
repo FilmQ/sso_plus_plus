@@ -8,9 +8,8 @@ abstract final class FieldRules {
 
   static final _nationalId = RegExp(r'^\d{13}$');
   static final _password = RegExp(r'^[A-Za-z0-9]{8,}$');
-  static final _phone1 = RegExp(r'^\+?\d[\d ().-]{6,18}\d$');
-  static final _phone2 = RegExp(r'^\+?\d{7,15}$');
-  static final _thai = RegExp(r'^[฀-๿]+( [฀-๿]+)*$');
+  static final _phone = RegExp(r'^0\d{8,9}$');
+  static final _thai = RegExp(r'^[\u0E00-\u0E7F]+( [\u0E00-\u0E7F]+)*$');
 
   /// isThaiEncoding() of the U1 description: Thai characters only.
   static bool isThaiEncoding(String s) => _thai.hasMatch(s);
@@ -24,11 +23,16 @@ abstract final class FieldRules {
   /// passwordMatches() of the U1 description.
   static bool passwordMatches(String password, String confirm) => password == confirm;
 
-  /// RE: ^\+?\d[\d ().-]{6,18}\d$ or ^\+?\d{7,15}$
-  static bool isPhone(String s) => _phone1.hasMatch(s) || _phone2.hasMatch(s);
+  /// The data dictionary rule (D-016): 9 or 10 digits that start with 0,
+  /// after [normalPhone].
+  static bool isPhone(String s) => _phone.hasMatch(normalPhone(s));
 
-  /// The phone number without spaces, dots, dashes and brackets (D-016).
-  static String normalPhone(String s) => s.replaceAll(RegExp(r'[ ().-]'), '');
+  /// Removes spaces, dots, dashes and brackets, and changes a leading +66
+  /// into 0 (D-016). '+66 81 234 5678' gives '0812345678'.
+  static String normalPhone(String s) {
+    final digits = s.replaceAll(RegExp(r'[ ().-]'), '');
+    return digits.startsWith('+66') ? '0${digits.substring(3)}' : digits;
+  }
 
   /// The MIME type from the file name, or null when the type is not allowed.
   static String? mimeTypeOf(String fileName) {

@@ -55,6 +55,38 @@ class ClaimModel extends Model {
     return claimNo;
   }
 
+  /// The claim statuses that an officer can decide (O2, O3). QO2.1 and QO3.1
+  /// have no status condition, so the Model checks it (R-012).
+  static const decidable = ['Awaiting verification', 'Needs review', 'Register unavailable'];
+
+  /// O2 Approve Injury Application: QO2.1 with result 'Covered'.
+  /// Throws [StateConflictException] when the claim is already decided.
+  Future<void> confirmResult(int claimId, {required int officerId, String? overrideReason}) =>
+      claims.db.transaction(() async {
+        await _requireDecidable(claimId);
+        await claims.saveResult(
+            claimId: claimId, result: 'Covered', officerId: officerId, overrideReason: overrideReason);
+      });
+
+  /// O3 Reject Injury Application: QO3.1 ('Not covered'), then QO3.2 ('Rejected').
+  /// Throws [StateConflictException] when the claim is already decided.
+  Future<void> rejectApplication(int claimId,
+          {required int officerId, required String reasonCode, String? officerMessage}) =>
+      claims.db.transaction(() async {
+        await _requireDecidable(claimId);
+        await claims.saveResult(claimId: claimId, result: 'Not covered', officerId: officerId, overrideReason: reasonCode);
+        await claims.insertRejection(
+            claimId: claimId, reasonCode: reasonCode, officerId: officerId, officerMessage: officerMessage);
+      });
+
+  Future<void> _requireDecidable(int claimId) async {
+    final status = await claims.findClaimStatusForUpdate(claimId);
+    if (status == null) throw const StateConflictException('The claim was not found.');
+    if (!decidable.contains(status)) {
+      throw StateConflictException('The claim is already decided ($status).');
+    }
+  }
+
   /// The register reference, in the seed format 'REG-20261002-0143' (D-017).
   static String evidenceRef(int claimId, [DateTime? now]) {
     final d = now ?? DateTime.now();
