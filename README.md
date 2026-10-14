@@ -51,7 +51,9 @@ The password of every seed account is `Password123` (`server/db/seeds/001_user_a
 | Console | `kanya.w@sso.go.th` | Evaluation Officer กัญญา วงศ์ศิริ |
 | Console | `thana.s@ssorehab.go.th` | Consultant นพ. ธนา ศรีสุข |
 
-A new user registers in the user app (U1) and signs in with the national ID.
+A new user registers in the user app (U1) and signs in with the national ID. For a successful U1 in the demo, use
+national ID `1555500011122` (นาย ทดลอง ใจดี) or `2555500022233` (นางสาว มาลัย รักงาน): they are ACTIVE in the register
+stub and not yet registered. `1909900111222` is INACTIVE and fails the Section 33 check.
 
 ## Lint and test
 

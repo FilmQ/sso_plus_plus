@@ -37,7 +37,7 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
-    final Map<String, Object?> sent = jsonDecode(server.requests.single.body) as Map<String, Object?>;
+    final Map<String, Object?> sent = jsonDecode(server.requests.first.body) as Map<String, Object?>;
     expect(sent['app'], 'user');
     expect(find.text('Home'), findsWidgets);
   });
@@ -62,7 +62,7 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
-    expect((jsonDecode(server.requests.single.body) as Map<String, Object?>)['app'], 'console');
+    expect((jsonDecode(server.requests.first.body) as Map<String, Object?>)['app'], 'console');
     expect(find.text('กัญญา วงศ์ศิริ'), findsOneWidget);
     expect(find.text('Evaluation Officer'), findsOneWidget);
   });

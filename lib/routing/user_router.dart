@@ -4,11 +4,15 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/shared/login_page.dart';
 import '../pages/user/injury_form/injury_form_page.dart';
+import '../pages/user/home/home_page.dart';
 import '../pages/user/injury_forms_submitted_page.dart';
+import '../pages/user/profile_page.dart';
 import '../pages/user/register_page.dart';
 import '../pages/user/submission_provider.dart';
+import '../pages/user/user_shell.dart';
 import '../session/session_providers.dart';
 import '../widgets/pending_page.dart';
+import 'session_redirect.dart';
 import 'session_refresh.dart';
 
 /// Routes that a person opens without a session.
@@ -23,14 +27,13 @@ final Provider<GoRouter> userRouterProvider = Provider<GoRouter>((Ref ref) {
     initialLocation: '/register',
     refreshListenable: refresh,
     redirect: (BuildContext context, GoRouterState state) {
-      final bool signedIn = ref.read(sessionProvider).value != null;
-      final String at = state.matchedLocation;
-      if (!signedIn) return _public.contains(at) ? null : '/register';
       // U1 step 6: after a submission the user is signed in and sees U1-5.
-      if (at == '/register/form' && ref.read(submissionProvider) != null) return '/register/submitted';
-      return _public.contains(at) ? '/home' : null;
+      final bool submitted = ref.read(submissionProvider) != null && ref.read(sessionProvider).value != null;
+      if (submitted && state.matchedLocation == '/register/form') return '/register/submitted';
+      return sessionRedirect(ref, state, public: _public, home: '/home', start: '/register');
     },
     routes: <RouteBase>[
+      loadingRoute,
       GoRoute(
         path: '/login',
         builder: (BuildContext context, GoRouterState state) =>
@@ -50,20 +53,22 @@ final Provider<GoRouter> userRouterProvider = Provider<GoRouter>((Ref ref) {
           ),
         ],
       ),
-      GoRoute(
-        path: '/home',
-        builder: (BuildContext context, GoRouterState state) => Scaffold(
-          appBar: AppBar(title: const Text('Home')),
-          body: PendingPage(
-            title: 'Home',
-            useCases: 'U2',
-            action: OutlinedButton(
-              onPressed: () => ref.read(sessionProvider.notifier).logout(),
-              child: const Text('Sign out'),
-            ),
-          ),
-        ),
+      StatefulShellRoute.indexedStack(
+        builder: (BuildContext context, GoRouterState state, StatefulNavigationShell shell) => UserShell(shell: shell),
+        branches: <StatefulShellBranch>[
+          _branch('/home', const HomePage()),
+          _branch('/schedule', _pending('Schedule', 'U5 and U6')),
+          _branch('/notifications', _pending('Notifications', 'U3')),
+          _branch('/profile', const ProfilePage()),
+        ],
       ),
     ],
   );
 });
+
+StatefulShellBranch _branch(String path, Widget page) => StatefulShellBranch(
+      routes: <RouteBase>[GoRoute(path: path, builder: (BuildContext context, GoRouterState state) => page)],
+    );
+
+Widget _pending(String title, String useCases) =>
+    Scaffold(appBar: AppBar(title: Text(title)), body: PendingPage(title: title, useCases: useCases));

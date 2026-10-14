@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/console/console_home_page.dart';
 import '../pages/shared/login_page.dart';
-import '../session/session_providers.dart';
+import 'session_redirect.dart';
 import 'session_refresh.dart';
 
 /// The routes of the officer and consultant console
@@ -15,14 +15,10 @@ final Provider<GoRouter> consoleRouterProvider = Provider<GoRouter>((Ref ref) {
   return GoRouter(
     initialLocation: '/login',
     refreshListenable: refresh,
-    redirect: (BuildContext context, GoRouterState state) {
-      final bool signedIn = ref.read(sessionProvider).value != null;
-      final bool atLogin = state.matchedLocation == '/login';
-      if (!signedIn && !atLogin) return '/login';
-      if (signedIn && atLogin) return '/console';
-      return null;
-    },
+    redirect: (BuildContext context, GoRouterState state) =>
+        sessionRedirect(ref, state, public: const <String>{'/login'}, home: '/console', start: '/login'),
     routes: <RouteBase>[
+      loadingRoute,
       GoRoute(
         path: '/login',
         builder: (BuildContext context, GoRouterState state) =>
