@@ -14,6 +14,8 @@ void main() {
           status: 401);
     await tester.pumpWidget(testApp(server, userRouterProvider));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Already registered? Sign in'));
+    await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('login_name')), '1103700123456');
     await tester.enterText(find.byKey(const Key('password')), 'Wrong1234');
@@ -26,6 +28,8 @@ void main() {
   testWidgets('Login: the user app sends app=user and opens Home', (WidgetTester tester) async {
     final FakeServer server = FakeServer()..json('POST /auth/login', FakeServer.session());
     await tester.pumpWidget(testApp(server, userRouterProvider));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Already registered? Sign in'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byKey(const Key('login_name')), '1103700123456');

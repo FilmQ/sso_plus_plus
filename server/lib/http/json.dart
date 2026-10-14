@@ -6,6 +6,8 @@ const _type = {'Content-Type': 'application/json; charset=utf-8'};
 
 Response jsonOk(Object? body) => Response.ok(_encode(body), headers: _type);
 
+Response jsonCreated(Object? body) => Response(201, body: _encode(body), headers: _type);
+
 Response jsonError(int status, String message, {Map<String, Object?>? extra}) =>
     Response(status, body: _encode({'error': message, ...?extra}), headers: _type);
 

@@ -51,12 +51,13 @@ class FakeServer {
 }
 
 /// Starts an app with the fake server and no kept token.
-Widget testApp(FakeServer server, Provider<GoRouter> router, {String app = 'user'}) {
+Widget testApp(FakeServer server, Provider<GoRouter> router, {String app = 'user', List<Object> extra = const <Object>[]}) {
   SharedPreferences.setMockInitialValues(<String, Object>{});
   return ProviderScope(
     overrides: [
       apiClientProvider.overrideWithValue(server.client()),
       appKindProvider.overrideWithValue(app),
+      ...extra.cast(),
     ],
     child: SstApp(title: 'Test', router: router),
   );

@@ -1,5 +1,6 @@
 import 'repository.dart';
 import 'sql/claim_sql.dart';
+import 'sql/infrastructure_sql.dart';
 
 /// Table InjuryClaim and its child tables (U1, O1, O2, O3, O5.2).
 class ClaimRepository extends Repository {
@@ -69,6 +70,11 @@ class ClaimRepository extends Repository {
 
   // Q1.10 [U1]
   Future<int> insertFirstStatus(int claimId) => execute(ClaimSql.q1_10, {'claim_id': claimId});
+
+  /// Not in the report (R-006): the newest claim of a user, for U1-5 and the
+  /// claim card of U2-1 Home page.
+  Future<Row?> findLatestClaimOf(int insuredId) async =>
+      (await query(InfrastructureSql.findHomeClaim, {'insured_id': insuredId})).firstOrNull;
 
   // QO1.1 [O1]
   Future<List<Row>> findPendingClaims() async => (await query(ClaimSql.qO1_1)).rows;
