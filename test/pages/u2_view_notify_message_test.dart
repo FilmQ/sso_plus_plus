@@ -20,18 +20,20 @@ FakeServer _server(List<Map<String, Object?>> messages, {String status = 'Covere
   s.on('GET /u2/unread-count', (_) async =>
       FakeServer.reply(<String, int>{'unread': messages.where((Map<String, Object?> m) => m['is_read'] == false).length}));
   s.on('GET /u2/notifications', (_) async => FakeServer.reply(<String, Object>{'notifications': messages}));
-  s.on('GET /home', (_) async => FakeServer.reply(<String, Object?>{
+  s.on('GET /u2/home-claim', (_) async => FakeServer.reply(<String, Object?>{
         'claim': <String, Object?>{
+          'claim_id': 143,
           'claim_no': 'SST-2026-000143',
-          'claim_status': status,
+          'first_name': 'สมชาย',
           'injury': 'Fracture, right wrist',
+          'claim_status': status,
           'submitted_time': '2 October 2026 : 14:32',
-          'checked_time': '5 October 2026 : 09:15',
-        },
-        'next_appointment': <String, Object?>{
-          'appointment_date': '16 October 2026 : 10:00',
-          'consultant_name': 'นพ. ธนา ศรีสุข',
-          'office_location': 'Building A, Floor 3, Room 305',
+          'officer_checked_time': '5 October 2026 : 09:15',
+          'appointment_status': status == 'Covered' ? 'Pending' : null,
+          'appointment_time': status == 'Covered' ? '16 October 2026 : 10:00' : null,
+          'consultant_name': status == 'Covered' ? 'นพ. ธนา ศรีสุข' : null,
+          'office_location': status == 'Covered' ? 'Building A, Floor 3, Room 305' : null,
+          'treatment_status': null,
         },
       }));
   for (final Map<String, Object?> m in messages) {
@@ -50,7 +52,7 @@ Future<void> _signIn(WidgetTester tester, FakeServer server) async {
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('login_name')), '1103700123456');
   await tester.enterText(find.byKey(const Key('password')), 'Password123');
-  await tester.tap(find.text('Sign in'));
+  await tester.tap(find.byKey(const Key('sign_in')));
   await tester.pumpAndSettle();
 }
 
@@ -71,6 +73,8 @@ void main() {
     expect(find.text('Claim SST-2026-000143 · Fracture, right wrist'), findsOneWidget);
     expect(find.text('Covered'), findsOneWidget);
     expect(find.text('Next appointment'), findsOneWidget);
+    expect(find.text('Waiting for your confirmation'), findsOneWidget);
+    expect(find.text('นพ. ธนา ศรีสุข · Building A, Floor 3, Room 305'), findsOneWidget);
     expect(_redDot(tester), isTrue);
 
     // U2-2: the pop-up lists the messages, 1 unread.
@@ -83,6 +87,7 @@ void main() {
     await tester.tap(find.text('Appointment scheduled'));
     await tester.pumpAndSettle();
     expect(server.requests.any((http.Request r) => r.url.path == '/u2/notifications/902/read'), isTrue);
+    expect(find.text('Please confirm, change or decline this appointment on the appointment page.'), findsOneWidget);
     expect(find.text('Close'), findsOneWidget);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();

@@ -25,9 +25,12 @@ class NotificationItem {
         sentTime: j['sent_time']! as String,
         isRead: j['is_read']! as bool,
       );
+
+  /// QN.3 writes this subject. Its message leads to the Appointment Page (U3).
+  bool get isAppointment => subject == 'Appointment scheduled';
 }
 
-/// The page side of server NotificationController (U2) and HomeController (D-002).
+/// The page side of server NotificationController (U2, D-002).
 class NotificationApi {
   const NotificationApi(this.api);
 
@@ -46,6 +49,10 @@ class NotificationApi {
   Future<NotificationItem> markAsRead(int notificationId) async => NotificationItem.fromJson(
       (await api.post('/u2/notifications/$notificationId/read'))['notification']! as Map<String, Object?>);
 
-  /// The claim card and the next appointment of U2-1 (R-006).
-  Future<Map<String, Object?>> getHome() => api.get('/home');
+  /// Q2.4: the claim card of U2-1 (with the next appointment), or null.
+  Future<Map<String, Object?>?> getHomeClaim() async =>
+      (await api.get('/u2/home-claim'))['claim'] as Map<String, Object?>?;
+
+  /// The Profile page (P-1, D-003): national ID, name, phone and address.
+  Future<Map<String, Object?>> getProfile() async => (await api.get('/auth/profile'))['profile']! as Map<String, Object?>;
 }

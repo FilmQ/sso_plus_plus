@@ -21,6 +21,12 @@ void addAuthRoutes(Router router, UserAccountRepository accounts, SessionToken t
       );
       return jsonOk(result.toJson());
     })
+    // Figma P-1 Profile Page (infrastructure, D-003).
+    ..get('/auth/profile', (Request request) async {
+      final session = sessionOf(request);
+      if (session == null || session.insuredId == null) throw const NotAuthorizedException();
+      return jsonOk({'profile': await accounts.findUserProfile(session.insuredId!)});
+    })
     ..get('/auth/me', (Request request) {
       final session = sessionOf(request);
       if (session == null) throw const NotAuthorizedException();

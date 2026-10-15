@@ -54,6 +54,17 @@ void main() {
       expect((await client.login('1103700123456', app: 'console')).status, 401);
     });
 
+    test('GET /auth/profile gives the P-1 data of the signed-in user only', () async {
+      expect((await client.get('/auth/profile')).status, 401);
+      await client.login('1103700123456');
+      final p = (await client.get('/auth/profile')).json['profile'] as Map;
+      expect(p['full_name'], 'นาย สมชาย ประเสริฐ');
+      expect(p['national_id'], '1103700123456');
+      expect(p['phone_no'], '0812345678');
+      await client.login('kanya.w@sso.go.th', app: 'console');
+      expect((await client.get('/auth/profile')).status, 401);
+    });
+
     test('GET /auth/me needs a valid token', () async {
       expect((await client.get('/auth/me')).status, 401);
       await client.login('1103700123456');

@@ -37,7 +37,8 @@ final Provider<GoRouter> userRouterProvider = Provider<GoRouter>((Ref ref) {
       GoRoute(
         path: '/login',
         builder: (BuildContext context, GoRouterState state) =>
-            const LoginPage(title: 'SST Injury Claim', loginLabel: 'National ID', registerRoute: '/register'),
+            const LoginPage(
+                title: 'Sign in', loginLabel: 'National ID', loginHelper: '13 digits, numbers only', registerRoute: '/register'),
       ),
       GoRoute(
         path: '/register',

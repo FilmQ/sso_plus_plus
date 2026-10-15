@@ -19,7 +19,7 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('login_name')), '1103700123456');
     await tester.enterText(find.byKey(const Key('password')), 'Wrong1234');
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.byKey(const Key('sign_in')));
     await tester.pumpAndSettle();
 
     expect(find.text('The login name or the password is not correct.'), findsOneWidget);
@@ -34,7 +34,7 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('login_name')), '1103700123456');
     await tester.enterText(find.byKey(const Key('password')), 'Password123');
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.byKey(const Key('sign_in')));
     await tester.pumpAndSettle();
 
     final Map<String, Object?> sent = jsonDecode(server.requests.first.body) as Map<String, Object?>;
@@ -59,7 +59,7 @@ void main() {
 
     await tester.enterText(find.byKey(const Key('login_name')), 'kanya.w@sso.go.th');
     await tester.enterText(find.byKey(const Key('password')), 'Password123');
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.byKey(const Key('sign_in')));
     await tester.pumpAndSettle();
 
     expect((jsonDecode(server.requests.first.body) as Map<String, Object?>)['app'], 'console');

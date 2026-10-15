@@ -25,4 +25,14 @@ INSERT INTO UserAccount (role, login_name, password_hash, insured_id, created_at
 VALUES ('USER', :login_name, crypt(:password, gen_salt('bf', 8)), :insured_id, NOW())
 RETURNING account_id
 ''';
+
+  // D-003: the Profile page (Figma P-1) of a signed-in user. Login and
+  // profile are infrastructure, so this SQL is not in the report.
+  static const findUserProfile = r'''
+SELECT national_id,
+  CONCAT_WS(' ', title_name, first_name, last_name) AS full_name,
+  phone_no, address
+FROM InsuredPerson
+WHERE insured_id = :insured_id
+''';
 }

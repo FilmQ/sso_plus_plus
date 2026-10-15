@@ -28,4 +28,8 @@ class UserAccountRepository extends Repository {
     });
     return rs.rows.single['account_id'] as int;
   }
+
+  /// The data of the Profile page (P-1) of a user, or null.
+  Future<Row?> findUserProfile(int insuredId) async =>
+      (await query(InfrastructureSql.findUserProfile, {'insured_id': insuredId})).firstOrNull;
 }

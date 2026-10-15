@@ -19,10 +19,24 @@ class _Detail extends StatelessWidget {
 
   final NotificationItem item;
 
-  /// QN.2 writes the reason and the officer message with an empty line between them.
-  List<Widget> _cards() {
+  /// QN.2 writes the reason and the officer message with an empty line between
+  /// them (U2-4). Other messages show the body in one card (U2-3).
+  List<Widget> _cards(BuildContext context) {
     if (item.subject != 'Application rejected') {
-      return <Widget>[_textCard(Icons.mail, 'Message', item.body)];
+      return <Widget>[
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+          child: Text(item.body, style: Theme.of(context).textTheme.bodyLarge),
+        ),
+        if (item.isAppointment)
+          Text('Please confirm, change or decline this appointment on the appointment page.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      ];
     }
     final List<String> parts = item.body.split('\n\n');
     return <Widget>[
@@ -49,7 +63,7 @@ class _Detail extends StatelessWidget {
               children: <Widget>[
                 Text(item.subject, style: text.headlineSmall),
                 Text(item.sentTime, style: text.bodySmall),
-                ..._cards(),
+                ..._cards(context),
                 FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
               ],
             ),

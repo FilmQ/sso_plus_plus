@@ -96,6 +96,6 @@ void main() {
     expect(find.text('National ID already registered'), findsOneWidget);
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
-    expect(find.text('New user? Register'), findsOneWidget);
+    expect(find.text('New here? Register'), findsOneWidget);
   });
 }

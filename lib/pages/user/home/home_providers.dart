@@ -12,8 +12,14 @@ final FutureProvider<int> unreadCountProvider = FutureProvider<int>((Ref ref) {
   return ref.read(notificationApiProvider).checkUnreadNotifications();
 });
 
-/// The claim card and the next appointment of U2-1.
-final FutureProvider<Map<String, Object?>> homeProvider = FutureProvider<Map<String, Object?>>((Ref ref) {
+/// U2 step 2 (Q2.4): the claim card of U2-1, or null when there is no claim.
+final FutureProvider<Map<String, Object?>?> homeClaimProvider = FutureProvider<Map<String, Object?>?>((Ref ref) {
   ref.watch(sessionProvider);
-  return ref.read(notificationApiProvider).getHome();
+  return ref.read(notificationApiProvider).getHomeClaim();
+});
+
+/// The data of P-1 Profile Page (D-003).
+final FutureProvider<Map<String, Object?>> profileProvider = FutureProvider<Map<String, Object?>>((Ref ref) {
+  ref.watch(sessionProvider);
+  return ref.read(notificationApiProvider).getProfile();
 });
