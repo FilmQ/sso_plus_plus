@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/shared/login_page.dart';
 import '../pages/user/injury_form/injury_form_page.dart';
+import '../pages/user/appointment/appointment_page.dart';
 import '../pages/user/home/home_page.dart';
 import '../pages/user/injury_forms_submitted_page.dart';
+import '../pages/user/notifications/notification_page.dart';
 import '../pages/user/profile_page.dart';
 import '../pages/user/register_page.dart';
 import '../pages/user/submission_provider.dart';
@@ -54,12 +56,20 @@ final Provider<GoRouter> userRouterProvider = Provider<GoRouter>((Ref ref) {
           ),
         ],
       ),
+      // U3-2 Appointment Page; ?n= is the message that opened it (Q3.7, D-034).
+      GoRoute(
+        path: '/appointment/:claimId',
+        builder: (BuildContext context, GoRouterState state) => AppointmentPage(
+          claimId: int.parse(state.pathParameters['claimId']!),
+          notificationId: int.tryParse(state.uri.queryParameters['n'] ?? ''),
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (BuildContext context, GoRouterState state, StatefulNavigationShell shell) => UserShell(shell: shell),
         branches: <StatefulShellBranch>[
           _branch('/home', const HomePage()),
           _branch('/schedule', _pending('Schedule', 'U5 and U6')),
-          _branch('/notifications', _pending('Notifications', 'U3')),
+          _branch('/notifications', const NotificationPage()),
           _branch('/profile', const ProfilePage()),
         ],
       ),

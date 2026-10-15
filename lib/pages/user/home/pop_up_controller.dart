@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/notification_api.dart';
-import 'notification_style.dart';
+import '../notifications/notification_tile.dart';
 
 /// U2-2 Notification pop-up (SA report figure 2-18, class PopUpController).
 ///
@@ -58,55 +58,13 @@ class _NotificationPopUp extends StatelessWidget {
                     shrinkWrap: true,
                     itemCount: items.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (BuildContext context, int i) => _Row(item: items[i]),
+                    itemBuilder: (BuildContext context, int i) =>
+                        NotificationTile(item: items[i], onTap: () => Navigator.of(context).pop(items[i])),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Row extends StatelessWidget {
-  const _Row({required this.item});
-
-  final NotificationItem item;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme text = Theme.of(context).textTheme;
-    final ColorScheme colors = Theme.of(context).colorScheme;
-    final Color muted = colors.onSurfaceVariant;
-    return InkWell(
-      onTap: () => Navigator.of(context).pop(item),
-      child: Container(
-        color: item.isRead ? null : colors.primaryContainer.withValues(alpha: 0.35),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            NotificationIcon(item.subject),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 2,
-                children: <Widget>[
-                  Text(item.subject, style: item.isRead ? text.bodyLarge : text.titleSmall),
-                  Text(item.body, maxLines: 3, overflow: TextOverflow.ellipsis, style: text.bodyMedium?.copyWith(color: muted)),
-                  Text(item.sentTime, style: text.bodySmall?.copyWith(color: muted)),
-                ],
-              ),
-            ),
-            if (!item.isRead)
-              Padding(
-                padding: const EdgeInsets.only(left: 8, top: 4),
-                child: Badge(key: ValueKey<String>('unread:${item.id}'), smallSize: 10),
-              ),
-          ],
         ),
       ),
     );

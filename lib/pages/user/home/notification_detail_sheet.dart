@@ -5,19 +5,21 @@ import '../../../widgets/info_card.dart';
 
 /// U2-3 Message opened (marked as read) and U2-4 Rejection message
 /// (SA report figures 2-19 and 2-20).
-Future<void> showNotificationDetail(BuildContext context, NotificationItem item) {
+/// [onOpenAppointment] adds "Open appointment" to a QN.3 message (U2-3).
+Future<void> showNotificationDetail(BuildContext context, NotificationItem item, {VoidCallback? onOpenAppointment}) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (BuildContext sheet) => _Detail(item: item),
+    builder: (BuildContext sheet) => _Detail(item: item, onOpenAppointment: onOpenAppointment),
   );
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail({required this.item});
+  const _Detail({required this.item, this.onOpenAppointment});
 
   final NotificationItem item;
+  final VoidCallback? onOpenAppointment;
 
   /// QN.2 writes the reason and the officer message with an empty line between
   /// them (U2-4). Other messages show the body in one card (U2-3).
@@ -64,7 +66,17 @@ class _Detail extends StatelessWidget {
                 Text(item.subject, style: text.headlineSmall),
                 Text(item.sentTime, style: text.bodySmall),
                 ..._cards(context),
-                FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                if (item.isAppointment && onOpenAppointment != null) ...<Widget>[
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      onOpenAppointment!();
+                    },
+                    child: const Text('Open appointment'),
+                  ),
+                  TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                ] else
+                  FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
               ],
             ),
           ),

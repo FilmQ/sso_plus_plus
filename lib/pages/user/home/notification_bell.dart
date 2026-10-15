@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/notification_api.dart';
+import '../notifications/notification_providers.dart';
 import 'home_providers.dart';
 import 'notification_detail_sheet.dart';
 import 'pop_up_controller.dart';
@@ -28,8 +30,11 @@ class NotificationBell extends ConsumerWidget {
   /// U2 steps 5 and 6: the message is marked read (Q2.3) and shown.
   Future<void> selectNotification(BuildContext context, WidgetRef ref, int notificationId) async {
     final NotificationItem item = await ref.read(notificationApiProvider).markAsRead(notificationId);
-    ref.invalidate(unreadCountProvider);
-    if (context.mounted) await showNotificationDetail(context, item);
+    refreshUserData(ref);
+    if (context.mounted) {
+      await showNotificationDetail(context, item,
+          onOpenAppointment: () => context.push('/appointment/${item.claimId}?n=${item.id}'));
+    }
   }
 
   @override

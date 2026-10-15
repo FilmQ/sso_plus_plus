@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../session/session_providers.dart';
 import '../../../widgets/centered_body.dart';
@@ -64,6 +65,13 @@ class _HomeBody extends ConsumerWidget {
               children: <Widget>[
                 KeyValue('Date', claim['appointment_time']! as String, large: true),
                 KeyValue('Consultant', '${claim['consultant_name']} · ${claim['office_location']}'),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonal(
+                    onPressed: () => context.push('/appointment/${claim['claim_id']}'),
+                    child: const Text('View appointment'),
+                  ),
+                ),
               ],
             ),
         ],

@@ -4,6 +4,7 @@ import 'api_client.dart';
 class NotificationItem {
   const NotificationItem({
     required this.id,
+    required this.claimId,
     required this.subject,
     required this.body,
     required this.sentTime,
@@ -11,6 +12,7 @@ class NotificationItem {
   });
 
   final int id;
+  final int claimId;
   final String subject;
   final String body;
 
@@ -20,6 +22,7 @@ class NotificationItem {
 
   factory NotificationItem.fromJson(Map<String, Object?> j) => NotificationItem(
         id: j['notification_id']! as int,
+        claimId: j['claim_id']! as int,
         subject: j['subject']! as String,
         body: j['body']! as String,
         sentTime: j['sent_time']! as String,

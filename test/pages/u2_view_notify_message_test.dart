@@ -88,6 +88,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(server.requests.any((http.Request r) => r.url.path == '/u2/notifications/902/read'), isTrue);
     expect(find.text('Please confirm, change or decline this appointment on the appointment page.'), findsOneWidget);
+    expect(find.text('Open appointment'), findsOneWidget);
     expect(find.text('Close'), findsOneWidget);
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
