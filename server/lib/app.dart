@@ -3,6 +3,7 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'auth/session_token.dart';
 import 'config.dart';
+import 'controller/appointment_controller.dart';
 import 'controller/insured_form_controller.dart';
 import 'controller/notification_controller.dart';
 import 'db/db_connector.dart';
@@ -12,8 +13,12 @@ import 'http/json.dart';
 import 'http/session_middleware.dart';
 import 'http/u1_routes.dart';
 import 'http/u2_routes.dart';
+import 'http/u3_routes.dart';
+import 'model/appointment_model.dart';
 import 'model/claim_model.dart';
 import 'model/insured_person_model.dart';
+import 'model/notification_model.dart';
+import 'repository/appointment_repository.dart';
 import 'repository/claim_repository.dart';
 import 'repository/insured_person_repository.dart';
 import 'repository/notification_repository.dart';
@@ -36,6 +41,7 @@ class App {
   late final people = InsuredPersonRepository(db);
   late final claims = ClaimRepository(db);
   late final notifications = NotificationRepository(db);
+  late final appointments = AppointmentRepository(db);
 
   InsuredFormController insuredFormController() => InsuredFormController(
         db: db,
@@ -48,6 +54,9 @@ class App {
   NotificationController notificationController(Request r) =>
       NotificationController(sessionOf(r), notifications, claims);
 
+  AppointmentController appointmentController(Request r) => AppointmentController(
+      sessionOf(r), db, AppointmentModel(appointments), NotificationModel(notifications));
+
   Handler get handler {
     final router = Router()
       ..get('/health', (Request _) async {
@@ -57,6 +66,7 @@ class App {
     addAuthRoutes(router, accounts, tokens);
     addU1Routes(router, insuredFormController);
     addU2Routes(router, notificationController);
+    addU3Routes(router, appointmentController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())
