@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../pages/console/console_home_page.dart';
-import '../pages/shared/login_page.dart';
+import '../pages/console/console_login_page.dart';
 import 'session_redirect.dart';
 import 'session_refresh.dart';
 
@@ -21,8 +21,7 @@ final Provider<GoRouter> consoleRouterProvider = Provider<GoRouter>((Ref ref) {
       loadingRoute,
       GoRoute(
         path: '/login',
-        builder: (BuildContext context, GoRouterState state) =>
-            const LoginPage(title: 'SST Console', loginLabel: 'E-mail'),
+        builder: (BuildContext context, GoRouterState state) => const ConsoleLoginPage(),
       ),
       GoRoute(
         path: '/console',

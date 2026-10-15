@@ -42,7 +42,7 @@ void main() {
     expect(find.text('Home'), findsWidgets);
   });
 
-  testWidgets('Login: the console sends app=console and shows the officer name', (WidgetTester tester) async {
+  testWidgets('Login (L-2): the console sends app=console and shows the officer name', (WidgetTester tester) async {
     final FakeServer server = FakeServer()
       ..json('POST /auth/login', <String, Object?>{
         'token': 't',
@@ -56,6 +56,9 @@ void main() {
       });
     await tester.pumpWidget(testApp(server, consoleRouterProvider, app: 'console'));
     await tester.pumpAndSettle();
+    expect(find.text('Social Security Office'), findsOneWidget); // L-2
+    expect(find.text('Staff e-mail'), findsOneWidget);
+    expect(find.text('New here? Register'), findsNothing);
 
     await tester.enterText(find.byKey(const Key('login_name')), 'kanya.w@sso.go.th');
     await tester.enterText(find.byKey(const Key('password')), 'Password123');
