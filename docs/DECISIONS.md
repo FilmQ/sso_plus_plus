@@ -74,3 +74,4 @@ in the report.
 | R-021 | 2.13 U3.1 steps 1 and 2 | The Notification Page (U3-1) lists the messages, but U3 has no list query; only Q3.1 (the count) and Q3.2 (the appointment). | The page uses Q2.2 (D-035). |
 | R-023 | Figma U3-5; 05-states.md | Frame U3-5 shows a Confirmed appointment with no buttons, but the state machine lets the user reschedule or cancel a Confirmed appointment (Q3.5, Q3.6 accept it). | D-036. |
 | R-024 | 2.13 U3.2 step 5 | "Cancel" can be clicked only after a date is chosen. Then a user who opens the pop-up by mistake cannot close it. | "Cancel" can always be clicked (D-037). |
+| R-025 | 2.17 seed | The seed has no `Pending` appointment, so U3.1 and U3.2 cannot be shown with the seed alone (O4 is not built yet). Seed claim 155 is `Covered` with no EligibilityCheck or ClaimStatusHistory rows (R-013 applies to it). | For a demo, add a Pending appointment and its QN.3 message to the dev database by hand (README). |

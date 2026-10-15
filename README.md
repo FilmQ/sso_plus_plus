@@ -55,6 +55,22 @@ A new user registers in the user app (U1) and signs in with the national ID. For
 national ID `1555500011122` (นาย ธีรพงษ์ ทดลองดี) or `2555500022233` (นางสาว พิมพ์ชนก ทดลองใจ): `seed.sql` has them as
 ACTIVE in the register stub and not yet registered. `1909900111222` is INACTIVE and fails the Section 33 check.
 
+### U3 demo data
+
+The seed has no Pending appointment, and O4 (the officer makes it) is not built yet (`docs/DECISIONS.md`, R-025).
+To try U3 as user `1101500567893`, add one to the dev database with the values of QO4.3 and QN.3, for example:
+
+```sh
+docker exec sst-db psql -U sst -d sst -c "INSERT INTO Appointment (claim_id, officer_id, consultant_id, appointment_type,
+  schedule_date, schedule_time, location, appointment_status, confirm_deadline, created_at)
+  VALUES (155, 1, 3, 'Onsite', CURRENT_DATE + 3, '10:00', 'Building C, Floor 1, Room 104', 'Pending',
+  CURRENT_DATE + 2 + TIME '10:00', NOW());
+  INSERT INTO Notification (claim_id, insured_id, subject, body, sent_at)
+  VALUES (155, 105, 'Appointment scheduled', 'Your appointment with นพ. วีระ ทองดี is booked. Please confirm it.', NOW());"
+```
+
+`make db-reset` removes it again.
+
 ## Lint and test
 
 ```sh
