@@ -7,9 +7,12 @@ class NotificationRepository extends Repository {
 
   final String table = 'Notification';
 
-  // Q2.1 [U2]
-  Future<int> countUnread(int insuredId) async =>
-      (await query(NotificationSql.q2_1, {'insured_id': insuredId})).rows.single['unread'] as int;
+  // Q2.1 [U2] or Q3.1 [U3.1]: the two Query IDs have the same SQL (2.18:
+  // countUnread {Q2.1, Q3.1}). [queryId] tells which use case asks.
+  Future<int> countUnread(int insuredId, {String queryId = 'Q2.1'}) async =>
+      (await query(queryId == 'Q3.1' ? NotificationSql.q3_1 : NotificationSql.q2_1, {'insured_id': insuredId}))
+          .rows
+          .single['unread'] as int;
 
   // Q2.2 [U2] Newest first.
   Future<List<Row>> findNotifications(int insuredId) async =>
@@ -18,10 +21,6 @@ class NotificationRepository extends Repository {
   // Q2.3 [U2] Gives 0 when the message was already read or is not for this user.
   Future<int> markAsRead(int notificationId, int insuredId) =>
       execute(NotificationSql.q2_3, {'notification_id': notificationId, 'insured_id': insuredId});
-
-  // Q3.1 [U3.1] The red dot on the Notification Page. Not in the class list of 2.18 (D-009).
-  Future<int> countUnreadOnNotificationPage(int insuredId) async =>
-      (await query(NotificationSql.q3_1, {'insured_id': insuredId})).rows.single['unread'] as int;
 
   // Q3.7 [U3.1, U3.2, U3.3]
   Future<int> markRead(int notificationId, int insuredId) =>

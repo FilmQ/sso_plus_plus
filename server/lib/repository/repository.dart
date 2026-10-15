@@ -18,32 +18,17 @@ abstract class Repository {
   Future<int> execute(String sql, [Map<String, Object?> params = const {}]) async =>
       (await db.performQuery(sql, params)).affectedRows;
 
-  /// Runs all statements of one Query ID in one transaction (brief, rule 2).
-  ///
-  /// If [guard] is set and that statement changes no row, the transaction rolls
-  /// back and [NoRowChangedException] is thrown. The report's guarded UPDATE
-  /// (for example `AND appointment_status = 'Pending'`) then stops the other
-  /// statements of the same Query ID.
-  Future<List<ResultSet>> runAll(
-    String queryId,
-    List<String> statements,
-    Map<String, Object?> params, {
-    int? guard,
-  }) =>
-      db.transaction(() async {
-        final results = <ResultSet>[];
-        for (final sql in statements) {
-          final rs = await query(sql, params);
-          if (guard == results.length && rs.affectedRows == 0) {
-            throw NoRowChangedException(queryId);
-          }
-          results.add(rs);
-        }
-        return results;
-      });
+  /// Runs a guarded statement of the report: its WHERE (or WITH) clause has
+  /// the status condition, so 0 changed rows means that the state did not allow
+  /// the change. Then [NoRowChangedException] is thrown (HTTP 409, D-008).
+  Future<ResultSet> guarded(String queryId, String sql, Map<String, Object?> params) async {
+    final rs = await query(sql, params);
+    if (rs.affectedRows == 0) throw NoRowChangedException(queryId);
+    return rs;
+  }
 }
 
-/// A guarded statement changed no row: the row is not in the expected state.
+/// A guarded statement changed no row: the row is not in a state that allows the change.
 class NoRowChangedException implements Exception {
   const NoRowChangedException(this.queryId);
 

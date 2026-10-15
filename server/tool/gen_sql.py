@@ -11,7 +11,7 @@ src = (root / "docs/spec/database/queries.sql").read_text(encoding="utf-8")
 
 REPOS = {
     "insured_person": ("InsuredPersonSql", "InsuredPersonRepository", ["Q1.1", "Q1.2", "Q1.3", "Q1.4", "Q1.5"]),
-    "claim": ("ClaimSql", "ClaimRepository", ["Q1.6", "Q1.7", "Q1.8", "Q1.9", "Q1.10", "QO1.1", "QO1.2", "QO1.3",
+    "claim": ("ClaimSql", "ClaimRepository", ["Q1.6", "Q1.7", "Q1.8", "Q1.9", "Q1.10", "Q2.4", "QO1.1", "QO1.2", "QO1.3",
                                               "QO1.4", "QO1.5", "QO1.6", "QO2.1", "QO3.1", "QO3.2", "QO5.4"]),
     "notification": ("NotificationSql", "NotificationRepository", ["Q2.1", "Q2.2", "Q2.3", "Q3.1", "Q3.7",
                                                                    "QN.1", "QN.2", "QN.3", "QN.4"]),
@@ -55,7 +55,7 @@ def statements(lines):
 def ident(qid):
     return "q" + qid[1:].replace(".", "_")
 
-assert len(order) == 56, len(order)
+assert len(order) == 57, len(order)
 used = [q for _, _, qs in REPOS.values() for q in qs]
 assert sorted(used) == sorted(order), set(order) ^ set(used)
 

@@ -1,18 +1,17 @@
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
-import '../controller/home_controller.dart';
 import '../controller/notification_controller.dart';
 import 'json.dart';
 
-/// U2 View Notify Message, and the Home page cards.
+/// U2 View Notify Message: the Home page claim card and the messages.
 void addU2Routes(
   Router router,
   NotificationController Function(Request) notifications,
-  HomeController Function(Request) home,
 ) {
   router
-    ..get('/home', (Request r) async => jsonOk(await home(r).getHome()))
+    // Q2.4
+    ..get('/u2/home-claim', (Request r) async => jsonOk({'claim': await notifications(r).getHomeClaim()}))
     // Q2.1
     ..get('/u2/unread-count', (Request r) async =>
         jsonOk({'unread': await notifications(r).checkUnreadNotifications()}))

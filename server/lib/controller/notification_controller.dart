@@ -1,4 +1,5 @@
 import '../auth/user_session.dart';
+import '../repository/claim_repository.dart';
 import '../repository/notification_repository.dart';
 import 'controller.dart';
 
@@ -7,14 +8,18 @@ import 'controller.dart';
 /// The report passes `insured_id`; here it always comes from the session, so a
 /// user can read only his or her own messages.
 class NotificationController extends Controller {
-  NotificationController(super.session, this.repository);
+  NotificationController(super.session, this.repository, this.claimRepository);
 
   final NotificationRepository repository;
+  final ClaimRepository claimRepository;
 
   int get _insuredId => requireRole(Role.user).insuredId!;
 
   /// U2 step 2 (Q2.1): the number for the red dot on the bell icon.
   Future<int> checkUnreadNotifications() => repository.countUnread(_insuredId);
+
+  /// U2 step 2 (Q2.4): the claim card of the Home page, or null.
+  Future<Map<String, Object?>?> getHomeClaim() => claimRepository.findHomeClaim(_insuredId);
 
   /// U2 step 4 (Q2.2): the list of the pop-up, newest first.
   Future<List<Map<String, Object?>>> getNotifications() => repository.findNotifications(_insuredId);

@@ -6,7 +6,9 @@
 abstract final class InsuredPersonSql {
   // Q1.1 [U1] ยื่นคำร้องกรณีประสบอันตราย (Submit Injury Application)
   static const q1_1 = r'''
-SELECT national_id, title_name, first_name, last_name
+SELECT national_id, title_name, first_name, last_name,
+  employer_account_no, employer_name, registration_date,
+  contribution_start, contribution_end, contribution_months
 FROM master_table
 WHERE national_id = :national_id
   AND coverage_status = 'ACTIVE'

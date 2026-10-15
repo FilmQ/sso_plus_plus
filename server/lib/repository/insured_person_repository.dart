@@ -1,5 +1,4 @@
 import 'repository.dart';
-import 'sql/infrastructure_sql.dart';
 import 'sql/insured_person_sql.dart';
 
 /// Table InsuredPerson, and the SSO register stub `master_table` (U1).
@@ -9,13 +8,9 @@ class InsuredPersonRepository extends Repository {
   final String table = 'InsuredPerson';
 
   // Q1.1 [U1] The person in the SSO register with coverage ACTIVE, or null.
+  // The row also has the employer and contribution columns for Q1.4 and Q1.5.
   Future<Row?> findInSSORegister(String nationalId) async =>
       (await query(InsuredPersonSql.q1_1, {'national_id': nationalId})).firstOrNull;
-
-  /// TEMPORARY, not in the report (R-004): the employer and contribution data of an
-  /// ACTIVE person in the register, for Q1.4 and Q1.5.
-  Future<Row?> findRegisterDetail(String nationalId) async =>
-      (await query(InfrastructureSql.findRegisterDetail, {'national_id': nationalId})).firstOrNull;
 
   // Q1.2 [U1]
   Future<int> countByNationalId(String nationalId) async =>
@@ -58,9 +53,9 @@ class InsuredPersonRepository extends Repository {
   Future<int> insertCoverage({
     required int insuredId,
     required int employerId,
-    required String registrationDate,
-    required String contributionStart,
-    String? contributionEnd,
+    required Object registrationDate,
+    required Object contributionStart,
+    Object? contributionEnd,
     required int contributionMonths,
   }) async {
     final rs = await query(InsuredPersonSql.q1_5, {

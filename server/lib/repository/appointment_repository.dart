@@ -14,7 +14,7 @@ class AppointmentRepository extends Repository {
 
   // Q3.3 [U3.1] Only a Pending appointment. Else NoRowChangedException.
   Future<void> confirmAppointment(int appointmentId) =>
-      runAll('Q3.3', AppointmentSql.q3_3, {'appointment_id': appointmentId}, guard: 0);
+      guarded('Q3.3', AppointmentSql.q3_3, {'appointment_id': appointmentId});
 
   // Q3.4 [U3.2] Free hours (09:00 to 16:00) of the consultant on [slotDate].
   Future<List<Row>> findFreeSlots(int consultantId, String slotDate) async =>
@@ -23,17 +23,17 @@ class AppointmentRepository extends Repository {
 
   // Q3.5 [U3.2] Gives the new appointment_id. Only a Pending or Confirmed appointment.
   Future<int> rescheduleAppointment(int appointmentId, String newDate, String newTime) async {
-    final results = await runAll('Q3.5', AppointmentSql.q3_5, {
+    final rs = await guarded('Q3.5', AppointmentSql.q3_5, {
       'appointment_id': appointmentId,
       'new_date': newDate,
       'new_time': newTime,
-    }, guard: 0);
-    return results.first.rows.single['appointment_id'] as int;
+    });
+    return rs.rows.single['appointment_id']! as int;
   }
 
   // Q3.6 [U3.3] Only a Pending or Confirmed appointment.
   Future<void> cancelAppointment(int appointmentId) =>
-      runAll('Q3.6', AppointmentSql.q3_6, {'appointment_id': appointmentId}, guard: 0);
+      guarded('Q3.6', AppointmentSql.q3_6, {'appointment_id': appointmentId});
 
   // QU5.1 [U5]
   Future<List<Row>> findUpcomingAppointments(int insuredId) async =>

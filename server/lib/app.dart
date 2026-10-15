@@ -3,7 +3,6 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'auth/session_token.dart';
 import 'config.dart';
-import 'controller/home_controller.dart';
 import 'controller/insured_form_controller.dart';
 import 'controller/notification_controller.dart';
 import 'db/db_connector.dart';
@@ -15,7 +14,6 @@ import 'http/u1_routes.dart';
 import 'http/u2_routes.dart';
 import 'model/claim_model.dart';
 import 'model/insured_person_model.dart';
-import 'repository/appointment_repository.dart';
 import 'repository/claim_repository.dart';
 import 'repository/insured_person_repository.dart';
 import 'repository/notification_repository.dart';
@@ -38,7 +36,6 @@ class App {
   late final people = InsuredPersonRepository(db);
   late final claims = ClaimRepository(db);
   late final notifications = NotificationRepository(db);
-  late final appointments = AppointmentRepository(db);
 
   InsuredFormController insuredFormController() => InsuredFormController(
         db: db,
@@ -48,9 +45,8 @@ class App {
         tokens: tokens,
       );
 
-  NotificationController notificationController(Request r) => NotificationController(sessionOf(r), notifications);
-
-  HomeController homeController(Request r) => HomeController(sessionOf(r), claims, appointments);
+  NotificationController notificationController(Request r) =>
+      NotificationController(sessionOf(r), notifications, claims);
 
   Handler get handler {
     final router = Router()
@@ -60,7 +56,7 @@ class App {
       });
     addAuthRoutes(router, accounts, tokens);
     addU1Routes(router, insuredFormController);
-    addU2Routes(router, notificationController, homeController);
+    addU2Routes(router, notificationController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())

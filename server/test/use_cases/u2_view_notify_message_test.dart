@@ -52,16 +52,17 @@ void main() {
     expect((await c.get('/u2/notifications')).status, 401);
   });
 
-  test('U2-1 Home: the claim card and the next appointment', () => inRollback(db, () async {
+  test('U2 Normal Case (Q2.4): the claim card of the Home page', () => inRollback(db, () async {
         final c = TestClient(db);
         await c.login('1209800456789');
-        final home = (await c.get('/home')).json;
-        final claim = home['claim'] as Map;
+        final claim = (await c.get('/u2/home-claim')).json['claim'] as Map;
         expect(claim['claim_no'], 'SST-2026-000151');
+        expect(claim['first_name'], 'วิภา');
         expect(claim['claim_status'], 'Rejected');
         expect(claim['injury'], 'Sprain, left ankle');
         expect(claim['submitted_time'], '3 October 2026 : 11:05');
-        expect(claim['checked_time'], '6 October 2026 : 10:40');
-        expect(home['next_appointment'], isNull);
+        expect(claim['officer_checked_time'], '6 October 2026 : 10:40');
+        expect(claim['appointment_status'], isNull);
+        expect(claim['treatment_status'], isNull);
       }));
 }

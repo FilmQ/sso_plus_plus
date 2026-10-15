@@ -31,8 +31,8 @@ void main() {
         expect(await repo.countUnread(103), 0);
       }));
 
-  test('Q3.1 countUnreadOnNotificationPage: same count as Q2.1', () async {
-    expect(await repo.countUnreadOnNotificationPage(103), 1);
+  test('Q3.1 countUnread (U3.1): same count as Q2.1', () async {
+    expect(await repo.countUnread(103, queryId: 'Q3.1'), 1);
   });
 
   test('Q3.7 markRead marks an unread message', () => inRollback(db, () async {

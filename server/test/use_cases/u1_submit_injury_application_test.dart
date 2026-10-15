@@ -66,7 +66,9 @@ void main() {
         expect(person['phone_no'], '0812345678');
         final claimId = int.parse((claim['claim_no'] as String).substring(9));
         final ic = await row('SELECT * FROM InjuryClaim WHERE claim_id = :id', {'id': claimId});
-        expect(ic['employer_id'], 11, reason: 'Q1.4 found the employer account of the register');
+        final employer = await row('SELECT * FROM Employer WHERE employer_id = :id', {'id': ic['employer_id']});
+        expect(employer['sso_account_no'], '1000678901', reason: 'Q1.4 added the employer of the register (Q1.1)');
+        expect(employer['employer_name'], 'Rangsit Auto Parts Co., Ltd.');
         final docs = await ClaimRepository(db).findDocuments(claimId);
         expect(docs.map((d) => d['file_uri']), contains('/claims/$claimId/id_card_front.jpg'));
         expect(File('${storageDir.path}/claims/$claimId/id_card_front.jpg').existsSync(), isTrue);
@@ -75,6 +77,15 @@ void main() {
         final history = await row('SELECT * FROM ClaimStatusHistory WHERE claim_id = :id', {'id': claimId});
         expect(history['to_status'], 'Awaiting verification');
         expect(await UserAccountRepository(db).findAccountByLogin(newNationalId, 'Secret123'), isNotNull);
+      }));
+
+  test('U1 Normal Case: an employer that is already known takes the ON CONFLICT path of Q1.4', () =>
+      inRollback(db, () async {
+        final result = await controller().submitInjuryForm(validForm({'national_id': '2555500022233'}), validFiles());
+        final ic = await row('SELECT employer_id FROM InjuryClaim WHERE claim_no = :no',
+            {'no': (result['claim'] as Map)['claim_no']});
+        expect(ic['employer_id'], 12, reason: 'employer account 1000234567 is Employer 12 of the seed');
+        expect((result['claim'] as Map)['submitted_time'], matches(RegExp(r'^\d{1,2} [A-Z][a-z]+ \d{4} : \d{2}:\d{2}$')));
       }));
 
   test('U1 Normal Case [Register unavailable]: the claim is saved for the officer to check', () =>

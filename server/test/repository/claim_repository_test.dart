@@ -19,12 +19,25 @@ void main() {
         expect((await claimRow(unavailable))['claim_status'], 'Register unavailable');
       }));
 
-  test('Q1.7 assignClaimNo: SST-<year>-<6 digits>', () => inRollback(db, () async {
+  test('Q1.7 assignClaimNo: SST-<year>-<6 digits>, and submitted_at', () => inRollback(db, () async {
         final id = await insertTestClaim(repo);
-        final no = await repo.assignClaimNo(id);
-        expect(no, matches(RegExp(r'^SST-\d{4}-\d{6}$')));
-        expect(no, endsWith(id.toString().padLeft(6, '0')));
+        final r = await repo.assignClaimNo(id);
+        expect(r.claimNo, matches(RegExp(r'^SST-\d{4}-\d{6}$')));
+        expect(r.claimNo, endsWith(id.toString().padLeft(6, '0')));
+        expect(r.claimNo, contains('SST-${r.submittedAt.year}-'));
       }));
+
+  test('Q2.4 findHomeClaim: claim card, next appointment and treatment of person 101', () async {
+    final row = await repo.findHomeClaim(101);
+    expect(row, containsPair('claim_no', 'SST-2026-000143'));
+    expect(row, containsPair('first_name', 'สมชาย'));
+    expect(row, containsPair('officer_checked_time', '5 October 2026 : 09:15'));
+    expect(row, containsPair('appointment_status', 'Confirmed'));
+    expect(row, containsPair('appointment_time', '16 October 2026 : 10:00'));
+    expect(row, containsPair('consultant_name', 'นพ. ธนา ศรีสุข'));
+    expect(row, containsPair('treatment_status', 'Accepted'));
+    expect(await repo.findHomeClaim(999), isNull);
+  });
 
   test('Q1.8 insertDocument adds one Pending document', () => inRollback(db, () async {
         final id = await insertTestClaim(repo);

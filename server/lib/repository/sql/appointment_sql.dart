@@ -30,19 +30,19 @@ LIMIT 1
 ''';
 
   // Q3.3 [U3.1] ยืนยันนัดหมาย (Confirm Appointment)
-  static const q3_3 = <String>[
-    r'''
-UPDATE Appointment
-SET appointment_status = 'Confirmed'
-WHERE appointment_id = :appointment_id
-  AND appointment_status = 'Pending'
-''',
-    r'''
+  static const q3_3 = r'''
+WITH confirmed AS (
+  UPDATE Appointment
+  SET appointment_status = 'Confirmed'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status = 'Pending'
+  RETURNING appointment_id
+)
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Confirmed', NOW())
-''',
-  ];
+SELECT appointment_id, 'application', 'Confirmed', NOW()
+FROM confirmed
+''';
 
   // Q3.4 [U3.2] ยืนยันนัดหมาย (Request Another Date)
   static const q3_4 = r'''
@@ -61,47 +61,48 @@ ORDER BY s.slot_at
 ''';
 
   // Q3.5 [U3.2] ยืนยันนัดหมาย (Request Another Date)
-  static const q3_5 = <String>[
-    r'''
-INSERT INTO Appointment
-  (claim_id, officer_id, consultant_id, supersedes_appt_id,
-   appointment_type, schedule_date, schedule_time, location,
-   appointment_status, created_at)
-SELECT claim_id, officer_id, consultant_id, appointment_id,
-  appointment_type, :new_date, :new_time, location,
-  'Confirmed', NOW()
-FROM Appointment
-WHERE appointment_id = :appointment_id
-  AND appointment_status IN ('Pending', 'Confirmed')
-RETURNING appointment_id
-''',
-    r'''
-UPDATE Appointment
-SET appointment_status = 'Rescheduled'
-WHERE appointment_id = :appointment_id
-''',
-    r'''
-INSERT INTO AppointmentConfirmation
-  (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Requested another date',
-  NOW())
-''',
-  ];
+  static const q3_5 = r'''
+WITH old AS (
+  UPDATE Appointment
+  SET appointment_status = 'Rescheduled'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status IN ('Pending', 'Confirmed')
+  RETURNING appointment_id, claim_id, officer_id, consultant_id,
+    appointment_type, location
+), new_appt AS (
+  INSERT INTO Appointment
+    (claim_id, officer_id, consultant_id, supersedes_appt_id,
+     appointment_type, schedule_date, schedule_time, location,
+     appointment_status, created_at)
+  SELECT claim_id, officer_id, consultant_id, appointment_id,
+    appointment_type, :new_date, :new_time, location,
+    'Confirmed', NOW()
+  FROM old
+  RETURNING appointment_id
+), confirmation AS (
+  INSERT INTO AppointmentConfirmation
+    (appointment_id, channel, outcome, recorded_at)
+  SELECT appointment_id, 'application', 'Requested another date',
+    NOW()
+  FROM old
+)
+SELECT appointment_id FROM new_appt
+''';
 
   // Q3.6 [U3.3] ยืนยันนัดหมาย (I cannot attend)
-  static const q3_6 = <String>[
-    r'''
-UPDATE Appointment
-SET appointment_status = 'Cancelled'
-WHERE appointment_id = :appointment_id
-  AND appointment_status IN ('Pending', 'Confirmed')
-''',
-    r'''
+  static const q3_6 = r'''
+WITH cancelled AS (
+  UPDATE Appointment
+  SET appointment_status = 'Cancelled'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status IN ('Pending', 'Confirmed')
+  RETURNING appointment_id
+)
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Cannot attend', NOW())
-''',
-  ];
+SELECT appointment_id, 'application', 'Cannot attend', NOW()
+FROM cancelled
+''';
 
   // QU5.1 [U5] ดูตารางนัดหมาย (View Appointment Schedule)
   static const qU5_1 = r'''
@@ -209,10 +210,10 @@ ORDER BY a.schedule_date, a.schedule_time
   /// Every Query ID of this class, for the test that compares the SQL with the report.
   static const all = <String, List<String>>{
     'Q3.2': [q3_2],
-    'Q3.3': q3_3,
+    'Q3.3': [q3_3],
     'Q3.4': [q3_4],
-    'Q3.5': q3_5,
-    'Q3.6': q3_6,
+    'Q3.5': [q3_5],
+    'Q3.6': [q3_6],
     'QU5.1': [qU5_1],
     'QO4.1': [qO4_1],
     'QO4.2': [qO4_2],

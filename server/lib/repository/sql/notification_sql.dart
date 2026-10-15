@@ -39,7 +39,7 @@ WHERE insured_id = :insured_id
   AND read_at IS NULL
 ''';
 
-  // Q3.7 [U3.1, U3.2, U3.3] ยืนยันนัดหมาย (Confirm Appointment)
+  // Q3.7 [U3.1, U3.2, U3.3] ยืนยันนัดหมาย (Confirm Appointment) / ยืนยันนัดหมาย (Request Another Date) / ยืนยันนัดหมาย (I cannot attend)
   static const q3_7 = r'''
 UPDATE Notification
 SET read_at = NOW()
@@ -48,7 +48,7 @@ WHERE notification_id = :notification_id
   AND read_at IS NULL
 ''';
 
-  // QN.1 [O2, O5.1] อนุมัติคำร้อง (Approve Injury Application)
+  // QN.1 [O2, O5.1] อนุมัติคำร้อง (Approve Injury Application) / นัดหมายการรักษา (Book Treatment)
   static const qN_1 = r'''
 INSERT INTO Notification
   (claim_id, insured_id, subject, body, sent_at)

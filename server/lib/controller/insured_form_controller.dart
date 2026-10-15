@@ -4,6 +4,7 @@ import '../auth/session_token.dart';
 import '../auth/user_session.dart';
 import '../db/db_connector.dart';
 import '../model/claim_model.dart';
+import '../model/date_text.dart';
 import '../model/field_rules.dart';
 import '../model/injury_form.dart';
 import '../model/insured_person_model.dart';
@@ -34,10 +35,9 @@ class InsuredFormController extends Controller {
     try {
       return await db.transaction(() async {
         final reg = await personModel.register(form, files);
-        final claimNo = await claimModel.createClaim(reg.insuredId, form, files, reg);
+        final claim = await claimModel.createClaim(reg.insuredId, form, files, reg);
         final accountId = await accounts.insertUserAccount(
             loginName: form.nationalId, password: form.password, insuredId: reg.insuredId);
-        final claim = (await claimModel.claims.findLatestClaimOf(reg.insuredId))!;
         final session = UserSession(
           accountId: accountId,
           role: Role.user,
@@ -49,9 +49,10 @@ class InsuredFormController extends Controller {
           'token': tokens.issue(session),
           'session': session.toJson(),
           'claim': {
-            'claim_no': claimNo,
-            'claim_status': claim['claim_status'],
-            'submitted_time': claim['submitted_time'],
+            'claim_no': claim.claimNo,
+            // The status that Q1.6 gives for this register result.
+            'claim_status': reg.registerResult == 'Covered' ? 'Awaiting verification' : 'Register unavailable',
+            'submitted_time': DateText.dateTime(claim.submittedAt),
             'claimant_name': form.fullName,
             'files_received': [for (final f in files) f.docTypeId],
           },

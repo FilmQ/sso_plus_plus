@@ -11,7 +11,7 @@ export 'result_set.dart';
 ///
 /// Every Repository sends its SQL through [performQuery]. A [transaction]
 /// keeps one pooled connection for all statements in its body. A transaction
-/// inside a transaction joins the outer one.
+/// inside a transaction is a SAVEPOINT of the outer one.
 class DBConnector {
   DBConnector({
     required this.host,
@@ -62,7 +62,7 @@ class DBConnector {
     final named = NamedParameters.parse(sql);
     final result = await _session.execute(
       named.sql,
-      parameters: named.bind(params),
+      parameters: named.bind(params).map(_toSql).toList(),
     );
     return ResultSet(
       [for (final row in result) row.toColumnMap()],
@@ -72,11 +72,15 @@ class DBConnector {
 
   /// Runs [body] in one transaction. If [body] throws, the transaction rolls
   /// back. If [rollbackOnly] is true, it rolls back also on success (tests).
+  ///
+  /// Inside another transaction, [body] runs in a SAVEPOINT of the same
+  /// connection: an error in [body] undoes only the work of [body], also when
+  /// the caller catches the error.
   Future<T> transaction<T>(
     Future<T> Function() body, {
     bool rollbackOnly = false,
   }) {
-    if (Zone.current[_txKey] != null) return body();
+    if (Zone.current[_txKey] != null) return _savepoint(body, rollbackOnly: rollbackOnly);
     return _requirePool().withConnection(
       (connection) => runZoned(
         () async {
@@ -93,6 +97,24 @@ class DBConnector {
         zoneValues: {_txKey: connection},
       ),
     );
+  }
+
+  static int _savepoints = 0;
+
+  Future<T> _savepoint<T>(Future<T> Function() body, {required bool rollbackOnly}) async {
+    final name = 'sp_${++_savepoints}';
+    final connection = _txConnection();
+    await connection.execute('SAVEPOINT $name');
+    try {
+      final result = await body();
+      if (rollbackOnly) await connection.execute('ROLLBACK TO SAVEPOINT $name');
+      await connection.execute('RELEASE SAVEPOINT $name');
+      return result;
+    } catch (_) {
+      await connection.execute('ROLLBACK TO SAVEPOINT $name');
+      await connection.execute('RELEASE SAVEPOINT $name');
+      rethrow;
+    }
   }
 
   Future<void> beginTransaction() => _txConnection().execute('BEGIN');
@@ -117,6 +139,17 @@ class DBConnector {
   Future<void> close() async {
     await _pool?.close();
     _pool = null;
+  }
+
+  /// The driver gives `date` and `timestamp` columns as DateTime values with
+  /// the wall-clock time in the UTC fields. A DateTime parameter goes as the
+  /// text of its own fields (no time zone change), so a value read from one
+  /// query can go into another unchanged.
+  static Object? _toSql(Object? value) {
+    if (value is! DateTime) return value;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final d = value;
+    return '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
   }
 
   Session get _session =>

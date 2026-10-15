@@ -20,7 +20,7 @@ void main() {
       expect(rs.rows.single['n'], 0);
     }, rollbackOnly: true);
     final rs = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-    expect(rs.rows.single['n'], 5);
+    expect(rs.rows.single['n'], 7);
   });
 
   test('an error in the body rolls the transaction back', () async {
@@ -32,15 +32,32 @@ void main() {
       throwsStateError,
     );
     final rs = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-    expect(rs.rows.single['n'], 5);
+    expect(rs.rows.single['n'], 7);
   });
 
-  test('a transaction inside a transaction joins the outer one', () async {
+  test('an error in an inner transaction undoes only the inner work (SAVEPOINT)', () async {
+    await db.transaction(() async {
+      await db.performQuery("UPDATE Notification SET subject = 'outer' WHERE notification_id = 901");
+      await expectLater(
+        db.transaction(() async {
+          await db.performQuery('DELETE FROM ClaimStatusHistory');
+          throw StateError('stop');
+        }),
+        throwsStateError,
+      );
+      final history = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
+      expect(history.rows.single['n'], 7, reason: 'the inner DELETE is undone');
+      final outer = await db.performQuery('SELECT subject FROM Notification WHERE notification_id = 901');
+      expect(outer.rows.single['subject'], 'outer', reason: 'the outer work stays');
+    }, rollbackOnly: true);
+  });
+
+  test('a transaction inside a transaction uses the same connection', () async {
     await db.transaction(() async {
       await db.transaction(() => db.performQuery('DELETE FROM ClaimStatusHistory'));
     }, rollbackOnly: true);
     final rs = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-    expect(rs.rows.single['n'], 5);
+    expect(rs.rows.single['n'], 7);
   });
 
   test('performQuery gives affectedRows', () async {

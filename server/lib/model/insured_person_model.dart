@@ -32,12 +32,13 @@ class InsuredPersonModel extends Model {
     validateFields(form, files);
     var registerResult = 'Covered';
     var alreadyRegistered = false;
+    Map<String, Object?>? reg;
     if (!fieldErrors.containsKey('national_id')) {
       try {
-        // Q1.1: Section 33 coverage must be ACTIVE.
-        if (await people.findInSSORegister(form.nationalId) == null) {
-          fieldErrors['national_id'] = FieldRules.notActive;
-        }
+        // Q1.1: Section 33 coverage must be ACTIVE. The row also has the
+        // employer and contribution data for Q1.4 and Q1.5.
+        reg = await people.findInSSORegister(form.nationalId);
+        if (reg == null) fieldErrors['national_id'] = FieldRules.notActive;
       } on RegisterUnavailableException {
         registerResult = 'Register unavailable';
       }
@@ -62,10 +63,9 @@ class InsuredPersonModel extends Model {
       phoneNo: FieldRules.normalPhone(form.phoneNo),
       address: form.address,
     );
-    if (registerResult != 'Covered') {
+    if (reg == null) {
       return Registration(insuredId: insuredId, employerId: null, coverageId: null, registerResult: registerResult);
     }
-    final reg = (await people.findRegisterDetail(form.nationalId))!;
     // Q1.4
     final employerId = await people.upsertEmployer(
       accountNo: reg['employer_account_no']! as String,
@@ -75,9 +75,9 @@ class InsuredPersonModel extends Model {
     final coverageId = await people.insertCoverage(
       insuredId: insuredId,
       employerId: employerId,
-      registrationDate: reg['registration_date']! as String,
-      contributionStart: reg['contribution_start']! as String,
-      contributionEnd: reg['contribution_end'] as String?,
+      registrationDate: reg['registration_date']!,
+      contributionStart: reg['contribution_start']!,
+      contributionEnd: reg['contribution_end'],
       contributionMonths: reg['contribution_months']! as int,
     );
     return Registration(

@@ -1,4 +1,5 @@
 import '../repository/claim_repository.dart';
+import '../repository/repository.dart' show NoRowChangedException;
 import '../storage/file_storage.dart';
 import 'field_rules.dart';
 import 'injury_form.dart';
@@ -16,8 +17,9 @@ class ClaimModel extends Model {
   /// stored files when the transaction rolls back.
   int? lastClaimId;
 
-  /// U1 steps 5.4 to 5.8. Gives the claim_no. Run it in a transaction.
-  Future<String> createClaim(int insuredId, InjuryForm form, List<UploadedFile> files, Registration reg) async {
+  /// U1 steps 5.4 to 5.8. Gives the claim_no and submitted_at (Q1.7) for U1-5.
+  /// Run it in a transaction.
+  Future<({String claimNo, DateTime submittedAt})> createClaim(int insuredId, InjuryForm form, List<UploadedFile> files, Registration reg) async {
     // Q1.6
     final claimId = await claims.insertClaim(
       insuredId: insuredId,
@@ -31,7 +33,7 @@ class ClaimModel extends Model {
     );
     lastClaimId = claimId;
     // Q1.7
-    final claimNo = await claims.assignClaimNo(claimId);
+    final assigned = await claims.assignClaimNo(claimId);
     // Q1.8, one row for each file
     for (final file in files) {
       await claims.insertDocument(
@@ -52,38 +54,32 @@ class ClaimModel extends Model {
     );
     // Q1.10
     await claims.insertFirstStatus(claimId);
-    return claimNo;
+    return assigned;
   }
 
-  /// The claim statuses that an officer can decide (O2, O3). QO2.1 and QO3.1
-  /// have no status condition, so the Model checks it (R-012).
-  static const decidable = ['Awaiting verification', 'Needs review', 'Register unavailable'];
-
-  /// O2 Approve Injury Application: QO2.1 with result 'Covered'.
-  /// Throws [StateConflictException] when the claim is already decided.
+  /// O2 Approve Injury Application: QO2.1 with result 'Covered'. QO2.1 itself
+  /// decides only a claim that is not yet decided; else StateConflictException.
   Future<void> confirmResult(int claimId, {required int officerId, String? overrideReason}) =>
-      claims.db.transaction(() async {
-        await _requireDecidable(claimId);
-        await claims.saveResult(
-            claimId: claimId, result: 'Covered', officerId: officerId, overrideReason: overrideReason);
-      });
+      _decide(() => claims.saveResult(
+          claimId: claimId, result: 'Covered', officerId: officerId, overrideReason: overrideReason));
 
   /// O3 Reject Injury Application: QO3.1 ('Not covered'), then QO3.2 ('Rejected').
-  /// Throws [StateConflictException] when the claim is already decided.
   Future<void> rejectApplication(int claimId,
           {required int officerId, required String reasonCode, String? officerMessage}) =>
-      claims.db.transaction(() async {
-        await _requireDecidable(claimId);
+      _decide(() async {
         await claims.saveResult(claimId: claimId, result: 'Not covered', officerId: officerId, overrideReason: reasonCode);
         await claims.insertRejection(
             claimId: claimId, reasonCode: reasonCode, officerId: officerId, officerMessage: officerMessage);
       });
 
-  Future<void> _requireDecidable(int claimId) async {
-    final status = await claims.findClaimStatusForUpdate(claimId);
-    if (status == null) throw const StateConflictException('The claim was not found.');
-    if (!decidable.contains(status)) {
-      throw StateConflictException('The claim is already decided ($status).');
+  /// Runs a decision in one transaction. A guarded query that changes no row
+  /// rolls the transaction back: the claim is already decided, or it has no
+  /// automatic Section 33 check row (R-013).
+  Future<void> _decide(Future<void> Function() body) async {
+    try {
+      await claims.db.transaction(body);
+    } on NoRowChangedException {
+      throw const StateConflictException('The claim is already decided.');
     }
   }
 

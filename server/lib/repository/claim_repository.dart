@@ -1,6 +1,5 @@
 import 'repository.dart';
 import 'sql/claim_sql.dart';
-import 'sql/infrastructure_sql.dart';
 
 /// Table InjuryClaim and its child tables (U1, O1, O2, O3, O5.2).
 class ClaimRepository extends Repository {
@@ -32,9 +31,11 @@ class ClaimRepository extends Repository {
     return rs.rows.single['claim_id'] as int;
   }
 
-  // Q1.7 [U1] Gives the claim_no, for example SST-2026-000156.
-  Future<String> assignClaimNo(int claimId) async =>
-      (await query(ClaimSql.q1_7, {'claim_id': claimId})).rows.single['claim_no'] as String;
+  // Q1.7 [U1] Gives the claim_no (for example SST-2026-000156) and submitted_at.
+  Future<({String claimNo, DateTime submittedAt})> assignClaimNo(int claimId) async {
+    final row = (await query(ClaimSql.q1_7, {'claim_id': claimId})).rows.single;
+    return (claimNo: row['claim_no']! as String, submittedAt: row['submitted_at']! as DateTime);
+  }
 
   // Q1.8 [U1]
   Future<int> insertDocument({
@@ -71,16 +72,10 @@ class ClaimRepository extends Repository {
   // Q1.10 [U1]
   Future<int> insertFirstStatus(int claimId) => execute(ClaimSql.q1_10, {'claim_id': claimId});
 
-  /// TEMPORARY, not in the report (R-006): the newest claim of a user, for U1-5 and the
-  /// claim card of U2-1 Home page.
-  Future<Row?> findLatestClaimOf(int insuredId) async =>
-      (await query(InfrastructureSql.findHomeClaim, {'insured_id': insuredId})).firstOrNull;
-
-  /// TEMPORARY, not in the report (R-012): the status of the claim, with a
-  /// row lock. Null when the claim does not exist. Run it in a transaction.
-  Future<String?> findClaimStatusForUpdate(int claimId) async =>
-      (await query(InfrastructureSql.findClaimStatusForUpdate, {'claim_id': claimId})).firstOrNull?['claim_status']
-          as String?;
+  // Q2.4 [U2] The claim card of the Home page: the newest claim of the user,
+  // with its next appointment and treatment status. Null when there is no claim.
+  Future<Row?> findHomeClaim(int insuredId) async =>
+      (await query(ClaimSql.q2_4, {'insured_id': insuredId})).firstOrNull;
 
   // QO1.1 [O1]
   Future<List<Row>> findPendingClaims() async => (await query(ClaimSql.qO1_1)).rows;
@@ -104,6 +99,8 @@ class ClaimRepository extends Repository {
   Future<List<Row>> findRejectionReasons() async => (await query(ClaimSql.qO1_6)).rows;
 
   // QO2.1 [O2] when result is 'Covered', QO3.1 [O3] when result is 'Not covered'.
+  // Only a claim in 'Awaiting verification', 'Needs review' or 'Register
+  // unavailable' changes; else NoRowChangedException (R-013).
   Future<void> saveResult({
     required int claimId,
     required String result,
@@ -111,7 +108,7 @@ class ClaimRepository extends Repository {
     String? overrideReason,
   }) async {
     final covered = result == 'Covered';
-    await runAll(covered ? 'QO2.1' : 'QO3.1', covered ? ClaimSql.qO2_1 : ClaimSql.qO3_1, {
+    await guarded(covered ? 'QO2.1' : 'QO3.1', covered ? ClaimSql.qO2_1 : ClaimSql.qO3_1, {
       'claim_id': claimId,
       'result': result,
       'officer_id': officerId,
@@ -119,21 +116,21 @@ class ClaimRepository extends Repository {
     });
   }
 
-  // QO3.2 [O3] The last UPDATE is guarded by the claim status.
+  // QO3.2 [O3] Only a claim that is not yet decided or is 'Not covered'.
   Future<void> insertRejection({
     required int claimId,
     required String reasonCode,
     required int officerId,
     String? officerMessage,
   }) =>
-      runAll('QO3.2', ClaimSql.qO3_2, {
+      guarded('QO3.2', ClaimSql.qO3_2, {
         'claim_id': claimId,
         'reason_code': reasonCode,
         'officer_id': officerId,
         'officer_message': officerMessage,
-      }, guard: 2);
+      });
 
-  // QO5.4 [O5.2] The UPDATE is guarded by claim_status = 'Covered'.
+  // QO5.4 [O5.2] Only a 'Covered' claim.
   Future<void> updateNoTreatment({required int claimId, required int officerId}) =>
-      runAll('QO5.4', ClaimSql.qO5_4, {'claim_id': claimId, 'officer_id': officerId}, guard: 1);
+      guarded('QO5.4', ClaimSql.qO5_4, {'claim_id': claimId, 'officer_id': officerId});
 }
