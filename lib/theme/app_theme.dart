@@ -9,8 +9,9 @@ import 'status_colors.dart';
 abstract final class AppTheme {
   static const Color seed = Color(0xFF6750A4);
 
-  /// The bundled Thai font (pubspec.yaml). Latin text keeps the default font;
-  /// Thai characters use this one, as in the Figma frames.
+  /// The bundled fonts (pubspec.yaml), as in the Figma frames: Roboto for
+  /// Latin text, Noto Sans Thai for Thai characters.
+  static const String latinFont = 'Roboto';
   static const String thaiFont = 'NotoSansThai';
 
   static ThemeData light() => _build(Brightness.light);
@@ -24,6 +25,7 @@ abstract final class AppTheme {
     );
     return ThemeData(
       colorScheme: colors,
+      fontFamily: latinFont,
       fontFamilyFallback: const <String>[thaiFont],
       extensions: <ThemeExtension<dynamic>>[
         brightness == Brightness.light ? StatusColors.light : StatusColors.dark,

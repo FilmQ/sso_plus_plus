@@ -66,9 +66,16 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # Noto Sans Thai (SIL Open Font License, assets/fonts/noto_sans_thai/OFL.txt).
-  # The app keeps it, so Thai text shows also without a network (web and mobile).
+  # Roboto (Latin) and Noto Sans Thai, both SIL Open Font License (OFL.txt in each
+  # folder). The app keeps them, so text shows also without a network (D-038).
   fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/roboto/Roboto-Regular.ttf
+        - asset: assets/fonts/roboto/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/roboto/Roboto-Bold.ttf
+          weight: 700
     - family: NotoSansThai
       fonts:
         - asset: assets/fonts/noto_sans_thai/NotoSansThai-Regular.ttf
