@@ -278,7 +278,7 @@ COMMENT ON COLUMN InsuredPerson.title_name IS 'คำนำหน้าชื่
 COMMENT ON COLUMN InsuredPerson.first_name IS 'ชื่อ | ตัวอักษร 1 ถึง 80 ตัว';
 COMMENT ON COLUMN InsuredPerson.last_name IS 'นามสกุล | ตัวอักษร 1 ถึง 80 ตัว';
 COMMENT ON COLUMN InsuredPerson.date_of_birth IS 'วันเกิด | ก่อนวันที่ลงทะเบียน และอายุไม่ต่ำกว่า 15 ปี';
-COMMENT ON COLUMN InsuredPerson.gender IS 'เพศ | M หรือ F';
+COMMENT ON COLUMN InsuredPerson.gender IS 'เพศ | M, F หรือ O (อื่น ๆ)';
 COMMENT ON COLUMN InsuredPerson.phone_no IS 'เบอร์โทรศัพท์ | ตัวเลข 9 ถึง 10 หลัก ขึ้นต้นด้วย 0';
 COMMENT ON COLUMN InsuredPerson.email IS 'อีเมล | รูปแบบ name@domain';
 COMMENT ON COLUMN InsuredPerson.address IS 'ที่อยู่ | ไม่เกิน 255 ตัวอักษร';

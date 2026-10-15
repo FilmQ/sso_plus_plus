@@ -6,12 +6,12 @@ back into the report.
 
 ## Decide before or during the first build
 
-1. **Login and accounts.** The site map has *Login* as the root of all three trees, but the report has no login
-   use case and no table that stores credentials. U1 collects a password (`^[A-Za-z0-9]{8,}$`, plus a confirmation)
-   that no table stores, and `EvaluationOfficer` / `Consultant` have no credentials either. Proposal: add one
-   `UserAccount` table (account id, role `USER` / `OFFICER` / `CONSULTANT`, login name, password hash, link to
-   `insured_id`, `officer_id` or `consultant_id`) outside the 19 report tables, and treat login as infrastructure,
-   not a use case. Officers and consultants are created by seed data only (no admin use case).
+1. **Login and accounts (settled 2026-10-15).** Login and sign-out are infrastructure, not use cases (report
+   2.20 and 2.21). Accounts are kept in one `UserAccount` table outside the 19 report tables (decision D-003);
+   users sign in with national ID and the password set in U1, officers and consultants with their staff e-mail.
+   The signed-in user's `insured_id`, `officer_id` or `consultant_id` comes from the session (`UserSession`) and is
+   passed to the SQL that needs it (D-010). Figma frames: L-1 Login Page, P-1 Profile Page, L-2 Console Login Page
+   (see `06-screens.md`). Officers and consultants are created by seed data only (no admin use case).
 2. **One claim per person.** U1 registers the person and submits the claim in one step, and Q1.2 rejects a
    national ID that is already registered. A registered user therefore cannot file a second claim. Keep this for the
    prototype unless the team decides otherwise.
@@ -36,8 +36,8 @@ back into the report.
    queries as they are (the team chose to leave it).
 9. **Notifications** are in-app only (`Notification` rows read in U2). No push, e-mail or SMS is specified.
 10. **Time zone** is Asia/Bangkok; the report's dates are written `[วัน] / [เดือน] / [ปี] : [เวลา]`.
-11. **Software platform.** Section 2.20 of the report is still a placeholder; only PostgreSQL is named. Whatever
-    stack is chosen should be written back into 2.20.
+11. **Software platform.** The stack is settled (D-001: Flutter, a Dart server, PostgreSQL 16), but the stack
+    figure in report section 2.20 is still a placeholder for the team to fill.
 
 ## Sample data cleaning
 
@@ -62,3 +62,11 @@ appointments or reports that are not among the samples. `seed.sql` leaves these 
 
 `seed.sql` also adds the `master_table` rows: the five sample people as `ACTIVE`, plus one `INACTIVE` person
 (national ID 1909900111222) to exercise the failed Section 33 check.
+
+At the end of `seed.sql`, a marked block adds rows that are not among the report's samples:
+
+- two `ACTIVE`, not yet registered people in `master_table` (1555500011122 and 2555500022233), so U1 can succeed
+  against the seed; the second uses employer account 1000234567, which is already Employer 12, so Q1.4 takes its
+  `ON CONFLICT` path;
+- the officer's decision on claim 149 (EligibilityCheck 806, ClaimStatusHistory 1006 and 1007), which the samples
+  show as `Covered` with appointments but without the officer's rows.

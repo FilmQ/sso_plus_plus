@@ -12,7 +12,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | first_name | ชื่อ |  | Y | VARCHAR(80) | ตัวอักษร 1 ถึง 80 ตัว |
 | last_name | นามสกุล |  | Y | VARCHAR(80) | ตัวอักษร 1 ถึง 80 ตัว |
 | date_of_birth | วันเกิด |  | Y | DATE | ก่อนวันที่ลงทะเบียน และอายุไม่ต่ำกว่า 15 ปี |
-| gender | เพศ |  | Y | CHAR(1) | M หรือ F |
+| gender | เพศ |  | Y | CHAR(1) | M, F หรือ O (อื่น ๆ) |
 | phone_no | เบอร์โทรศัพท์ |  | Y | VARCHAR(20) | ตัวเลข 9 ถึง 10 หลัก ขึ้นต้นด้วย 0 |
 | email | อีเมล |  | N | VARCHAR(120) | รูปแบบ name@domain |
 | address | ที่อยู่ |  | Y | VARCHAR(255) | ไม่เกิน 255 ตัวอักษร |

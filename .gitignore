@@ -126,3 +126,6 @@ app.*.symbols
 .env
 server/storage/
 .DS_Store
+
+# Spec pack archives from the documentation agent (the content is in docs/)
+/sst-spec.zip

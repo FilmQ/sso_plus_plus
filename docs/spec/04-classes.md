@@ -111,7 +111,7 @@ Methods:
 
 Used in: U2
 
-Attributes: `- insuredId: int`, `- unreadCount: int`
+Attributes: `- insuredId: int`, `- unreadCount: int`, `- claimCard: ClaimCard`
 
 Methods:
 
@@ -138,6 +138,7 @@ Attributes: `- notifications: List<Notification>`
 
 Methods:
 
+- `+ open()`
 - `+ clickNotification(claim_id)`
 
 ### RegisterPage
@@ -238,6 +239,7 @@ Attributes: `- appointmentModel: AppointmentModel`, `- notificationModel: Notifi
 
 Methods:
 
+- `+ checkUnreadNotifications(insured_id)`
 - `+ getAppointment(claim_id, insured_id)`
 - `+ confirmAppointment(appointment_id)`
 - `+ getFreeSlots(consultant_id, slot_date)`
@@ -263,11 +265,12 @@ Methods:
 
 Used in: U2
 
-Attributes: `- repository: NotificationRepository`
+Attributes: `- repository: NotificationRepository`, `- claimRepository: ClaimRepository`
 
 Methods:
 
 - `+ checkUnreadNotifications(insured_id)`
+- `+ getHomeClaim(insured_id)`
 - `+ getNotifications(insured_id)`
 - `+ markAsRead(notification_id)`
 
@@ -311,7 +314,7 @@ Methods:
 - `+ cancelUnacceptedTreatments()`
 - `+ getTreatmentSchedule(insured_id)`
 - `+ getClaimsForTreatment()`
-- `+ getAvailableTimes(facility, dates)`
+- `+ getAvailableTimes(facility, date_from, date_to)`
 - `+ bookTreatment(claim_id, report_id, details)`
 - `+ closeWithoutTreatment(claim_id)`
 
@@ -383,6 +386,7 @@ Attributes: `- notificationId: int`, `- claimId: int`, `- subject: String`, `- b
 
 Methods:
 
+- `+ countUnread(insured_id)`
 - `+ markRead(notification_id)`
 - `+ notifyUser(claim_id, subject, body)`
 - `+ notifyRejection(claim_id)`
@@ -419,7 +423,7 @@ Methods:
 - `+ cancelExpired()`
 - `+ getUpcomingTreatments(insured_id)`
 - `+ getClaimsForTreatment()`
-- `+ getFacilitySlots(facility, dates)`
+- `+ getFacilitySlots(facility, date_from, date_to)`
 - `+ bookTreatment(claim_id, report_id, details)`
 
 ## Repository
@@ -445,7 +449,7 @@ Methods:
 
 ### ClaimRepository
 
-Used in: U1, O1, O2, O3, O5.2
+Used in: U1, U2, O1, O2, O3, O5.2
 
 Attributes: `- table: String = "InjuryClaim"`
 
@@ -465,6 +469,7 @@ Methods:
 - `+ insertRejection(claim_id, reason_code, message) {QO3.2}`
 - `+ updateNoTreatment(claim_id) {QO5.4}`
 - `+ findRejectionReasons() {QO1.6}`
+- `+ findHomeClaim(insured_id) {Q2.4}`
 
 ### InsuredPersonRepository
 
@@ -488,9 +493,9 @@ Attributes: `- table: String = "Notification"`
 
 Methods:
 
-- `+ countUnread(insured_id)`
-- `+ findNotifications(insured_id)`
-- `+ markAsRead(notification_id, insured_id)`
+- `+ countUnread(insured_id) {Q2.1, Q3.1}`
+- `+ findNotifications(insured_id) {Q2.2}`
+- `+ markAsRead(notification_id, insured_id) {Q2.3}`
 - `+ markRead(notification_id, insured_id) {Q3.7}`
 - `+ insertNotification(claim_id, subject, body) {QN.1}`
 - `+ insertRejectionNotice(claim_id) {QN.2}`
@@ -529,7 +534,7 @@ Methods:
 - `+ cancelExpiredAndNotifyUser() {QU4.3}`
 - `+ findUpcomingTreatments(insured_id) {Q6.1}`
 - `+ findClaimsWithFiledReport() {QO5.1}`
-- `+ findFacilitySlots(facility, dates, officer_id) {QO5.2}`
+- `+ findFacilitySlots(facility, date_from, date_to, officer_id) {QO5.2}`
 - `+ insertTreatment(treatment) {QO5.3}`
 
 ## DB connector

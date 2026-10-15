@@ -43,8 +43,8 @@ Actors and use cases (14, some split into sub-cases):
 8. `database/schema.sql`, `database/seed.sql`, `database/queries.sql`, `database/data-dictionary.md`.
 9. `diagrams/`: use case, business process, ER, class, state, sequence and site map diagrams as PNG.
 
-`schema.sql` and `seed.sql` load cleanly into PostgreSQL 16, and all 56 statements in `queries.sql` pass `EXPLAIN`
-against that schema. If `docs/spec/` is missing, stop and ask me for it.
+`schema.sql` and `seed.sql` load cleanly into PostgreSQL 16, and all 57 statements in `queries.sql` pass `EXPLAIN`
+against that schema. `docs/spec/README.md` ends with what changed since the previous pack. If `docs/spec/` is missing, stop and ask me for it.
 
 **Live sources (links).** They need our team's Google, Figma or Canva sign-in, so you may not be able to open
 them. Use them only through a connected MCP server (Google Drive, Figma) or ask me for an export. `docs/spec/` is
@@ -62,7 +62,8 @@ enough for this session.
 
 In Figma, every frame is named `<screen code> · <screen name>` (for example `U1-2 · Fill in Injury Forms Page`,
 `O4-1 · Scheduling page`): 23 frames on the user app page and 29 on the console page, one per screen in
-`06-screens.md`. A label above each frame names the use case step and the SQL it shows. The September draft pages in the same file (phone M1 to M9, console D1 to D8) are
+`06-screens.md`, plus the infrastructure frames `L-1 · Login Page`, `P-1 · Profile Page` and
+`L-2 · Console Login Page`. A label above each frame names the use case step and the SQL it shows. The September draft pages in the same file (phone M1 to M9, console D1 to D8) are
 superseded; do not build from them.
 
 ## 3. Rules that keep the code traceable to the report
@@ -94,27 +95,23 @@ superseded; do not build from them.
 
 ## 4. Stack
 
-The report names only PostgreSQL (section 2.20 is still a placeholder). The team chose this stack on 2026-10-14
-(`docs/DECISIONS.md`, D-001). It replaces the earlier Node.js, Express and React default:
+Settled with the team on 2026-10-14 (decision D-001 in `docs/DECISIONS.md`):
 
 - PostgreSQL 16 in Docker Compose, schema and seed from `docs/spec/database/`.
-- Back end: a Dart server (`server/`, `shelf`). Controllers, Models and Repositories as classes; `DBConnector`
-  wraps a `postgres` connection pool and owns transactions.
-- Front end: Flutter with Material 3, for web and mobile. Two entry points: `lib/main.dart` for the user (phone
-  layout) and `lib/main_console.dart` for officers and consultants (desktop layout). Page widgets named after the
-  report's Page classes. The pages call the server over HTTP.
-- Tests: `dart test` for repositories, models and controllers (against a test database loaded from `schema.sql` and
-  `seed.sql`), `flutter test` widget tests and `integration_test` for the screen flows.
-- A small scheduled job for U4.3 (`AutoCancelJob`, runs QU4.3), in the Dart server.
-- One repository, a `Makefile` with the run, lint and test commands, a README with run instructions, and a
-  `.env.example`.
+- Server in Dart (`shelf`, `postgres` package): Controllers, Models, Repositories and `DBConnector` with the
+  report's class and method names. A Flutter web app cannot open a database connection, so the Page classes call the
+  server over HTTP (JSON).
+- Flutter (Material 3) for the user app and the console, on web and mobile. Page widgets are named after the
+  report's Page classes.
+- Tests: `dart test` (server, against a seeded test database) and `flutter test`.
+- A scheduled job for U4.3 (`AutoCancelJob`, runs QU4.3).
+- The September draft code lives in `lib/legacy/` until the officer and consultant slices replace it.
 
 ## 5. Questions to ask me first (one message)
 
-1. Stack: answered, see section 4.
-2. Login: the report has no login use case and nowhere to store passwords (see `07-open-questions.md`, item 1).
-   OK to add a `UserAccount` table (role, login name, password hash, link to the person) and treat login as
-   infrastructure?
+1. Stack: settled (section 4); skip this question.
+2. Login: settled. Login is infrastructure, kept in a `UserAccount` table outside the 19 report tables
+   (`07-open-questions.md`, item 1; report 2.20 and 2.21; Figma frames L-1, P-1 and L-2); skip this question.
 3. Uploaded files: OK to store them in a local folder behind a storage interface for now?
 
 Then continue without waiting for anything else; note further assumptions in `docs/DECISIONS.md`.
@@ -126,7 +123,7 @@ Do these in order, commit after each step, and stop after step 5 with a short su
 1. **Scaffold** the repository with the agreed stack, Docker Compose for PostgreSQL 16, the migration from
    `schema.sql`, the seed from `seed.sql`, lint and test scripts, README and `.env.example`.
 2. **Data layer:** `DBConnector` (pool, `performQuery`, transactions, `:name` parameter conversion) and every
-   Repository class from `04-classes.md` with **all 56 queries** as methods. Add a test per query that runs it
+   Repository class from `04-classes.md` with **all 57 queries** as methods. Add a test per query that runs it
    against the seeded database inside a rolled-back transaction, with parameters taken from the seed rows.
 3. **Login** as agreed in question 2, with seed accounts for one user, one officer and one consultant from the
    seed people.
@@ -136,7 +133,7 @@ Do these in order, commit after each step, and stop after step 5 with a short su
    against the `master_table` stub (national ID 1909900111222 is the `INACTIVE` test person), and Q1.1 to Q1.10.
    Tests for the Normal Case and Alternate Case 1 [Validation Failed].
 5. **Vertical slice U2 View Notify Message**: home page with the unread dot, the notification pop-up, opening a
-   message marks it read (Q2.1 to Q2.3), with tests.
+   message marks it read (Q2.1 to Q2.3), and the claim card on the home page (Q2.4), with tests.
 
 Then report back: what runs, how to run it, what each test covers, decisions you logged, and anything in the
 report that looked inconsistent while you built (with the report section). Do not start the officer or consultant

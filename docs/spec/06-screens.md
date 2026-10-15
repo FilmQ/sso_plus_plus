@@ -2,7 +2,7 @@
 
 - User app (phone, 390 x 844 frames): Figma page `03 · Use-case screens · User app`, https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=125-2
 - Evaluation Officer and Consultant console (desktop, 1440 x 900 frames): Figma page `04 · Use-case screens · Officer & Consultant console`, https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=125-3
-- Each Figma frame is named `<screen code> · <screen name>` (for example `U1-2 · Fill in Injury Forms Page`), 23 on the user app page and 29 on the console page, and has a label above it naming the use case step and the SQL it shows.
+- Each Figma frame is named `<screen code> · <screen name>` (for example `U1-2 · Fill in Injury Forms Page`), 23 on the user app page and 29 on the console page, and has a label above it naming the use case step and the SQL it shows. Both pages also hold infrastructure frames that are not use case screens: `L-1 · Login Page` and `P-1 · Profile Page` on the user app page, `L-2 · Console Login Page` on the console page (see the last table).
 - Older September draft pages (0:1 phone M1 to M9, 6:2 console D1 to D8) are superseded; use pages 125:2 and 125:3.
 - Site map: `diagrams/sitemap-user.png`, `diagrams/sitemap-officer.png`, `diagrams/sitemap-consultant.png`. Login is the root; solid boxes are pages, dashed boxes are pop-ups, confirmation cards and result messages.
 - Sample data used on the screens: claim SST-2026-000143, นาย สมชาย ประเสริฐ, officer กัญญา วงศ์ศิริ, consultant นพ. ธนา ศรีสุข.
@@ -61,6 +61,16 @@
 | C2.2-2 | สร้างรายงานการให้คำปรึกษา (Sign the Signature): Signed | ที่ปรึกษา | 2-108 |
 | C2.3-1 | สร้างรายงานการให้คำปรึกษา (File the Report): File the report [Validation failed] | ที่ปรึกษา | 2-112 |
 | C2.3-2 | สร้างรายงานการให้คำปรึกษา (File the Report): Report filed [Validation passed] | ที่ปรึกษา | 2-113 |
+
+## Infrastructure screens (not use cases)
+
+Login and sign-out are platform infrastructure (report 2.20 and 2.21): no use case, no report query, not counted in the 52 screens and no figure in 2.13. Accounts live outside the 19 report tables (`UserAccount`, decision D-003).
+
+| Code | Screen | User | Figma |
+|---|---|---|---|
+| L-1 | Login Page: national ID and password, "New here? Register" opens U1-1 | ผู้ใช้งาน | page 125:2, frame `L-1 · Login Page` (node 146:8) |
+| P-1 | Profile Page: the Profile tab of the navigation bar; name, national ID, phone, address and Sign out | ผู้ใช้งาน | page 125:2, frame `P-1 · Profile Page` (node 146:50) |
+| L-2 | Console Login Page: staff e-mail and password; the role decides which console opens. Sign out is the icon beside the user in the navigation rail | เจ้าหน้าที่ประเมิน, ที่ปรึกษา | page 125:3, frame `L-2 · Console Login Page` (node 146:125) |
 
 ## Output design (SA report section 2.23)
 

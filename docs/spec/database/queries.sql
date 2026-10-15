@@ -3,7 +3,9 @@
 -- One block per Query ID; a block can hold several statements that run in one transaction.
 
 -- Q1.1  [U1] ยื่นคำร้องกรณีประสบอันตราย (Submit Injury Application)
-SELECT national_id, title_name, first_name, last_name
+SELECT national_id, title_name, first_name, last_name,
+  employer_account_no, employer_name, registration_date,
+  contribution_start, contribution_end, contribution_months
 FROM master_table
 WHERE national_id = :national_id
   AND coverage_status = 'ACTIVE';
@@ -56,7 +58,7 @@ UPDATE InjuryClaim
 SET claim_no = 'SST-' || TO_CHAR(submitted_at, 'YYYY') || '-'
             || LPAD(claim_id::text, 6, '0')
 WHERE claim_id = :claim_id
-RETURNING claim_no;
+RETURNING claim_no, submitted_at;
 
 -- Q1.8  [U1] ยื่นคำร้องกรณีประสบอันตราย (Submit Injury Application)
 INSERT INTO ClaimDocument
@@ -100,6 +102,44 @@ WHERE notification_id = :notification_id
   AND insured_id = :insured_id
   AND read_at IS NULL;
 
+-- Q2.4  [U2] ดูข้อความแจ้งเตือน (View Notify Message)
+SELECT ic.claim_id, ic.claim_no, ip.first_name,
+  CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
+  ic.claim_status,
+  TO_CHAR(ic.submitted_at, 'FMDD FMMonth YYYY" : "HH24:MI')
+    AS submitted_time,
+  (SELECT TO_CHAR(MAX(ec.checked_at),
+            'FMDD FMMonth YYYY" : "HH24:MI')
+   FROM EligibilityCheck ec
+   WHERE ec.claim_id = ic.claim_id
+     AND ec.officer_id IS NOT NULL) AS officer_checked_time,
+  na.appointment_status, na.appointment_time,
+  na.consultant_name, na.office_location,
+  (SELECT t.treatment_status
+   FROM Treatment t
+   WHERE t.claim_id = ic.claim_id
+   ORDER BY t.created_at DESC
+   LIMIT 1) AS treatment_status
+FROM InjuryClaim ic
+JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+LEFT JOIN LATERAL (
+  SELECT a.appointment_status,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appointment_time,
+    CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+      AS consultant_name,
+    c.office_location
+  FROM Appointment a
+  JOIN Consultant c ON c.consultant_id = a.consultant_id
+  WHERE a.claim_id = ic.claim_id
+    AND a.appointment_status IN ('Pending', 'Confirmed')
+  ORDER BY a.created_at DESC
+  LIMIT 1
+) na ON TRUE
+WHERE ic.insured_id = :insured_id
+ORDER BY ic.submitted_at DESC
+LIMIT 1;
+
 -- Q3.1  [U3.1] ยืนยันนัดหมาย (Confirm Appointment)
 SELECT COUNT(*) AS unread
 FROM Notification
@@ -130,14 +170,17 @@ ORDER BY a.created_at DESC
 LIMIT 1;
 
 -- Q3.3  [U3.1] ยืนยันนัดหมาย (Confirm Appointment)
-UPDATE Appointment
-SET appointment_status = 'Confirmed'
-WHERE appointment_id = :appointment_id
-  AND appointment_status = 'Pending';
- 
+WITH confirmed AS (
+  UPDATE Appointment
+  SET appointment_status = 'Confirmed'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status = 'Pending'
+  RETURNING appointment_id
+)
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Confirmed', NOW());
+SELECT appointment_id, 'application', 'Confirmed', NOW()
+FROM confirmed;
 
 -- Q3.4  [U3.2] ยืนยันนัดหมาย (Request Another Date)
 SELECT TO_CHAR(s.slot_at, 'HH24:MI') AS slot_time
@@ -154,40 +197,46 @@ WHERE s.slot_at > NOW()
 ORDER BY s.slot_at;
 
 -- Q3.5  [U3.2] ยืนยันนัดหมาย (Request Another Date)
-INSERT INTO Appointment
-  (claim_id, officer_id, consultant_id, supersedes_appt_id,
-   appointment_type, schedule_date, schedule_time, location,
-   appointment_status, created_at)
-SELECT claim_id, officer_id, consultant_id, appointment_id,
-  appointment_type, :new_date, :new_time, location,
-  'Confirmed', NOW()
-FROM Appointment
-WHERE appointment_id = :appointment_id
-  AND appointment_status IN ('Pending', 'Confirmed')
-RETURNING appointment_id;
- 
-UPDATE Appointment
-SET appointment_status = 'Rescheduled'
-WHERE appointment_id = :appointment_id;
- 
-INSERT INTO AppointmentConfirmation
-  (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Requested another date',
-  NOW());
+WITH old AS (
+  UPDATE Appointment
+  SET appointment_status = 'Rescheduled'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status IN ('Pending', 'Confirmed')
+  RETURNING appointment_id, claim_id, officer_id, consultant_id,
+    appointment_type, location
+), new_appt AS (
+  INSERT INTO Appointment
+    (claim_id, officer_id, consultant_id, supersedes_appt_id,
+     appointment_type, schedule_date, schedule_time, location,
+     appointment_status, created_at)
+  SELECT claim_id, officer_id, consultant_id, appointment_id,
+    appointment_type, :new_date, :new_time, location,
+    'Confirmed', NOW()
+  FROM old
+  RETURNING appointment_id
+), confirmation AS (
+  INSERT INTO AppointmentConfirmation
+    (appointment_id, channel, outcome, recorded_at)
+  SELECT appointment_id, 'application', 'Requested another date',
+    NOW()
+  FROM old
+)
+SELECT appointment_id FROM new_appt;
 
 -- Q3.6  [U3.3] ยืนยันนัดหมาย (I cannot attend)
-UPDATE Appointment
-SET appointment_status = 'Cancelled'
-WHERE appointment_id = :appointment_id
-  AND appointment_status IN ('Pending', 'Confirmed');
- 
+WITH cancelled AS (
+  UPDATE Appointment
+  SET appointment_status = 'Cancelled'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status IN ('Pending', 'Confirmed')
+  RETURNING appointment_id
+)
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Cannot attend', NOW());
+SELECT appointment_id, 'application', 'Cannot attend', NOW()
+FROM cancelled;
 
--- Q3.7  [U3.1, U3.2, U3.3] ยืนยันนัดหมาย (Confirm Appointment)
-ยืนยันนัดหมาย (Request Another Date)
-ยืนยันนัดหมาย (I cannot attend)
+-- Q3.7  [U3.1, U3.2, U3.3] ยืนยันนัดหมาย (Confirm Appointment) / ยืนยันนัดหมาย (Request Another Date) / ยืนยันนัดหมาย (I cannot attend)
 UPDATE Notification
 SET read_at = NOW()
 WHERE notification_id = :notification_id
@@ -338,75 +387,101 @@ FROM RejectionReason
 ORDER BY reason_code;
 
 -- QO2.1  [O2] อนุมัติคำร้อง (Approve Injury Application)
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status IN ('Awaiting verification', 'Needs review',
+      'Register unavailable')
+), decided AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = :result::varchar
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, officer_id, from_status, to_status,
+     changed_at, change_reason)
+  SELECT prev.claim_id, :officer_id, prev.claim_status,
+    :result::varchar, NOW(), :override_reason::varchar
+  FROM prev
+  JOIN decided ON decided.claim_id = prev.claim_id
+)
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT claim_id, coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> result,
-  :override_reason, evidence_ref
-FROM EligibilityCheck
-WHERE claim_id = :claim_id
-  AND officer_id IS NULL
-ORDER BY checked_at DESC
+SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, :result::varchar <> ec.result,
+  :override_reason::varchar, ec.evidence_ref
+FROM EligibilityCheck ec
+JOIN decided ON decided.claim_id = ec.claim_id
+WHERE ec.officer_id IS NULL
+ORDER BY ec.checked_at DESC
 LIMIT 1;
- 
-INSERT INTO ClaimStatusHistory
-  (claim_id, officer_id, from_status, to_status,
-   changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status, :result, NOW(),
-  :override_reason
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
- 
-UPDATE InjuryClaim
-SET claim_status = :result
-WHERE claim_id = :claim_id;
 
 -- QO3.1  [O3] ปฏิเสธคำร้อง (Reject Injury Application)
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status IN ('Awaiting verification', 'Needs review',
+      'Register unavailable')
+), decided AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = :result::varchar
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, officer_id, from_status, to_status,
+     changed_at, change_reason)
+  SELECT prev.claim_id, :officer_id, prev.claim_status,
+    :result::varchar, NOW(), :override_reason::varchar
+  FROM prev
+  JOIN decided ON decided.claim_id = prev.claim_id
+)
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT claim_id, coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> result,
-  :override_reason, evidence_ref
-FROM EligibilityCheck
-WHERE claim_id = :claim_id
-  AND officer_id IS NULL
-ORDER BY checked_at DESC
+SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, :result::varchar <> ec.result,
+  :override_reason::varchar, ec.evidence_ref
+FROM EligibilityCheck ec
+JOIN decided ON decided.claim_id = ec.claim_id
+WHERE ec.officer_id IS NULL
+ORDER BY ec.checked_at DESC
 LIMIT 1;
- 
-INSERT INTO ClaimStatusHistory
-  (claim_id, officer_id, from_status, to_status,
-   changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status, :result, NOW(),
-  :override_reason
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
- 
-UPDATE InjuryClaim
-SET claim_status = :result
-WHERE claim_id = :claim_id;
 
 -- QO3.2  [O3] ปฏิเสธคำร้อง (Reject Injury Application)
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status IN ('Awaiting verification', 'Needs review',
+      'Register unavailable', 'Not covered')
+), rejected AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Rejected'
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, officer_id, from_status, to_status,
+     changed_at, change_reason)
+  SELECT prev.claim_id, :officer_id, prev.claim_status, 'Rejected',
+    NOW(), :reason_code::varchar
+  FROM prev
+  JOIN rejected ON rejected.claim_id = prev.claim_id
+)
 INSERT INTO ClaimRejection
   (claim_id, reason_code, officer_id, officer_message,
    rejection_timestamp, is_superseded)
-VALUES (:claim_id, :reason_code, :officer_id, :officer_message,
-  NOW(), FALSE);
- 
-INSERT INTO ClaimStatusHistory
-  (claim_id, officer_id, from_status, to_status,
-   changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status, 'Rejected', NOW(),
-  :reason_code
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
- 
-UPDATE InjuryClaim
-SET claim_status = 'Rejected'
-WHERE claim_id = :claim_id
-  AND claim_status IN ('Awaiting verification', 'Needs review',
-    'Register unavailable', 'Not covered');
+SELECT claim_id, :reason_code::varchar, :officer_id,
+  :officer_message, NOW(), FALSE
+FROM rejected;
 
 -- QO4.1  [O4] สร้างนัดหมาย (Schedule Appointment)
 SELECT ic.claim_id,
@@ -523,19 +598,26 @@ VALUES (:claim_id, :report_id, :officer_id, :treatment_type,
 RETURNING treatment_id;
 
 -- QO5.4  [O5.2] นัดหมายการรักษา (No Treatment Required)
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status = 'Covered'
+), closed AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'No treatment required'
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+)
 INSERT INTO ClaimStatusHistory
   (claim_id, officer_id, from_status, to_status,
    changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status,
+SELECT prev.claim_id, :officer_id, prev.claim_status,
   'No treatment required', NOW(),
   'Consultation report: no treatment required'
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
- 
-UPDATE InjuryClaim
-SET claim_status = 'No treatment required'
-WHERE claim_id = :claim_id
-  AND claim_status = 'Covered';
+FROM prev
+JOIN closed ON closed.claim_id = prev.claim_id;
 
 -- QO6.1  [O6] ดูรายงานการให้คำปรึกษา (View Consultation Report)
 SELECT cr.report_id,
@@ -692,8 +774,7 @@ WHERE report_id = :report_id
   AND delivered_at IS NULL
 RETURNING report_id;
 
--- QN.1  [O2, O5.1] อนุมัติคำร้อง (Approve Injury Application)
-นัดหมายการรักษา (Book Treatment)
+-- QN.1  [O2, O5.1] อนุมัติคำร้อง (Approve Injury Application) / นัดหมายการรักษา (Book Treatment)
 INSERT INTO Notification
   (claim_id, insured_id, subject, body, sent_at)
 SELECT claim_id, insured_id, :subject, :body, NOW()

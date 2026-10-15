@@ -43,8 +43,8 @@ Participants: User (actor), RegisterPage (ui), InjuryFormPage (ui), InsuredFormC
 34. ClaimRepository --> ClaimModel: claim_id
 35. ClaimModel -> ClaimRepository: assignClaimNo(claim_id) {Q1.7}
 36. ClaimRepository -> DB connector: performs query {Q1.7}
-37. DB connector --> ClaimRepository: claim_no
-38. ClaimRepository --> ClaimModel: claim_no
+37. DB connector --> ClaimRepository: claim_no, submitted_at
+38. ClaimRepository --> ClaimModel: claim_no, submitted_at
 39. ClaimModel -> ClaimRepository: insertDocument(claim_id, file) {Q1.8}
 40. ClaimRepository -> DB connector: performs query {Q1.8}
 41. DB connector --> ClaimRepository: rows affected
@@ -57,68 +57,82 @@ Participants: User (actor), RegisterPage (ui), InjuryFormPage (ui), InsuredFormC
 48. ClaimRepository -> DB connector: performs query {Q1.10}
 49. DB connector --> ClaimRepository: rows affected
 50. ClaimRepository --> ClaimModel: ok
-51. ClaimModel --> InsuredFormController: claim_no
-52. InsuredFormController --> InjuryFormPage: show submission complete (claim_no)
+51. ClaimModel --> InsuredFormController: claim_no, submitted_at
+52. InsuredFormController --> InjuryFormPage: show submission complete (claim_no, submitted_at)
 
 ## U2: View Notify Message
 
-Participants: User (actor), HomePage (ui), PopUpController (controller), NotificationController (controller), NotificationRepository (repository), DB connector (db)
+Participants: User (actor), HomePage (ui), PopUpController (controller), NotificationController (controller), NotificationRepository (repository), ClaimRepository (repository), DB connector (db)
 
 1. User -> HomePage: enters the homepage
 2. HomePage -> NotificationController: checkUnreadNotifications(insured_id)
-3. NotificationController -> NotificationRepository: countUnread(insured_id)
+3. NotificationController -> NotificationRepository: countUnread(insured_id) {Q2.1}
 4. NotificationRepository -> DB connector: performs query {Q2.1}
 5. DB connector --> NotificationRepository: unread count
 6. NotificationRepository --> NotificationController: unread count
 - alt [unread = 0]
   7. NotificationController --> HomePage: shows bell icon without red dot
 8. [unread > 0] NotificationController --> HomePage: shows bell icon with red dot
-9. User -> HomePage: clicks the bell icon
-10. HomePage -> NotificationController: getNotifications(insured_id)
-11. NotificationController -> NotificationRepository: findNotifications(insured_id)
-12. NotificationRepository -> DB connector: performs query {Q2.2}
-13. DB connector --> NotificationRepository: notification rows
-14. NotificationRepository --> NotificationController: notifications (list, with is_read flag)
-15. NotificationController --> PopUpController: show popup window with list
-16. PopUpController --> HomePage: show popup window with list
-17. User -> HomePage: select a specific notification
-18. HomePage -> NotificationController: markAsRead(notification_id)
-19. NotificationController -> NotificationRepository: markAsRead(notification_id, insured_id)
-20. NotificationRepository -> DB connector: performs query {Q2.3}
-21. DB connector --> NotificationRepository: ack
-22. NotificationRepository --> NotificationController: ack
-23. NotificationController --> HomePage: show notification detail
+9. HomePage -> NotificationController: getHomeClaim(insured_id)
+10. NotificationController -> ClaimRepository: findHomeClaim(insured_id) {Q2.4}
+11. ClaimRepository -> DB connector: performs query {Q2.4}
+12. DB connector --> ClaimRepository: claim card row
+13. ClaimRepository --> NotificationController: latest claim, next appointment
+14. NotificationController --> HomePage: show claim card
+15. User -> HomePage: clicks the bell icon
+16. HomePage -> NotificationController: getNotifications(insured_id)
+17. NotificationController -> NotificationRepository: findNotifications(insured_id) {Q2.2}
+18. NotificationRepository -> DB connector: performs query {Q2.2}
+19. DB connector --> NotificationRepository: notification rows
+20. NotificationRepository --> NotificationController: notifications (list, with is_read flag)
+21. NotificationController --> PopUpController: show popup window with list
+22. PopUpController --> HomePage: show popup window with list
+23. User -> HomePage: select a specific notification
+24. HomePage -> NotificationController: markAsRead(notification_id)
+25. NotificationController -> NotificationRepository: markAsRead(notification_id, insured_id) {Q2.3}
+26. NotificationRepository -> DB connector: performs query {Q2.3}
+27. DB connector --> NotificationRepository: ack
+28. NotificationRepository --> NotificationController: ack
+29. NotificationController --> HomePage: show notification detail
 
 ## U3.1: Appointment Confirmation (Confirm Appointment)
 
 Participants: User (actor), NotificationPage (ui), AppointmentPage (ui), AppointmentController (controller), AppointmentModel (model), NotificationModel (model), AppointmentRepository (repository), NotificationRepository (repository), DB connector (db)
 
-- ref U2: View Notify Message
-1. User -> NotificationPage: click notification (claim_id)
-2. NotificationPage -> AppointmentPage: open(claim_id)
-3. AppointmentPage -> AppointmentController: getAppointment(claim_id, insured_id)
-4. AppointmentController -> AppointmentModel: getAppointmentDetail(claim_id, insured_id)
-5. AppointmentModel -> AppointmentRepository: findLatestAppointment(claim_id, insured_id) {Q3.2}
-6. AppointmentRepository -> DB connector: performs query {Q3.2}
-7. DB connector --> AppointmentRepository: result rows
-8. AppointmentRepository --> AppointmentModel: appointment
-9. AppointmentModel --> AppointmentController: appointment
-10. AppointmentController --> AppointmentPage: show appointment + 3 options
-11. User -> AppointmentPage: click "Confirm Appointment"
-12. AppointmentPage -> AppointmentController: confirmAppointment(appointment_id)
-13. AppointmentController -> AppointmentModel: confirm(appointment_id)
-14. AppointmentModel -> AppointmentRepository: confirmAppointment(appointment_id) {Q3.3}
-15. AppointmentRepository -> DB connector: performs query {Q3.3}
-16. DB connector --> AppointmentRepository: ok (committed)
-17. AppointmentRepository --> AppointmentModel: ok
-18. AppointmentModel --> AppointmentController: ok
-19. AppointmentController -> NotificationModel: markRead(notification_id)
-20. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
-21. NotificationRepository -> DB connector: performs query {Q3.7}
-22. DB connector --> NotificationRepository: rows affected
-23. NotificationRepository --> NotificationModel: ok
-24. NotificationModel --> AppointmentController: ok
-25. AppointmentController --> AppointmentPage: show reminder pop-up
+1. User -> NotificationPage: click "Notifications"
+2. NotificationPage -> AppointmentController: checkUnreadNotifications(insured_id)
+3. AppointmentController -> NotificationModel: countUnread(insured_id)
+4. NotificationModel -> NotificationRepository: countUnread(insured_id) {Q3.1}
+5. NotificationRepository -> DB connector: performs query {Q3.1}
+6. DB connector --> NotificationRepository: result rows
+7. NotificationRepository --> NotificationModel: unread count
+8. NotificationModel --> AppointmentController: unread count
+9. AppointmentController --> NotificationPage: show red dot on the new message
+10. User -> NotificationPage: click notification (claim_id)
+11. NotificationPage -> AppointmentPage: open(claim_id)
+12. AppointmentPage -> AppointmentController: getAppointment(claim_id, insured_id)
+13. AppointmentController -> AppointmentModel: getAppointmentDetail(claim_id, insured_id)
+14. AppointmentModel -> AppointmentRepository: findLatestAppointment(claim_id, insured_id) {Q3.2}
+15. AppointmentRepository -> DB connector: performs query {Q3.2}
+16. DB connector --> AppointmentRepository: result rows
+17. AppointmentRepository --> AppointmentModel: appointment
+18. AppointmentModel --> AppointmentController: appointment
+19. AppointmentController --> AppointmentPage: show appointment + 3 options
+20. User -> AppointmentPage: click "Confirm Appointment"
+21. AppointmentPage -> AppointmentController: confirmAppointment(appointment_id)
+22. AppointmentController -> AppointmentModel: confirm(appointment_id)
+23. AppointmentModel -> AppointmentRepository: confirmAppointment(appointment_id) {Q3.3}
+24. AppointmentRepository -> DB connector: performs query {Q3.3}
+25. DB connector --> AppointmentRepository: ok (committed)
+26. AppointmentRepository --> AppointmentModel: ok
+27. AppointmentModel --> AppointmentController: ok
+28. AppointmentController -> NotificationModel: markRead(notification_id)
+29. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
+30. NotificationRepository -> DB connector: performs query {Q3.7}
+31. DB connector --> NotificationRepository: rows affected
+32. NotificationRepository --> NotificationModel: ok
+33. NotificationModel --> AppointmentController: ok
+34. AppointmentController --> AppointmentPage: show reminder pop-up
 
 ## U3.2: Appointment Confirmation (Request another date)
 
@@ -404,9 +418,9 @@ Participants: Evaluation Officer (actor), ScheduleTreatmentPage (ui), TreatmentC
 8. TreatmentModel --> TreatmentController: claims, report
 9. TreatmentController --> ScheduleTreatmentPage: show header + report card
 10. Evaluation Officer -> ScheduleTreatmentPage: enter type, duration, facility
-11. ScheduleTreatmentPage -> TreatmentController: getAvailableTimes(facility, dates)
-12. TreatmentController -> TreatmentModel: getFacilitySlots(facility, dates)
-13. TreatmentModel -> TreatmentRepository: findFacilitySlots(facility, dates, officer_id) {QO5.2}
+11. ScheduleTreatmentPage -> TreatmentController: getAvailableTimes(facility, date_from, date_to)
+12. TreatmentController -> TreatmentModel: getFacilitySlots(facility, date_from, date_to)
+13. TreatmentModel -> TreatmentRepository: findFacilitySlots(facility, date_from, date_to, officer_id) {QO5.2}
 14. TreatmentRepository -> DB connector: performs query {QO5.2}
 15. DB connector --> TreatmentRepository: result rows
 16. TreatmentRepository --> TreatmentModel: slots

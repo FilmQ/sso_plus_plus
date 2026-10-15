@@ -130,6 +130,22 @@ INSERT INTO AppointmentConfirmation (confirmation_id, appointment_id, call_attem
   (603, 502, NULL, 'application', 'Requested another date', '2026-10-09 12:10', NULL),
   (604, 505, NULL, 'application', 'Cannot attend', '2026-10-09 18:40', NULL);
 
+-- Extra rows for development and tests (not among the report's sample rows in 2.17):
+-- two ACTIVE people in the SSO register stub who are not yet registered, so U1 can succeed with the seed
+-- (the second shares employer account 1000234567 with Employer 12, which exercises the ON CONFLICT path of Q1.4),
+-- and the officer decision on claim 149, which the samples show as Covered with appointments but without the
+-- officer's EligibilityCheck and ClaimStatusHistory rows.
+INSERT INTO master_table (national_id, title_name, first_name, last_name, coverage_status, employer_account_no,  employer_name, registration_date, contribution_start, contribution_end, contribution_months) VALUES
+  ('1555500011122', 'นาย', 'ธีรพงษ์', 'ทดลองดี', 'ACTIVE', '1000678901', 'Rangsit Auto Parts Co., Ltd.', '2022-01-10', '2022-02-01', NULL, 57),
+  ('2555500022233', 'นางสาว', 'พิมพ์ชนก', 'ทดลองใจ', 'ACTIVE', '1000234567', 'Thai Pack Industry Co., Ltd.', '2023-04-03', '2023-05-01', NULL, 42);
+
+INSERT INTO EligibilityCheck (check_id, claim_id, coverage_id, officer_id, checked_at, result, is_override, override_reason, evidence_ref) OVERRIDING SYSTEM VALUE VALUES
+  (806, 149, 203, 2, '2026-10-07 13:10', 'Covered', FALSE, NULL, 'REG-20260930-0149');
+
+INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, to_status, changed_at, change_reason) OVERRIDING SYSTEM VALUE VALUES
+  (1006, 149, NULL, NULL, 'Awaiting verification', '2026-09-30 11:47', 'Submitted by the user'),
+  (1007, 149, 2, 'Awaiting verification', 'Covered', '2026-10-07 13:10', NULL);
+
 SELECT setval(pg_get_serial_sequence('insuredperson', 'insured_id'), (SELECT MAX(insured_id) FROM InsuredPerson));
 SELECT setval(pg_get_serial_sequence('employer', 'employer_id'), (SELECT MAX(employer_id) FROM Employer));
 SELECT setval(pg_get_serial_sequence('section33coverage', 'coverage_id'), (SELECT MAX(coverage_id) FROM Section33Coverage));

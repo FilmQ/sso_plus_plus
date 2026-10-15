@@ -49,6 +49,12 @@ Source: SA Documents, section 2.11 (use case list) and 2.13 (use case descriptio
 - เบอร์โทรศัพท์
 - คำนำหน้าชื่อ (เลือกได้เฉพาะคำนำหน้าที่ระบบกำหนด)
 - เพศ (เลือกได้เฉพาะ ชาย หญิง และอื่น ๆ)
+ข้อมูลการประสบอันตราย
+- วันและเวลาที่ประสบอันตราย
+- สถานที่ประสบอันตราย
+- สาเหตุการประสบอันตราย
+- อวัยวะที่บาดเจ็บ
+- ประเภทการบาดเจ็บ (เลือกได้เฉพาะประเภทที่ระบบกำหนด เช่น Fracture, Burn, Sprain)
 อัปโหลดไฟล์
 - รูปภาพบัตรประจำตัวประชาชน
 - ไฟล์เวชระเบียน (Medical Record)
@@ -60,10 +66,12 @@ Source: SA Documents, section 2.11 (use case list) and 2.13 (use case descriptio
 
 4. ระบบตรวจสอบข้อมูลดังนี้
 ตรวจสอบสิทธิ์ตามมาตรา 33
-- ตรวจสอบเลขประจำตัวประชาชนกับตารางข้อมูลหลักของสำนักงานประกันสังคม (master_table) ว่ามีสถานะความคุ้มครอง ACTIVE ตาม Q1.1
+- ตรวจสอบเลขประจำตัวประชาชนกับตารางข้อมูลหลักของสำนักงานประกันสังคม (master_table) ว่ามีสถานะความคุ้มครอง ACTIVE ตาม Q1.1 พร้อมอ่านข้อมูลนายจ้างและการส่งเงินสมทบจากทะเบียนเพื่อใช้ใน Q1.4 และ Q1.5
 ```sql
 -- Q1.1
-SELECT national_id, title_name, first_name, last_name
+SELECT national_id, title_name, first_name, last_name,
+  employer_account_no, employer_name, registration_date,
+  contribution_start, contribution_end, contribution_months
 FROM master_table
 WHERE national_id = :national_id
   AND coverage_status = 'ACTIVE';
@@ -74,7 +82,11 @@ WHERE national_id = :national_id
 - เลขประจำตัวประชาชน ห้ามค่าว่าง เป็นตัวเลขเท่านั้น จำนวน 13 หลัก (ตรวจสอบผ่าน RE: ^\d{13}$)
 - รหัสผ่าน ห้ามค่าว่าง ความยาวไม่น้อยกว่า 8 ตัวอักษร ใช้ได้เฉพาะตัวอักษรภาษาอังกฤษพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข (ตรวจสอบผ่าน RE: ^[A-Za-z0-9]{8,}$)
 - ยืนยันรหัสผ่าน ต้องตรงกับรหัสผ่าน (ตรวจสอบผ่านฟังก์ชัน passwordMatches())
-- เบอร์โทรศัพท์ ห้ามค่าว่าง และต้องอยู่ในรูปแบบเบอร์โทรศัพท์ (ตรวจสอบผ่าน RE: ^\+?\d[\d ().-]{6,18}\d$ หรือ ^\+?\d{7,15}$)
+- เบอร์โทรศัพท์ ห้ามค่าว่าง เป็นตัวเลข 9 ถึง 10 หลักและขึ้นต้นด้วย 0 หลังตัดช่องว่าง จุด ขีด และวงเล็บออก (ตรวจสอบผ่าน RE: ^0\d{8,9}$)
+- คำนำหน้าชื่อ ต้องเป็น นาย, นาง หรือ นางสาว
+- วันเกิด ห้ามค่าว่าง และผู้ใช้งานต้องมีอายุไม่ต่ำกว่า 15 ปี
+- ข้อมูลการประสบอันตราย ห้ามค่าว่างทุกช่อง และวันและเวลาที่ประสบอันตรายต้องไม่หลังเวลาที่ยื่นคำร้อง
+- ไฟล์ที่อัปโหลด ต้องเป็นไฟล์ .jpg, .png หรือ .pdf ขนาด 1 ไบต์ถึง 10 MB
 ตรวจสอบค่าซ้ำ (Database)
 - เลขประจำตัวประชาชนห้ามซ้ำ โดยนับจำนวนเลขประจำตัวประชาชนในตาราง InsuredPerson ตาม Q1.2 หากมีค่ามากกว่า 0 แสดงว่ามีเลขประจำตัวประชาชนนี้ในระบบแล้ว
 ```sql
@@ -143,14 +155,14 @@ RETURNING claim_id;
 
 **System:**
 
-5.5 กำหนดเลขที่คำร้อง ตาม Q1.7
+5.5 กำหนดเลขที่คำร้อง ตาม Q1.7 และส่งเลขที่คำร้องกับเวลาที่ยื่นกลับไปแสดงในหน้า Injury forms submitted
 ```sql
 -- Q1.7
 UPDATE InjuryClaim
 SET claim_no = 'SST-' || TO_CHAR(submitted_at, 'YYYY') || '-'
             || LPAD(claim_id::text, 6, '0')
 WHERE claim_id = :claim_id
-RETURNING claim_no;
+RETURNING claim_no, submitted_at;
 ```
 
 5.6 บันทึกไฟล์ที่อัปโหลด ตาม Q1.8
@@ -165,7 +177,7 @@ VALUES (:claim_id, :doc_type_id, :file_name, :file_uri,
 
 **System:**
 
-5.7 บันทึกผลการตรวจสอบสิทธิ์อัตโนมัติ ตาม Q1.9
+5.7 บันทึกผลการตรวจสอบสิทธิ์อัตโนมัติ ตาม Q1.9 โดย evidence_ref คือเลขอ้างอิงผลการตรวจจากทะเบียน ในรูปแบบ REG-[ปปปปดดวว]-[claim_id 4 หลัก] และเป็นค่าว่างเมื่อทะเบียนไม่พร้อมใช้งาน
 ```sql
 -- Q1.9
 INSERT INTO EligibilityCheck
@@ -187,7 +199,7 @@ WHERE claim_id = :claim_id;
 
 **System:**
 
-6. ระบบแสดงข้อความยื่นคำร้องสำเร็จ พร้อมเลขที่คำร้อง (claim_no)
+6. ระบบแสดงข้อความยื่นคำร้องสำเร็จ พร้อมเลขที่คำร้อง (claim_no) และเวลาที่ยื่น (submitted_at)
 
 
 ## U2: ดูข้อความแจ้งเตือน (View Notify Message)
@@ -216,16 +228,58 @@ WHERE insured_id = :insured_id
 
 - หากมีข้อความที่ยังไม่ได้อ่าน แสดงจุดสีแดงที่มุมขวาบนของไอคอนกระดิ่ง
 - หากไม่มี ไม่แสดงจุดสีแดง (Alternate Case 1 [unread = 0])
+ระบบแสดงการ์ดคำร้องล่าสุดของผู้ใช้งาน ได้แก่ เลขที่คำร้อง การบาดเจ็บ สถานะคำร้อง ขั้นตอนของคำร้อง (วันและเวลาที่ยื่น วันและเวลาที่เจ้าหน้าที่ประเมินยืนยันสิทธิ์ สถานะนัดหมาย และสถานะการรักษา) และนัดหมายถัดไป (วันและเวลา ที่ปรึกษา และสถานที่) ตาม Q2.4
+```sql
+-- Q2.4
+SELECT ic.claim_id, ic.claim_no, ip.first_name,
+  CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
+  ic.claim_status,
+  TO_CHAR(ic.submitted_at, 'FMDD FMMonth YYYY" : "HH24:MI')
+    AS submitted_time,
+  (SELECT TO_CHAR(MAX(ec.checked_at),
+            'FMDD FMMonth YYYY" : "HH24:MI')
+   FROM EligibilityCheck ec
+   WHERE ec.claim_id = ic.claim_id
+     AND ec.officer_id IS NOT NULL) AS officer_checked_time,
+  na.appointment_status, na.appointment_time,
+  na.consultant_name, na.office_location,
+  (SELECT t.treatment_status
+   FROM Treatment t
+   WHERE t.claim_id = ic.claim_id
+   ORDER BY t.created_at DESC
+   LIMIT 1) AS treatment_status
+FROM InjuryClaim ic
+JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+LEFT JOIN LATERAL (
+  SELECT a.appointment_status,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appointment_time,
+    CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+      AS consultant_name,
+    c.office_location
+  FROM Appointment a
+  JOIN Consultant c ON c.consultant_id = a.consultant_id
+  WHERE a.claim_id = ic.claim_id
+    AND a.appointment_status IN ('Pending', 'Confirmed')
+  ORDER BY a.created_at DESC
+  LIMIT 1
+) na ON TRUE
+WHERE ic.insured_id = :insured_id
+ORDER BY ic.submitted_at DESC
+LIMIT 1;
+```
 
 **Actor:**
 
-3. ผู้ใช้งานคลิกไอคอนกระดิ่งที่มุมขวาบนของหน้า "Dashboard"
+3. ผู้ใช้งานคลิกไอคอนกระดิ่งที่มุมขวาบนของหน้า "Home Page"
 
 **System:**
 
 4. ระบบแสดงหน้าต่าง Pop-up รายการข้อความแจ้งเตือน แต่ละข้อความประกอบด้วยข้อมูลอย่างใดอย่างหนึ่งดังนี้
 - ข้อความแจ้งการปฏิเสธ (Rejection Message) แสดงคำอธิบายหรือเหตุผลที่แบบฟอร์มการประสบอันตรายถูกปฏิเสธ
-- วันและเวลานัดหมาย
+- ข้อความแจ้งนัดหมาย (Appointment scheduled) แสดงวันและเวลานัดหมาย ที่ปรึกษา สถานที่ และกำหนดยืนยัน ตาม QN.3
+- ข้อความแจ้งผลการตรวจสอบสิทธิ์ (Claim confirmed) หรือการนัดหมายการรักษา (Treatment booked) ตาม QN.1
+- ข้อความแจ้งว่าไม่ต้องรักษา (No treatment required) ตาม QN.4 หรือแจ้งยกเลิกการรักษา (Treatment cancelled) ตาม QU4.3
 ระบบดึงข้อมูลข้อความแจ้งเตือน ตาม Q2.2
 ```sql
 -- Q2.2
@@ -329,14 +383,17 @@ LIMIT 1;
 - เปลี่ยนสถานะนัดหมายใน Appointment Schedule จาก "Pending" เป็น "Confirmed" ตาม Q3.3
 ```sql
 -- Q3.3
-UPDATE Appointment
-SET appointment_status = 'Confirmed'
-WHERE appointment_id = :appointment_id
-  AND appointment_status = 'Pending';
-
+WITH confirmed AS (
+  UPDATE Appointment
+  SET appointment_status = 'Confirmed'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status = 'Pending'
+  RETURNING appointment_id
+)
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Confirmed', NOW());
+SELECT appointment_id, 'application', 'Confirmed', NOW()
+FROM confirmed;
 ```
 
 **System:**
@@ -411,26 +468,31 @@ ORDER BY s.slot_at;
 - แสดงกล่องข้อความแจ้ง "เวลานัดหมายถูกเปลี่ยนเป็น [วัน] [เดือน] [ปี] : [เวลา]"
 ```sql
 -- Q3.5
-INSERT INTO Appointment
-  (claim_id, officer_id, consultant_id, supersedes_appt_id,
-   appointment_type, schedule_date, schedule_time, location,
-   appointment_status, created_at)
-SELECT claim_id, officer_id, consultant_id, appointment_id,
-  appointment_type, :new_date, :new_time, location,
-  'Confirmed', NOW()
-FROM Appointment
-WHERE appointment_id = :appointment_id
-  AND appointment_status IN ('Pending', 'Confirmed')
-RETURNING appointment_id;
-
-UPDATE Appointment
-SET appointment_status = 'Rescheduled'
-WHERE appointment_id = :appointment_id;
-
-INSERT INTO AppointmentConfirmation
-  (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Requested another date',
-  NOW());
+WITH old AS (
+  UPDATE Appointment
+  SET appointment_status = 'Rescheduled'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status IN ('Pending', 'Confirmed')
+  RETURNING appointment_id, claim_id, officer_id, consultant_id,
+    appointment_type, location
+), new_appt AS (
+  INSERT INTO Appointment
+    (claim_id, officer_id, consultant_id, supersedes_appt_id,
+     appointment_type, schedule_date, schedule_time, location,
+     appointment_status, created_at)
+  SELECT claim_id, officer_id, consultant_id, appointment_id,
+    appointment_type, :new_date, :new_time, location,
+    'Confirmed', NOW()
+  FROM old
+  RETURNING appointment_id
+), confirmation AS (
+  INSERT INTO AppointmentConfirmation
+    (appointment_id, channel, outcome, recorded_at)
+  SELECT appointment_id, 'application', 'Requested another date',
+    NOW()
+  FROM old
+)
+SELECT appointment_id FROM new_appt;
 ```
 
 **System:**
@@ -490,14 +552,17 @@ WHERE notification_id = :notification_id
 - แสดงกล่องข้อความแจ้ง "เวลานัดหมายถูกยกเลิกแล้ว"
 ```sql
 -- Q3.6
-UPDATE Appointment
-SET appointment_status = 'Cancelled'
-WHERE appointment_id = :appointment_id
-  AND appointment_status IN ('Pending', 'Confirmed');
-
+WITH cancelled AS (
+  UPDATE Appointment
+  SET appointment_status = 'Cancelled'
+  WHERE appointment_id = :appointment_id
+    AND appointment_status IN ('Pending', 'Confirmed')
+  RETURNING appointment_id
+)
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
-VALUES (:appointment_id, 'application', 'Cannot attend', NOW());
+SELECT appointment_id, 'application', 'Cannot attend', NOW()
+FROM cancelled;
 ```
 
 **System:**
@@ -868,29 +933,38 @@ LIMIT 1;
 6.1 คลิก "Confirm" ระบบบันทึกผลการตรวจสอบสิทธิ์และเปลี่ยนสถานะคำร้อง ตาม QO2.1
 ```sql
 -- QO2.1
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status IN ('Awaiting verification', 'Needs review',
+      'Register unavailable')
+), decided AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = :result::varchar
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, officer_id, from_status, to_status,
+     changed_at, change_reason)
+  SELECT prev.claim_id, :officer_id, prev.claim_status,
+    :result::varchar, NOW(), :override_reason::varchar
+  FROM prev
+  JOIN decided ON decided.claim_id = prev.claim_id
+)
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT claim_id, coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> result,
-  :override_reason, evidence_ref
-FROM EligibilityCheck
-WHERE claim_id = :claim_id
-  AND officer_id IS NULL
-ORDER BY checked_at DESC
+SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, :result::varchar <> ec.result,
+  :override_reason::varchar, ec.evidence_ref
+FROM EligibilityCheck ec
+JOIN decided ON decided.claim_id = ec.claim_id
+WHERE ec.officer_id IS NULL
+ORDER BY ec.checked_at DESC
 LIMIT 1;
-
-INSERT INTO ClaimStatusHistory
-  (claim_id, officer_id, from_status, to_status,
-   changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status, :result, NOW(),
-  :override_reason
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
-
-UPDATE InjuryClaim
-SET claim_status = :result
-WHERE claim_id = :claim_id;
 ```
 
 **System:**
@@ -957,29 +1031,38 @@ ORDER BY reason_code;
 - กรณีเลือก "Not Covered" ตาม QO3.1
 ```sql
 -- QO3.1
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status IN ('Awaiting verification', 'Needs review',
+      'Register unavailable')
+), decided AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = :result::varchar
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, officer_id, from_status, to_status,
+     changed_at, change_reason)
+  SELECT prev.claim_id, :officer_id, prev.claim_status,
+    :result::varchar, NOW(), :override_reason::varchar
+  FROM prev
+  JOIN decided ON decided.claim_id = prev.claim_id
+)
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT claim_id, coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> result,
-  :override_reason, evidence_ref
-FROM EligibilityCheck
-WHERE claim_id = :claim_id
-  AND officer_id IS NULL
-ORDER BY checked_at DESC
+SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, :result::varchar <> ec.result,
+  :override_reason::varchar, ec.evidence_ref
+FROM EligibilityCheck ec
+JOIN decided ON decided.claim_id = ec.claim_id
+WHERE ec.officer_id IS NULL
+ORDER BY ec.checked_at DESC
 LIMIT 1;
-
-INSERT INTO ClaimStatusHistory
-  (claim_id, officer_id, from_status, to_status,
-   changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status, :result, NOW(),
-  :override_reason
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
-
-UPDATE InjuryClaim
-SET claim_status = :result
-WHERE claim_id = :claim_id;
 ```
 
 **System:**
@@ -987,25 +1070,33 @@ WHERE claim_id = :claim_id;
 จากนั้นระบบบันทึกการปฏิเสธลงตาราง ClaimRejection และเปลี่ยนสถานะคำร้องเป็น "Rejected" ตาม QO3.2
 ```sql
 -- QO3.2
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status IN ('Awaiting verification', 'Needs review',
+      'Register unavailable', 'Not covered')
+), rejected AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Rejected'
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, officer_id, from_status, to_status,
+     changed_at, change_reason)
+  SELECT prev.claim_id, :officer_id, prev.claim_status, 'Rejected',
+    NOW(), :reason_code::varchar
+  FROM prev
+  JOIN rejected ON rejected.claim_id = prev.claim_id
+)
 INSERT INTO ClaimRejection
   (claim_id, reason_code, officer_id, officer_message,
    rejection_timestamp, is_superseded)
-VALUES (:claim_id, :reason_code, :officer_id, :officer_message,
-  NOW(), FALSE);
-
-INSERT INTO ClaimStatusHistory
-  (claim_id, officer_id, from_status, to_status,
-   changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status, 'Rejected', NOW(),
-  :reason_code
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
-
-UPDATE InjuryClaim
-SET claim_status = 'Rejected'
-WHERE claim_id = :claim_id
-  AND claim_status IN ('Awaiting verification', 'Needs review',
-    'Register unavailable', 'Not covered');
+SELECT claim_id, :reason_code::varchar, :officer_id,
+  :officer_message, NOW(), FALSE
+FROM rejected;
 ```
 
 **System:**
@@ -1349,19 +1440,26 @@ WHERE claim_id = :claim_id;
 6.1 คลิก "Confirm" ระบบเปลี่ยนสถานะคำร้องเป็น "No treatment required" ตาม QO5.4 และแสดงการ์ด "No Treatment Required"
 ```sql
 -- QO5.4
+WITH prev AS (
+  SELECT claim_id, claim_status
+  FROM InjuryClaim
+  WHERE claim_id = :claim_id
+    AND claim_status = 'Covered'
+), closed AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'No treatment required'
+  FROM prev
+  WHERE ic.claim_id = prev.claim_id
+  RETURNING ic.claim_id
+)
 INSERT INTO ClaimStatusHistory
   (claim_id, officer_id, from_status, to_status,
    changed_at, change_reason)
-SELECT claim_id, :officer_id, claim_status,
+SELECT prev.claim_id, :officer_id, prev.claim_status,
   'No treatment required', NOW(),
   'Consultation report: no treatment required'
-FROM InjuryClaim
-WHERE claim_id = :claim_id;
-
-UPDATE InjuryClaim
-SET claim_status = 'No treatment required'
-WHERE claim_id = :claim_id
-  AND claim_status = 'Covered';
+FROM prev
+JOIN closed ON closed.claim_id = prev.claim_id;
 ```
 
 **System:**
@@ -1723,4 +1821,3 @@ WHERE report_id = :report_id
   AND delivered_at IS NULL
 RETURNING report_id;
 ```
-
