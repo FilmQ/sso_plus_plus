@@ -207,14 +207,18 @@ WITH prev AS (
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> ec.result,
+SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
   :override_reason::varchar, ec.evidence_ref
-FROM EligibilityCheck ec
-JOIN decided ON decided.claim_id = ec.claim_id
-WHERE ec.officer_id IS NULL
-ORDER BY ec.checked_at DESC
-LIMIT 1
+FROM decided
+LEFT JOIN LATERAL (
+  SELECT e.coverage_id, e.result, e.evidence_ref
+  FROM EligibilityCheck e
+  WHERE e.claim_id = decided.claim_id
+    AND e.officer_id IS NULL
+  ORDER BY e.checked_at DESC
+  LIMIT 1
+) ec ON TRUE
 ''';
 
   // QO3.1 [O3] ปฏิเสธคำร้อง (Reject Injury Application)
@@ -243,14 +247,18 @@ WITH prev AS (
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> ec.result,
+SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
   :override_reason::varchar, ec.evidence_ref
-FROM EligibilityCheck ec
-JOIN decided ON decided.claim_id = ec.claim_id
-WHERE ec.officer_id IS NULL
-ORDER BY ec.checked_at DESC
-LIMIT 1
+FROM decided
+LEFT JOIN LATERAL (
+  SELECT e.coverage_id, e.result, e.evidence_ref
+  FROM EligibilityCheck e
+  WHERE e.claim_id = decided.claim_id
+    AND e.officer_id IS NULL
+  ORDER BY e.checked_at DESC
+  LIMIT 1
+) ec ON TRUE
 ''';
 
   // QO3.2 [O3] ปฏิเสธคำร้อง (Reject Injury Application)

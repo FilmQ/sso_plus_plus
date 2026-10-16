@@ -62,9 +62,9 @@ void main() {
       }));
 
   test('QO5.2 findFacilitySlots: 8 hours a day; a booked hour is mine', () => inRollback(db, () async {
-        await insertFor155(day(10));
+        await insertFor155(day(40));
         final rows = await repo.findFacilitySlots(
-            facilityName: 'SSO Rehabilitation Center', dateFrom: day(10), dateTo: day(11), officerId: 1);
+            facilityName: 'SSO Rehabilitation Center', dateFrom: day(40), dateTo: day(41), officerId: 1);
         expect(rows, hasLength(16));
         expect(rows.where((r) => r['slot_state'] == 'mine'), hasLength(1));
       }));

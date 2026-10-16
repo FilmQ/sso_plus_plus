@@ -7,6 +7,10 @@ class AppointmentModel extends Model {
 
   final AppointmentRepository appointments;
 
+  /// Data dictionary, Appointment.schedule_time: 09:00 to 15:00 every hour
+  /// except 12:00 (the hours of Q3.4 and QO4.2).
+  static const bookableHours = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'];
+
   /// Q3.2: the newest Pending or Confirmed appointment of the claim, or null.
   Future<Map<String, Object?>?> getAppointmentDetail(int claimId, int insuredId) =>
       appointments.findLatestAppointment(claimId, insuredId);
@@ -19,15 +23,18 @@ class AppointmentModel extends Model {
         for (final row in await appointments.findFreeSlots(consultantId, slotDate)) row['slot_time']! as String,
       ];
 
-  /// Q3.5 (U3.2). Gives the new appointment_id. Refuses a time that is not free
-  /// (D-033): Q3.5 itself does not check it.
-  Future<int> reschedule(int appointmentId, int consultantId, String newDate, String newTime) async {
-    if (!(await getFreeSlots(consultantId, newDate)).contains(newTime)) {
-      throw const StateConflictException('This time is not free any more. Choose another time.');
+  /// Q3.5 (U3.2). Gives the new appointment_id. Q3.5 refuses (409) an
+  /// appointment that is not Pending or Confirmed, an hour in the past, and an
+  /// hour that the consultant already has.
+  /// Q3.5 does not check the bookable hours, so the Model does (422, D-033).
+  Future<int> reschedule(int appointmentId, String newDate, String newTime) {
+    if (!bookableHours.contains(newTime)) {
+      throw const ValidationFailedException({'new_time': 'Choose one of the free times.'});
     }
     return appointments.rescheduleAppointment(appointmentId, newDate, newTime);
   }
 
-  /// Q3.6 (U3.3). Only a Pending or Confirmed appointment.
+  /// Q3.6 (U3.3). Only a Pending or Confirmed appointment. The claim changes
+  /// from Covered to Withdrawn (final).
   Future<void> cancel(int appointmentId) => appointments.cancelAppointment(appointmentId);
 }

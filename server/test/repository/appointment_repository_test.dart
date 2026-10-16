@@ -29,11 +29,12 @@ void main() {
         await expectLater(repo.confirmAppointment(id), throwsA(isA<NoRowChangedException>()));
       }));
 
-  test('Q3.4 findFreeSlots: 8 hours on a free day, 7 when one hour is taken', () => inRollback(db, () async {
-        expect(await repo.findFreeSlots(3, day(10)), hasLength(8));
+  test('Q3.4 findFreeSlots: the 6 bookable hours on a free day, 5 when one hour is taken', () => inRollback(db, () async {
+        expect((await repo.findFreeSlots(3, day(10))).map((r) => r['slot_time']),
+            ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00']);
         await insertTestAppointment(repo, date: day(10), time: '11:00');
         final slots = (await repo.findFreeSlots(3, day(10))).map((r) => r['slot_time']);
-        expect(slots, hasLength(7));
+        expect(slots, hasLength(5));
         expect(slots, isNot(contains('11:00')));
       }));
 
@@ -46,9 +47,11 @@ void main() {
         await expectLater(repo.rescheduleAppointment(504, day(12), '15:00'), throwsA(isA<NoRowChangedException>()));
       }));
 
-  test('Q3.6 cancelAppointment: Confirmed to Cancelled; not twice', () => inRollback(db, () async {
+  test('Q3.6 cancelAppointment: Confirmed to Cancelled, claim Withdrawn; not twice', () => inRollback(db, () async {
         await repo.cancelAppointment(504);
         expect((await appt(504))['appointment_status'], 'Cancelled');
+        final claim = await db.performQuery('SELECT claim_status FROM InjuryClaim WHERE claim_id = 143');
+        expect(claim.rows.single['claim_status'], 'Withdrawn', reason: 'Q3.6 withdraws a Covered claim');
         await expectLater(repo.cancelAppointment(504), throwsA(isA<NoRowChangedException>()));
       }));
 
@@ -59,15 +62,18 @@ void main() {
         expect(rows.single['consultant_name'], 'นพ. วีระ ทองดี');
       }));
 
-  test('QO4.1 findClaimsToSchedule: claim 155 (its appointment is Cancelled)', () async {
-    final rows = await repo.findClaimsToSchedule();
-    expect(rows.map((r) => r['claim_no']), ['SST-2026-000155']);
-  });
+  test('QO4.1 findClaimsToSchedule: only a Covered claim without an open appointment', () => inRollback(db, () async {
+        // Seed: 143, 149 and 160 have an open appointment; 155 is Withdrawn.
+        expect(await repo.findClaimsToSchedule(), isEmpty);
+        await db.performQuery("UPDATE Appointment SET appointment_status = 'Cancelled' WHERE appointment_id = 510");
+        expect((await repo.findClaimsToSchedule()).map((r) => r['claim_no']), ['SST-2026-000160']);
+      }));
 
-  test('QO4.2 findConsultantSlots: 5 consultants x 8 hours, with slot_state', () => inRollback(db, () async {
+  test('QO4.2 findConsultantSlots: 5 consultants x 6 hours, with slot_state', () => inRollback(db, () async {
         await insertTestAppointment(repo, date: day(10), time: '11:00');
         final rows = await repo.findConsultantSlots(day(10), 1);
-        expect(rows, hasLength(40));
+        expect(rows, hasLength(30));
+        expect(rows.map((r) => (r['slot_at']! as DateTime).hour).toSet(), {9, 10, 11, 13, 14, 15});
         final mine = rows.where((r) => r['slot_state'] == 'mine');
         expect(mine.single['consultant_id'], 3);
         expect(await repo.findConsultantSlots(day(10), 2).then((r) => r.where((x) => x['slot_state'] == 'busy')),

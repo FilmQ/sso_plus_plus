@@ -44,11 +44,13 @@ void main() {
         expect(checks.rows.single['n'], 4, reason: 'no new EligibilityCheck rows');
       }));
 
-  test('R-013: a claim without the automatic check is refused, and its status does not change', () =>
-      inRollback(db, () async {
+  test('R-013 (settled): a claim without the automatic check can be decided', () => inRollback(db, () async {
         final id = await insertTestClaim(claims);
         await db.performQuery('DELETE FROM EligibilityCheck WHERE claim_id = :id', {'id': id});
-        await expectLater(model.confirmResult(id, officerId: 1), throwsA(isA<StateConflictException>()));
-        expect(await status(id), 'Awaiting verification');
+        await model.confirmResult(id, officerId: 1);
+        expect(await status(id), 'Covered');
+        final check = await db.performQuery(
+            'SELECT coverage_id, is_override FROM EligibilityCheck WHERE claim_id = :id AND officer_id = 1', {'id': id});
+        expect(check.rows.single, {'coverage_id': null, 'is_override': false});
       }));
 }

@@ -123,6 +123,45 @@ WHERE claim_id = :claim_id
   AND claim_status = 'No treatment required'
 ''';
 
+  // QN.5 [U3.1, U3.2, U3.3] ยืนยันนัดหมาย (Confirm Appointment) / ยืนยันนัดหมาย (Request Another Date) / ยืนยันนัดหมาย (I cannot attend)
+  static const qN_5 = r'''
+WITH appt AS (
+  SELECT a.claim_id, a.consultant_id, a.appointment_status,
+    a.supersedes_appt_id, a.location, ic.claim_no,
+    CONCAT_WS(' ', ip.title_name, ip.first_name, ip.last_name)
+      AS user_name,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appt_time
+  FROM Appointment a
+  JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+  JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+  WHERE a.appointment_id = :appointment_id
+)
+INSERT INTO Notification
+  (claim_id, insured_id, consultant_id, subject, body, sent_at)
+SELECT claim_id, NULL, consultant_id,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN 'Appointment cancelled'
+    WHEN supersedes_appt_id IS NOT NULL THEN 'Appointment rescheduled'
+    ELSE 'Appointment confirmed'
+  END,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') cannot attend the appointment on ', appt_time,
+        '. The appointment is cancelled and the claim is withdrawn.')
+    WHEN supersedes_appt_id IS NOT NULL THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') moved the appointment to ', appt_time, ' at ', location, '.')
+    ELSE
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') confirmed the appointment on ', appt_time, ' at ',
+        location, '.')
+  END,
+  NOW()
+FROM appt
+''';
+
   /// Every Query ID of this class, for the test that compares the SQL with the report.
   static const all = <String, List<String>>{
     'Q2.1': [q2_1],
@@ -134,5 +173,6 @@ WHERE claim_id = :claim_id
     'QN.2': [qN_2],
     'QN.3': [qN_3],
     'QN.4': [qN_4],
+    'QN.5': [qN_5],
   };
 }

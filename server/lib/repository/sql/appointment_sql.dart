@@ -13,7 +13,8 @@ SELECT a.appointment_id,
     'FMDD / FMMM / YYYY" : "HH24:MI') AS appointment_date,
   CONCAT_WS(' ', o.first_name, o.last_name) AS scheduled_by,
   a.appointment_type,
-  CONCAT_WS(' ', c.first_name, c.last_name) AS consultant_name,
+  CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+    AS consultant_name,
   c.office_location,
   ic.claim_no,
   CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
@@ -48,9 +49,10 @@ FROM confirmed
   static const q3_4 = r'''
 SELECT TO_CHAR(s.slot_at, 'HH24:MI') AS slot_time
 FROM generate_series(:slot_date::date + TIME '09:00',
-                     :slot_date::date + TIME '16:00',
+                     :slot_date::date + TIME '15:00',
                      INTERVAL '1 hour') AS s(slot_at)
 WHERE s.slot_at > NOW()
+  AND s.slot_at::time <> TIME '12:00'
   AND NOT EXISTS (
         SELECT 1
         FROM Appointment a
@@ -67,6 +69,14 @@ WITH old AS (
   SET appointment_status = 'Rescheduled'
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
+    AND :new_date::date + :new_time::time > NOW()
+    AND NOT EXISTS (
+          SELECT 1
+          FROM Appointment b
+          WHERE b.consultant_id = Appointment.consultant_id
+            AND b.schedule_date = :new_date::date
+            AND b.schedule_time = :new_time::time
+            AND b.appointment_status IN ('Pending', 'Confirmed'))
   RETURNING appointment_id, claim_id, officer_id, consultant_id,
     appointment_type, location
 ), new_appt AS (
@@ -96,7 +106,20 @@ WITH cancelled AS (
   SET appointment_status = 'Cancelled'
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
-  RETURNING appointment_id
+  RETURNING appointment_id, claim_id
+), withdrawn AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Withdrawn'
+  FROM cancelled
+  WHERE ic.claim_id = cancelled.claim_id
+    AND ic.claim_status = 'Covered'
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, from_status, to_status, changed_at, change_reason)
+  SELECT claim_id, 'Covered', 'Withdrawn', NOW(),
+    'User cannot attend the appointment'
+  FROM withdrawn
 )
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
@@ -164,12 +187,13 @@ SELECT c.consultant_id,
   END AS slot_state
 FROM Consultant c
 CROSS JOIN generate_series(:slot_date::date + TIME '09:00',
-                           :slot_date::date + TIME '16:00',
+                           :slot_date::date + TIME '15:00',
                            INTERVAL '1 hour') AS s(slot_at)
 LEFT JOIN Appointment a
        ON a.consultant_id = c.consultant_id
       AND a.schedule_date + a.schedule_time = s.slot_at
       AND a.appointment_status IN ('Pending', 'Confirmed')
+WHERE s.slot_at::time <> TIME '12:00'
 ORDER BY consultant_name, s.slot_at
 ''';
 

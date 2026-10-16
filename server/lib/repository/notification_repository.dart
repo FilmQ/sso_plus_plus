@@ -42,6 +42,11 @@ class NotificationRepository extends Repository {
   Future<int> insertAppointmentNotices(int appointmentId) =>
       execute(NotificationSql.qN_3, {'appointment_id': appointmentId});
 
+  // QN.5 [U3.1, U3.2, U3.3] A message to the consultant: the appointment is
+  // confirmed, rescheduled (give the new appointment_id) or cancelled.
+  Future<int> insertConsultantMessage(int appointmentId) =>
+      execute(NotificationSql.qN_5, {'appointment_id': appointmentId});
+
   // QN.4 [O5.2]
   Future<int> insertNoTreatmentNotice(int claimId) =>
       execute(NotificationSql.qN_4, {'claim_id': claimId});

@@ -57,6 +57,20 @@ void main() {
         expect(await countFor(143), before + 2);
       }));
 
+  test('QN.5 insertConsultantMessage: confirmed, rescheduled or cancelled, to the consultant', () =>
+      inRollback(db, () async {
+        Future<String> newest() async => (await db.performQuery(
+                'SELECT subject FROM Notification WHERE consultant_id IS NOT NULL ORDER BY notification_id DESC LIMIT 1'))
+            .rows
+            .single['subject']! as String;
+        expect(await repo.insertConsultantMessage(504), 1); // Confirmed, not a reschedule
+        expect(await newest(), 'Appointment confirmed');
+        expect(await repo.insertConsultantMessage(503), 1); // supersedes 502
+        expect(await newest(), 'Appointment rescheduled');
+        expect(await repo.insertConsultantMessage(505), 1); // Cancelled
+        expect(await newest(), 'Appointment cancelled');
+      }));
+
   test('QN.4 insertNoTreatmentNotice: only for a claim with No treatment required', () => inRollback(db, () async {
         expect(await repo.insertNoTreatmentNotice(147), 1);
         expect(await repo.insertNoTreatmentNotice(143), 0);

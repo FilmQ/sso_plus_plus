@@ -8,7 +8,7 @@ void main() {
 
   test('the seed is loaded and the time zone is Asia/Bangkok', () async {
     final claims = await db.performQuery('SELECT COUNT(*) AS n FROM InjuryClaim');
-    expect(claims.rows.single['n'], 5);
+    expect(claims.rows.single['n'], 6);
     final tz = await db.performQuery('SHOW timezone');
     expect(tz.rows.single.values.single, 'Asia/Bangkok');
   });
@@ -20,7 +20,7 @@ void main() {
       expect(rs.rows.single['n'], 0);
     }, rollbackOnly: true);
     final rs = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-    expect(rs.rows.single['n'], 7);
+    expect(rs.rows.single['n'], 12);
   });
 
   test('an error in the body rolls the transaction back', () async {
@@ -32,7 +32,7 @@ void main() {
       throwsStateError,
     );
     final rs = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-    expect(rs.rows.single['n'], 7);
+    expect(rs.rows.single['n'], 12);
   });
 
   test('an error in an inner transaction undoes only the inner work (SAVEPOINT)', () async {
@@ -46,7 +46,7 @@ void main() {
         throwsStateError,
       );
       final history = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-      expect(history.rows.single['n'], 7, reason: 'the inner DELETE is undone');
+      expect(history.rows.single['n'], 12, reason: 'the inner DELETE is undone');
       final outer = await db.performQuery('SELECT subject FROM Notification WHERE notification_id = 901');
       expect(outer.rows.single['subject'], 'outer', reason: 'the outer work stays');
     }, rollbackOnly: true);
@@ -57,7 +57,7 @@ void main() {
       await db.transaction(() => db.performQuery('DELETE FROM ClaimStatusHistory'));
     }, rollbackOnly: true);
     final rs = await db.performQuery('SELECT COUNT(*) AS n FROM ClaimStatusHistory');
-    expect(rs.rows.single['n'], 7);
+    expect(rs.rows.single['n'], 12);
   });
 
   test('performQuery gives affectedRows', () async {

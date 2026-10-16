@@ -26,6 +26,8 @@ Middleware errorMiddleware() => (inner) => (request) async {
       } on ControllerException catch (e) {
         if (e.cause != null) print('ERROR ${request.method} ${request.url}: ${e.cause}');
         return jsonError(e.status, e.message, extra: e.details);
+      } on ValidationFailedException catch (e) {
+        return jsonError(422, 'validation_failed', extra: {'fields': e.fieldErrors});
       } on StateConflictException catch (e) {
         return jsonError(409, e.message);
       } on NoRowChangedException {

@@ -133,8 +133,8 @@ void main() {
       }));
 
   test('QO5.4 updateNoTreatment: only a Covered claim', () => inRollback(db, () async {
-        await repo.updateNoTreatment(claimId: 155, officerId: 1);
-        expect((await claimRow(155))['claim_status'], 'No treatment required');
+        await repo.updateNoTreatment(claimId: 160, officerId: 1);
+        expect((await claimRow(160))['claim_status'], 'No treatment required');
         await expectLater(repo.updateNoTreatment(claimId: 151, officerId: 1), throwsA(isA<NoRowChangedException>()));
       }));
 }

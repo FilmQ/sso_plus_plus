@@ -24,6 +24,9 @@ class AppointmentController extends Controller {
   /// U3.1 step 1 (Q3.1): the number for the red dot of the Notification Page.
   Future<int> checkUnreadNotifications() => notificationModel.countUnread(_insuredId);
 
+  /// U3.1 step 1 (Q2.2): the messages of the Notification Page.
+  Future<List<Map<String, Object?>>> getNotifications() => notificationModel.getNotifications(_insuredId);
+
   /// U3.1 step 3 (Q3.2): the Appointment Page data.
   Future<Map<String, Object?>> getAppointment(int claimId) async {
     final appointment = await appointmentModel.getAppointmentDetail(claimId, _insuredId);
@@ -31,11 +34,13 @@ class AppointmentController extends Controller {
     return appointment;
   }
 
-  /// U3.1 steps 5 and 6: Q3.3, then Q3.7. Gives the appointment again (Confirmed).
+  /// U3.1 steps 5 and 6: Q3.3, QN.5, then Q3.7. Gives the appointment again (Confirmed).
   Future<Map<String, Object?>> confirmAppointment(int claimId, {int? notificationId}) =>
       db.transaction(() async {
         final a = await getAppointment(claimId);
-        await appointmentModel.confirm(a['appointment_id']! as int);
+        final appointmentId = a['appointment_id']! as int;
+        await appointmentModel.confirm(appointmentId);
+        await notificationModel.notifyConsultant(appointmentId);
         await _markRead(notificationId);
         return getAppointment(claimId);
       });
@@ -49,26 +54,29 @@ class AppointmentController extends Controller {
     return appointmentModel.getFreeSlots(a['consultant_id']! as int, slotDate);
   }
 
-  /// U3.2 steps 7.1 and 8: Q3.5, then Q3.7. Gives the new appointment.
+  /// U3.2 steps 7.1 and 8: Q3.5, QN.5 (new appointment), then Q3.7. Gives the new appointment.
   Future<Map<String, Object?>> reschedule(int claimId, String newDate, String newTime, {int? notificationId}) {
     if (!_date.hasMatch(newDate) || !_time.hasMatch(newTime)) {
       throw const FormatException('new_date must be yyyy-MM-dd and new_time HH:mm');
     }
     return db.transaction(() async {
       final a = await getAppointment(claimId);
-      await appointmentModel.reschedule(
-          a['appointment_id']! as int, a['consultant_id']! as int, newDate, newTime);
+      final newId = await appointmentModel.reschedule(a['appointment_id']! as int, newDate, newTime);
+      await notificationModel.notifyConsultant(newId);
       await _markRead(notificationId);
       return getAppointment(claimId);
     });
   }
 
-  /// U3.3 steps 7.1 and 8: Q3.6, then Q3.7. Q3.2 does not read a Cancelled
-  /// appointment, so this gives the data from before, with the new status (U3-7).
+  /// U3.3 steps 7.1 and 8: Q3.6 (the claim becomes Withdrawn), QN.5, then Q3.7.
+  /// Q3.2 does not read a Cancelled appointment, so this gives the data from
+  /// before, with the new status (U3-7, R-017).
   Future<Map<String, Object?>> cancelAppointment(int claimId, {int? notificationId}) =>
       db.transaction(() async {
         final a = await getAppointment(claimId);
-        await appointmentModel.cancel(a['appointment_id']! as int);
+        final appointmentId = a['appointment_id']! as int;
+        await appointmentModel.cancel(appointmentId);
+        await notificationModel.notifyConsultant(appointmentId);
         await _markRead(notificationId);
         return {...a, 'appointment_status': 'Cancelled'};
       });

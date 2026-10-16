@@ -73,8 +73,8 @@ class ClaimModel extends Model {
       });
 
   /// Runs a decision in one transaction. A guarded query that changes no row
-  /// rolls the transaction back: the claim is already decided, or it has no
-  /// automatic Section 33 check row (R-013).
+  /// means that the claim is already decided (QO2.1, QO3.1 and QO3.2 of the
+  /// 2026-10-15 evening pack, R-013 settled).
   Future<void> _decide(Future<void> Function() body) async {
     try {
       await claims.db.transaction(body);

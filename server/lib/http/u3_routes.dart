@@ -17,6 +17,9 @@ void addU3Routes(
     // Q3.1: the red dot of the Notification Page.
     ..get('/u3/unread-count', (Request r) async =>
         jsonOk({'unread': await appointments(r).checkUnreadNotifications()}))
+    // Q2.2: the list of the Notification Page (U3.1 step 1).
+    ..get('/u3/notifications', (Request r) async =>
+        jsonOk({'notifications': await appointments(r).getNotifications()}))
     // Q3.2
     ..get(base, (Request r, String claim) async =>
         jsonOk({'appointment': await appointments(r).getAppointment(int.parse(claim))}))
