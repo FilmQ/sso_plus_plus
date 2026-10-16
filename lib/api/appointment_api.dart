@@ -1,4 +1,5 @@
 import 'api_client.dart';
+import 'notification_api.dart';
 
 /// The page side of server AppointmentController (U3.1 to U3.3, D-002, D-032).
 /// [notificationId] is the message that opened the Appointment Page (Q3.7).
@@ -13,6 +14,12 @@ class AppointmentApi {
 
   /// Q3.1: the red dot of the Notification Page (checkUnreadNotifications).
   Future<int> checkUnreadNotifications() async => (await api.get('/u3/unread-count'))['unread']! as int;
+
+  /// Q2.2 through AppointmentController.getNotifications (U3.1 step 1).
+  Future<List<NotificationItem>> getNotifications() async {
+    final List<Object?> rows = (await api.get('/u3/notifications'))['notifications']! as List<Object?>;
+    return <NotificationItem>[for (final Object? r in rows) NotificationItem.fromJson(r! as Map<String, Object?>)];
+  }
 
   /// Q3.2
   Future<Map<String, Object?>> getAppointment(int claimId) async => _row(await api.get(_base(claimId)));

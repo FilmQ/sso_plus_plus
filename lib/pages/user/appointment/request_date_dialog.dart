@@ -6,10 +6,8 @@ import '../../../widgets/picker_field.dart';
 /// Loads the free hours of a date ('yyyy-MM-dd') with Q3.4.
 typedef SlotLoader = Future<List<String>> Function(String date);
 
-/// The hours of Q3.4: 09:00 to 16:00, every hour.
-const List<String> consultationHours = <String>[
-  '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00',
-];
+/// The bookable hours of Q3.4 (data dictionary, Appointment.schedule_time).
+const List<String> consultationHours = <String>['09:00', '10:00', '11:00', '13:00', '14:00', '15:00'];
 
 /// U3-4 Request Another Date pop-up (SA report figure 2-29, U3.2 steps 5 and 6).
 /// Gives (date, time) for "Confirm Date", or null for "Cancel"
@@ -104,7 +102,7 @@ class _RequestDateDialogState extends State<_RequestDateDialog> {
     );
   }
 
-  /// All hours of the day: free hours (Q3.4) can be chosen, the others are grey.
+  /// The six bookable hours: free hours (Q3.4) can be chosen, the others are grey.
   Widget _slotGrid() => GridView.count(
         crossAxisCount: 3,
         shrinkWrap: true,

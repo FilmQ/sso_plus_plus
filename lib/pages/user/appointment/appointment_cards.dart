@@ -35,12 +35,16 @@ class AppointmentCards extends StatelessWidget {
 
   String _s(String key) => (appointment[key] as String?) ?? '';
 
-  /// U3.1 step 3: "Onsite (บ้านของผู้ใช้งาน) or Online" (R-014).
-  String get _type => _s('appointment_type') == 'Onsite' ? 'Onsite (at your house)' : _s('appointment_type');
+  /// U3.1 step 3: Onsite is at the rehabilitation center, in the consultant's room (R-014).
+  String get _type =>
+      _s('appointment_type') == 'Onsite' ? 'Onsite (at the rehabilitation center)' : _s('appointment_type');
 
   /// The first letter of the first name and of the last name (avatar of U3-2).
-  String get _initials =>
-      _s('consultant_name').split(' ').where((String w) => w.isNotEmpty).take(2).map((String w) => w[0]).join();
+  /// Q3.2 gives the title first ("นพ. ธนา ศรีสุข"), so the last two words are used.
+  String get _initials {
+    final List<String> words = _s('consultant_name').split(' ').where((String w) => w.isNotEmpty).toList();
+    return words.skip(words.length > 2 ? words.length - 2 : 0).map((String w) => w[0]).join();
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -4,7 +4,7 @@ import '../../../theme/status_colors.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/status_chip.dart';
 
-enum _Step { done, current, later }
+enum _Step { done, current, later, stopped }
 
 /// "Your claim" of U2-1, from one Q2.4 row: the status chip and the four steps
 /// of the process (01-business-process.md): forms, officer check,
@@ -22,6 +22,8 @@ class ClaimProgressCard extends StatelessWidget {
     final bool waiting = status == 'Awaiting verification' || status == 'Register unavailable';
     final bool rejected = status == 'Rejected' || status == 'Not covered';
     final bool closed = status == 'No treatment required';
+    // U3.3 "I cannot attend" (Q3.6): the claim ends at the consultation step.
+    final bool withdrawn = status == 'Withdrawn';
     final String? treatment = _s('treatment_status');
     return InfoCard(
       icon: Icons.assignment,
@@ -34,7 +36,9 @@ class ClaimProgressCard extends StatelessWidget {
         else
           _StepRow(_Step.done, rejected ? 'Checked by the officer' : 'Eligibility confirmed by the officer',
               _s('officer_checked_time') ?? ''),
-        if (!rejected) ...<Widget>[
+        if (withdrawn)
+          const _StepRow(_Step.stopped, 'Consultation with a consultant', 'You could not attend; the claim is withdrawn')
+        else if (!rejected) ...<Widget>[
           _consultation(waiting: waiting, finished: closed || treatment != null),
           _treatment(closed: closed, treatment: treatment),
         ],
@@ -82,6 +86,7 @@ class _StepRow extends StatelessWidget {
       _Step.done => (Icons.check_circle, StatusColors.of(context).success),
       _Step.current => (Icons.pending, c.primary),
       _Step.later => (Icons.radio_button_unchecked, c.outline),
+      _Step.stopped => (Icons.cancel, c.error),
     };
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

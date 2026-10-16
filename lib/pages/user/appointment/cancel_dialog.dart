@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// U3-6 I cannot attend warning (SA report figure 2-34, U3.3 step 5).
+/// U3-6 I cannot attend warning (SA report figure 2-34, U3.3 step 5). The claim
+/// becomes Withdrawn (Q3.6) and the consultant gets a message (QN.5).
 /// Gives true for "Confirm Cancel Appointment", false for "Go Back"
 /// (Alternate Case 1 [Go Back]).
 Future<bool> showCancelWarning(BuildContext context) async {
@@ -16,7 +17,7 @@ Future<bool> showCancelWarning(BuildContext context) async {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 12,
           children: <Widget>[
-            const Text('If you cancel, this consultation will not take place and the officer will be informed.'),
+            const Text('If you cancel, your claim will be withdrawn and the consultant will be informed.'),
             const SizedBox(height: 4),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: colors.error, foregroundColor: colors.onError),

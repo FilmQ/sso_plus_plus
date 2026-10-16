@@ -14,10 +14,10 @@ final FutureProvider<int> unreadOnNotificationPageProvider = FutureProvider<int>
   return ref.read(appointmentApiProvider).checkUnreadNotifications();
 });
 
-/// The list of U3-1 Notification Page. U3 has no list query, so it is Q2.2 (R-021).
+/// The list of U3-1 Notification Page (U3.1 step 1, Q2.2).
 final FutureProvider<List<NotificationItem>> notificationsProvider = FutureProvider<List<NotificationItem>>((Ref ref) {
   ref.watch(sessionProvider);
-  return ref.read(notificationApiProvider).getNotifications();
+  return ref.read(appointmentApiProvider).getNotifications();
 });
 
 /// Reloads every value that a read message or an appointment change can alter.

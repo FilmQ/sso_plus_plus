@@ -18,7 +18,7 @@ Map<String, Object?> _appointment(String status, {String date = '16 / 10 / 2026 
       'appointment_date': date,
       'scheduled_by': 'กัญญา วงศ์ศิริ',
       'appointment_type': 'Onsite',
-      'consultant_name': 'ธนา ศรีสุข',
+      'consultant_name': 'นพ. ธนา ศรีสุข',
       'office_location': 'Building A, Floor 3, Room 305',
       'claim_no': 'SST-2026-000143',
       'injury': 'Fracture, right wrist',
@@ -30,7 +30,7 @@ FakeServer _server() => FakeServer()
   ..json('GET /u2/unread-count', <String, int>{'unread': 1})
   ..json('GET /u2/home-claim', <String, Object?>{'claim': null})
   ..json('GET /u3/unread-count', <String, int>{'unread': 1})
-  ..json('GET /u2/notifications', <String, Object?>{
+  ..json('GET /u3/notifications', <String, Object?>{
     'notifications': <Map<String, Object?>>[
       <String, Object?>{
         'notification_id': 902,
@@ -74,7 +74,9 @@ Future<void> _openAppointment(WidgetTester tester, FakeServer server) async {
   await tester.pumpAndSettle();
   expect(find.text('Awaiting your confirmation'), findsOneWidget);
   expect(find.text('กัญญา วงศ์ศิริ (Evaluation Officer)'), findsOneWidget);
-  expect(find.text('Onsite (at your house)'), findsOneWidget);
+  expect(find.text('Onsite (at the rehabilitation center)'), findsOneWidget);
+  expect(find.text('นพ. ธนา ศรีสุข'), findsOneWidget);
+  expect(find.text('ธศ'), findsOneWidget); // avatar letters without the title
 }
 
 Future<void> _tap(WidgetTester tester, String text) async {
@@ -111,6 +113,9 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(find.text('Free times on this date'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('slot:12:00')), findsNothing);
+    expect(find.byKey(const ValueKey<String>('slot:16:00')), findsNothing);
+    expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey<String>('slot:09:00'))).enabled, isFalse);
     await tester.tap(find.byKey(const ValueKey<String>('slot:13:00')));
     await tester.pumpAndSettle();
     await _tap(tester, 'Confirm Date');
@@ -135,6 +140,7 @@ void main() {
     await _openAppointment(tester, server);
     await _tap(tester, 'I cannot attend');
     expect(find.text('คุณแน่ใจที่จะยกเลิกการนัดหมายหรือไม่'), findsOneWidget);
+    expect(find.text('If you cancel, your claim will be withdrawn and the consultant will be informed.'), findsOneWidget);
     await _tap(tester, 'Confirm Cancel Appointment');
     expect(_body(server, '$_base/cancel')['notification_id'], 902);
     expect(find.text('Cancelled'), findsOneWidget);

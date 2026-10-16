@@ -48,6 +48,7 @@ class ClaimStatusChip extends StatelessWidget {
       'No treatment required' => (Icons.task_alt, ok.successContainer, ok.success),
       'Rejected' || 'Not covered' => (Icons.block, colors.errorContainer, colors.onErrorContainer),
       'Register unavailable' => (Icons.cloud_off, colors.tertiaryContainer, colors.onTertiaryContainer),
+      'Withdrawn' => (Icons.do_not_disturb_on, colors.surfaceContainerHighest, colors.onSurfaceVariant),
       _ => (Icons.hourglass_top, colors.secondaryContainer, colors.onSecondaryContainer),
     };
     return StatusPill(icon: icon, label: status, background: bg, foreground: fg);

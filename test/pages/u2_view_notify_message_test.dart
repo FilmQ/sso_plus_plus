@@ -121,4 +121,12 @@ void main() {
     expect(find.text('Message from the officer'), findsOneWidget);
     expect(find.text('The register shows your contributions ended in May 2026.'), findsOneWidget);
   });
+
+  testWidgets('U2-1 Home after U3.3: the Withdrawn chip and the stopped consultation step', (WidgetTester tester) async {
+    await _signIn(tester, _server(<Map<String, Object?>>[], status: 'Withdrawn'));
+    expect(find.text('Withdrawn'), findsOneWidget);
+    expect(find.text('You could not attend; the claim is withdrawn'), findsOneWidget);
+    expect(find.text('Treatment'), findsNothing);
+    expect(find.text('Next appointment'), findsNothing);
+  });
 }
