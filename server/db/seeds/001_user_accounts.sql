@@ -7,5 +7,6 @@ INSERT INTO UserAccount (role, login_name, password_hash, insured_id, officer_id
   ('USER', '1100800345672', crypt('Password123', gen_salt('bf', 8)), 103, NULL, NULL, NOW()),
   ('USER', '1209800456789', crypt('Password123', gen_salt('bf', 8)), 104, NULL, NULL, NOW()),
   ('USER', '1101500567893', crypt('Password123', gen_salt('bf', 8)), 105, NULL, NULL, NOW()),
+  ('USER', '1350100678904', crypt('Password123', gen_salt('bf', 8)), 106, NULL, NULL, NOW()),
   ('OFFICER', 'kanya.w@sso.go.th', crypt('Password123', gen_salt('bf', 8)), NULL, 1, NULL, NOW()),
   ('CONSULTANT', 'thana.s@ssorehab.go.th', crypt('Password123', gen_salt('bf', 8)), NULL, NULL, 1, NOW());

@@ -78,3 +78,14 @@ Confirmation (U3.1, U3.2, U3.3) on the server and in the user app. Commits `4388
 4. R-018: who is told about U3.1 to U3.3, and with which query?
 5. R-014 and R-016: what does Onsite mean, and which hours can be booked?
 6. R-025: add a Pending appointment and the check rows of claim 155 to the seed?
+
+# Human-in-the-loop:
+
+In coding agent response(s):
+
+1. R-019: after "I cannot attend", QO4.1 lists the claim for a new appointment again, but the process says it ends there.
+
+Human response(s):
+
+1. If the user selects "I cannot attend" the claim should be dropped, and not appear in QO4.1 query statement.
+2. If a coding agent asks questions regarding business processes, the documentation agent should ask the prompter directly through the use of the question tool.

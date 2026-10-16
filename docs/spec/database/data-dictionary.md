@@ -79,7 +79,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | injury_cause | สาเหตุการบาดเจ็บ |  | Y | VARCHAR(255) | ไม่เกิน 255 ตัวอักษร |
 | body_part | อวัยวะที่บาดเจ็บ |  | Y | VARCHAR(80) | ไม่เกิน 80 ตัวอักษร |
 | injury_category | ประเภทการบาดเจ็บ |  | Y | VARCHAR(60) | เช่น Fracture, Burn, Sprain |
-| claim_status | สถานะคำร้อง |  | Y | VARCHAR(30) | Awaiting verification, Register unavailable, Covered, Not covered, Rejected หรือ No treatment required |
+| claim_status | สถานะคำร้อง |  | Y | VARCHAR(30) | Awaiting verification, Register unavailable, Covered, Not covered, Rejected, No treatment required หรือ Withdrawn |
 | submitted_at | วันและเวลาที่ยื่นคำร้อง |  | Y | TIMESTAMP | ระบบใส่ NOW() (Q1.6) |
 | created_at | วันและเวลาที่สร้างข้อมูล |  | Y | TIMESTAMP | ระบบใส่ NOW() (Q1.6) |
 
@@ -156,7 +156,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | supersedes_appt_id | รหัสนัดหมายเดิมที่ถูกแทนที่ | FK | N | INT | ต้องมีใน Appointment.appointment_id |
 | appointment_type | ประเภทนัดหมาย |  | Y | VARCHAR(20) | Onsite หรือ Online |
 | schedule_date | วันนัดหมาย |  | Y | DATE | หลังวันปัจจุบัน |
-| schedule_time | เวลานัดหมาย |  | Y | TIME | 09:00 ถึง 16:00 ทุก 1 ชั่วโมง |
+| schedule_time | เวลานัดหมาย |  | Y | TIME | 09:00 ถึง 15:00 ทุก 1 ชั่วโมง ยกเว้น 12:00 |
 | location | สถานที่นัดหมาย |  | Y | VARCHAR(160) | ไม่เกิน 160 ตัวอักษร |
 | appointment_status | สถานะนัดหมาย |  | Y | VARCHAR(30) | Pending, Confirmed, Rescheduled หรือ Cancelled |
 | confirm_deadline | กำหนดเวลายืนยันนัดหมาย |  | N | TIMESTAMP | 24 ชั่วโมงก่อนเวลานัดหมาย (QO4.3) |
@@ -239,7 +239,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | notification_id | รหัสข้อความแจ้งเตือน | PK | Y | INT | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0 |
 | claim_id | รหัสคำร้อง | FK | Y | INT | ต้องมีใน InjuryClaim.claim_id |
 | insured_id | รหัสผู้ประกันตนผู้รับ | FK | N | INT | ต้องมีใน InsuredPerson.insured_id ต้องมีค่าอย่างน้อยหนึ่งช่องระหว่าง insured_id กับ consultant_id |
-| consultant_id | รหัสที่ปรึกษาผู้รับ | FK | N | INT | ต้องมีใน Consultant.consultant_id (QN.3) |
+| consultant_id | รหัสที่ปรึกษาผู้รับ | FK | N | INT | ต้องมีใน Consultant.consultant_id (QN.3, QN.5) |
 | subject | หัวเรื่อง |  | Y | VARCHAR(160) | ไม่เกิน 160 ตัวอักษร |
 | body | เนื้อหาข้อความ |  | Y | TEXT | ไม่เกิน 2,000 ตัวอักษร |
 | sent_at | วันและเวลาที่ส่ง |  | Y | TIMESTAMP | ระบบใส่ NOW() |
@@ -251,7 +251,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 |---|---|---|---|---|---|
 | history_id | รหัสประวัติ | PK | Y | INT | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0 |
 | claim_id | รหัสคำร้อง | FK | Y | INT | ต้องมีใน InjuryClaim.claim_id |
-| officer_id | รหัสเจ้าหน้าที่ประเมิน | FK | N | INT | ต้องมีใน EvaluationOfficer.officer_id ค่าว่างคือระบบ |
+| officer_id | รหัสเจ้าหน้าที่ประเมิน | FK | N | INT | ต้องมีใน EvaluationOfficer.officer_id ค่าว่างคือระบบหรือผู้ใช้งาน |
 | from_status | สถานะเดิม |  | N | VARCHAR(30) | ค่าเดียวกับ InjuryClaim.claim_status ค่าว่างในแถวแรกของคำร้อง |
 | to_status | สถานะใหม่ |  | Y | VARCHAR(30) | ค่าเดียวกับ InjuryClaim.claim_status |
 | changed_at | วันและเวลาที่เปลี่ยน |  | Y | TIMESTAMP | ระบบใส่ NOW() |

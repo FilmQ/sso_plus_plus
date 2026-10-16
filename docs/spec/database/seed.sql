@@ -50,7 +50,7 @@ INSERT INTO InjuryClaim (claim_id, claim_no, insured_id, employer_id, injury_dat
   (147, 'SST-2026-000147', 102, 12, '2026-09-30 15:10', 'Packing line 2, Pak Kret, Nonthaburi', 'Touched a hot sealing plate', 'left hand', 'Burn', 'No treatment required', '2026-10-03 10:12', '2026-10-03 10:12'),
   (149, 'SST-2026-000149', 103, 13, '2026-09-29 13:25', 'Press shop, Bang Pu, Samut Prakan', 'Foot trapped under a steel coil', 'left foot', 'Crush injury', 'Covered', '2026-09-30 11:47', '2026-09-30 11:47'),
   (151, 'SST-2026-000151', 104, 14, '2026-10-01 07:50', 'Warehouse 2, Bang Na, Bangkok', 'Slipped on a wet loading ramp', 'left ankle', 'Sprain', 'Rejected', '2026-10-03 11:05', '2026-10-03 11:05'),
-  (155, 'SST-2026-000155', 105, 15, '2026-10-03 09:30', 'Cold storage, Khlong Luang, Pathum Thani', 'Lifted a heavy crate', 'lower back', 'Back strain', 'Covered', '2026-10-06 16:32', '2026-10-06 16:32');
+  (155, 'SST-2026-000155', 105, 15, '2026-10-03 09:30', 'Cold storage, Khlong Luang, Pathum Thani', 'Lifted a heavy crate', 'lower back', 'Back strain', 'Withdrawn', '2026-10-06 16:32', '2026-10-06 16:32');
 
 INSERT INTO DocumentType (doc_type_id, form_code, name_th, name_en, is_required) OVERRIDING SYSTEM VALUE VALUES
   (1, 'DOC-ID', 'สำเนาบัตรประจำตัวประชาชน', 'Image of National ID Card', TRUE),
@@ -145,6 +145,47 @@ INSERT INTO EligibilityCheck (check_id, claim_id, coverage_id, officer_id, check
 INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, to_status, changed_at, change_reason) OVERRIDING SYSTEM VALUE VALUES
   (1006, 149, NULL, NULL, 'Awaiting verification', '2026-09-30 11:47', 'Submitted by the user'),
   (1007, 149, 2, 'Awaiting verification', 'Covered', '2026-10-07 13:10', NULL);
+
+-- Claim 155: the automatic and officer checks and the status history up to "I cannot attend" (U3.3, Q3.6),
+-- which the samples leave out.
+INSERT INTO EligibilityCheck (check_id, claim_id, coverage_id, officer_id, checked_at, result, is_override, override_reason, evidence_ref) OVERRIDING SYSTEM VALUE VALUES
+  (807, 155, 205, NULL, '2026-10-06 16:32', 'Covered', FALSE, NULL, 'REG-20261006-0155'),
+  (808, 155, 205, 1, '2026-10-07 11:20', 'Covered', FALSE, NULL, 'REG-20261006-0155');
+
+INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, to_status, changed_at, change_reason) OVERRIDING SYSTEM VALUE VALUES
+  (1008, 155, NULL, NULL, 'Awaiting verification', '2026-10-06 16:32', 'Submitted by the user'),
+  (1009, 155, 1, 'Awaiting verification', 'Covered', '2026-10-07 11:20', NULL),
+  (1010, 155, NULL, 'Covered', 'Withdrawn', '2026-10-09 18:40', 'User cannot attend the appointment');
+
+-- A claim with a Pending appointment and its QN.1 and QN.3 messages, so U3.1 to U3.3 can be shown with the seed
+-- (person 106, claim 160, appointment 510).
+INSERT INTO master_table (national_id, title_name, first_name, last_name, coverage_status, employer_account_no,  employer_name, registration_date, contribution_start, contribution_end, contribution_months) VALUES
+  ('1350100678904', 'นางสาว', 'อรทัย', 'มั่นคง', 'ACTIVE', '1000345678', 'Eastern Coil Steel Co., Ltd.', '2022-06-01', '2022-07-01', NULL, 51);
+
+INSERT INTO InsuredPerson (insured_id, national_id, title_name, first_name, last_name, date_of_birth, gender, phone_no, email, address, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (106, '1350100678904', 'นางสาว', 'อรทัย', 'มั่นคง', '1994-03-22', 'F', '0861112233', NULL, '55/8 หมู่ 4 ตำบลบางปูใหม่ อำเภอเมืองสมุทรปราการ สมุทรปราการ 10280', '2026-10-08 09:10');
+
+INSERT INTO Section33Coverage (coverage_id, insured_id, employer_id, registration_date, contribution_start, contribution_end, contribution_months, coverage_status) OVERRIDING SYSTEM VALUE VALUES
+  (206, 106, 13, '2022-06-01', '2022-07-01', NULL, 51, 'ACTIVE');
+
+INSERT INTO InjuryClaim (claim_id, claim_no, insured_id, employer_id, injury_datetime, injury_place, injury_cause, body_part, injury_category, claim_status, submitted_at, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (160, 'SST-2026-000160', 106, 13, '2026-10-07 16:20', 'Press shop, Bang Pu, Samut Prakan', 'Cut by a sheet metal edge', 'left forearm', 'Laceration', 'Covered', '2026-10-08 09:10', '2026-10-08 09:10');
+
+INSERT INTO EligibilityCheck (check_id, claim_id, coverage_id, officer_id, checked_at, result, is_override, override_reason, evidence_ref) OVERRIDING SYSTEM VALUE VALUES
+  (809, 160, 206, NULL, '2026-10-08 09:10', 'Covered', FALSE, NULL, 'REG-20261008-0160'),
+  (810, 160, 206, 1, '2026-10-12 10:30', 'Covered', FALSE, NULL, 'REG-20261008-0160');
+
+INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, to_status, changed_at, change_reason) OVERRIDING SYSTEM VALUE VALUES
+  (1011, 160, NULL, NULL, 'Awaiting verification', '2026-10-08 09:10', 'Submitted by the user'),
+  (1012, 160, 1, 'Awaiting verification', 'Covered', '2026-10-12 10:30', NULL);
+
+INSERT INTO Appointment (appointment_id, claim_id, officer_id, consultant_id, supersedes_appt_id, appointment_type, schedule_date, schedule_time, location, appointment_status, confirm_deadline, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (510, 160, 1, 2, NULL, 'Onsite', '2026-10-22', '09:00', 'Building A, Floor 2, Room 210', 'Pending', '2026-10-21 09:00', '2026-10-14 11:00');
+
+INSERT INTO Notification (notification_id, claim_id, insured_id, consultant_id, subject, body, sent_at, read_at) OVERRIDING SYSTEM VALUE VALUES
+  (906, 160, 106, NULL, 'Claim confirmed', 'Your claim SST-2026-000160 is covered under Section 33.', '2026-10-12 10:30', NULL),
+  (907, 160, 106, NULL, 'Appointment scheduled', 'Your appointment with พญ. มาลี ใจดี is on 22 October 2026 : 09:00 at Building A, Floor 2, Room 210. Please confirm it in the application by 21 October 2026 : 09:00.', '2026-10-14 11:00', NULL),
+  (908, 160, NULL, 2, 'New appointment', 'นางสาว อรทัย มั่นคง (claim SST-2026-000160) is booked with you on 22 October 2026 : 09:00 at Building A, Floor 2, Room 210. Waiting for the patient to confirm.', '2026-10-14 11:00', NULL);
 
 SELECT setval(pg_get_serial_sequence('insuredperson', 'insured_id'), (SELECT MAX(insured_id) FROM InsuredPerson));
 SELECT setval(pg_get_serial_sequence('employer', 'employer_id'), (SELECT MAX(employer_id) FROM Employer));

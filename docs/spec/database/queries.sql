@@ -154,7 +154,8 @@ SELECT a.appointment_id,
     'FMDD / FMMM / YYYY" : "HH24:MI') AS appointment_date,
   CONCAT_WS(' ', o.first_name, o.last_name) AS scheduled_by,
   a.appointment_type,
-  CONCAT_WS(' ', c.first_name, c.last_name) AS consultant_name,
+  CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+    AS consultant_name,
   c.office_location,
   ic.claim_no,
   CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
@@ -185,9 +186,10 @@ FROM confirmed;
 -- Q3.4  [U3.2] ยืนยันนัดหมาย (Request Another Date)
 SELECT TO_CHAR(s.slot_at, 'HH24:MI') AS slot_time
 FROM generate_series(:slot_date::date + TIME '09:00',
-                     :slot_date::date + TIME '16:00',
+                     :slot_date::date + TIME '15:00',
                      INTERVAL '1 hour') AS s(slot_at)
 WHERE s.slot_at > NOW()
+  AND s.slot_at::time <> TIME '12:00'
   AND NOT EXISTS (
         SELECT 1
         FROM Appointment a
@@ -202,6 +204,14 @@ WITH old AS (
   SET appointment_status = 'Rescheduled'
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
+    AND :new_date::date + :new_time::time > NOW()
+    AND NOT EXISTS (
+          SELECT 1
+          FROM Appointment b
+          WHERE b.consultant_id = Appointment.consultant_id
+            AND b.schedule_date = :new_date::date
+            AND b.schedule_time = :new_time::time
+            AND b.appointment_status IN ('Pending', 'Confirmed'))
   RETURNING appointment_id, claim_id, officer_id, consultant_id,
     appointment_type, location
 ), new_appt AS (
@@ -229,7 +239,20 @@ WITH cancelled AS (
   SET appointment_status = 'Cancelled'
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
-  RETURNING appointment_id
+  RETURNING appointment_id, claim_id
+), withdrawn AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Withdrawn'
+  FROM cancelled
+  WHERE ic.claim_id = cancelled.claim_id
+    AND ic.claim_status = 'Covered'
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, from_status, to_status, changed_at, change_reason)
+  SELECT claim_id, 'Covered', 'Withdrawn', NOW(),
+    'User cannot attend the appointment'
+  FROM withdrawn
 )
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
@@ -411,14 +434,18 @@ WITH prev AS (
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> ec.result,
+SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
   :override_reason::varchar, ec.evidence_ref
-FROM EligibilityCheck ec
-JOIN decided ON decided.claim_id = ec.claim_id
-WHERE ec.officer_id IS NULL
-ORDER BY ec.checked_at DESC
-LIMIT 1;
+FROM decided
+LEFT JOIN LATERAL (
+  SELECT e.coverage_id, e.result, e.evidence_ref
+  FROM EligibilityCheck e
+  WHERE e.claim_id = decided.claim_id
+    AND e.officer_id IS NULL
+  ORDER BY e.checked_at DESC
+  LIMIT 1
+) ec ON TRUE;
 
 -- QO3.1  [O3] ปฏิเสธคำร้อง (Reject Injury Application)
 WITH prev AS (
@@ -445,14 +472,18 @@ WITH prev AS (
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> ec.result,
+SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
   :override_reason::varchar, ec.evidence_ref
-FROM EligibilityCheck ec
-JOIN decided ON decided.claim_id = ec.claim_id
-WHERE ec.officer_id IS NULL
-ORDER BY ec.checked_at DESC
-LIMIT 1;
+FROM decided
+LEFT JOIN LATERAL (
+  SELECT e.coverage_id, e.result, e.evidence_ref
+  FROM EligibilityCheck e
+  WHERE e.claim_id = decided.claim_id
+    AND e.officer_id IS NULL
+  ORDER BY e.checked_at DESC
+  LIMIT 1
+) ec ON TRUE;
 
 -- QO3.2  [O3] ปฏิเสธคำร้อง (Reject Injury Application)
 WITH prev AS (
@@ -521,12 +552,13 @@ SELECT c.consultant_id,
   END AS slot_state
 FROM Consultant c
 CROSS JOIN generate_series(:slot_date::date + TIME '09:00',
-                           :slot_date::date + TIME '16:00',
+                           :slot_date::date + TIME '15:00',
                            INTERVAL '1 hour') AS s(slot_at)
 LEFT JOIN Appointment a
        ON a.consultant_id = c.consultant_id
       AND a.schedule_date + a.schedule_time = s.slot_at
       AND a.appointment_status IN ('Pending', 'Confirmed')
+WHERE s.slot_at::time <> TIME '12:00'
 ORDER BY consultant_name, s.slot_at;
 
 -- QO4.3  [O4] สร้างนัดหมาย (Schedule Appointment)
@@ -840,3 +872,40 @@ SELECT claim_id, insured_id, 'No treatment required',
 FROM InjuryClaim
 WHERE claim_id = :claim_id
   AND claim_status = 'No treatment required';
+
+-- QN.5  [U3.1, U3.2, U3.3] ยืนยันนัดหมาย (Confirm Appointment) / ยืนยันนัดหมาย (Request Another Date) / ยืนยันนัดหมาย (I cannot attend)
+WITH appt AS (
+  SELECT a.claim_id, a.consultant_id, a.appointment_status,
+    a.supersedes_appt_id, a.location, ic.claim_no,
+    CONCAT_WS(' ', ip.title_name, ip.first_name, ip.last_name)
+      AS user_name,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appt_time
+  FROM Appointment a
+  JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+  JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+  WHERE a.appointment_id = :appointment_id
+)
+INSERT INTO Notification
+  (claim_id, insured_id, consultant_id, subject, body, sent_at)
+SELECT claim_id, NULL, consultant_id,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN 'Appointment cancelled'
+    WHEN supersedes_appt_id IS NOT NULL THEN 'Appointment rescheduled'
+    ELSE 'Appointment confirmed'
+  END,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') cannot attend the appointment on ', appt_time,
+        '. The appointment is cancelled and the claim is withdrawn.')
+    WHEN supersedes_appt_id IS NOT NULL THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') moved the appointment to ', appt_time, ' at ', location, '.')
+    ELSE
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') confirmed the appointment on ', appt_time, ' at ',
+        location, '.')
+  END,
+  NOW()
+FROM appt;

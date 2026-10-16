@@ -319,7 +319,7 @@ WHERE notification_id = :notification_id
 
 **System:**
 
-1. ระบบแจ้งผู้ใช้งานที่หน้าแจ้งเตือน (Notification Page) ว่าเจ้าหน้าที่ประเมินสร้างนัดหมายแล้ว โดยแสดงจุดสีแดงที่หน้าแจ้งเตือน และตรวจสอบข้อความที่ยังไม่ได้อ่าน ตาม Q3.1 (เช่นเดียวกับ U2)
+1. ระบบแจ้งผู้ใช้งานที่หน้าแจ้งเตือน (Notification Page) ว่าเจ้าหน้าที่ประเมินสร้างนัดหมายแล้ว โดยแสดงจุดสีแดงที่หน้าแจ้งเตือน และตรวจสอบข้อความที่ยังไม่ได้อ่าน ตาม Q3.1 และแสดงรายการข้อความแจ้งเตือน ตาม Q2.2 (เช่นเดียวกับ U2)
 ```sql
 -- Q3.1
 SELECT COUNT(*) AS unread
@@ -338,8 +338,8 @@ WHERE insured_id = :insured_id
 - สถานะนัดหมาย: Awaiting your confirmation หรือ Confirmed
 - วันที่นัดหมาย: [วัน] / [เดือน] / [ปี] : [เวลา]
 - ชื่อเจ้าหน้าที่ประเมินผู้สร้างนัดหมาย
-- ประเภทนัดหมาย: Onsite (บ้านของผู้ใช้งาน) หรือ Online
-- ข้อมูลที่ปรึกษา: ชื่อ นามสกุล และสถานที่ทำงาน (Office Location)
+- ประเภทนัดหมาย: Onsite (ที่ศูนย์ฟื้นฟูสมรรถภาพ ห้องของที่ปรึกษา) หรือ Online
+- ข้อมูลที่ปรึกษา: คำนำหน้า ชื่อ นามสกุล และสถานที่ทำงาน (Office Location)
 - รายละเอียดคำร้อง: Claim ID การบาดเจ็บ และวันที่บาดเจ็บ
 - ปุ่ม 3 ปุ่ม: "Confirm Appointment", "Request Another Date" และ "I cannot attend" (ปฏิเสธนัดหมายนี้และไม่เข้าร่วมอีก)
 ระบบดึงข้อมูลนัดหมาย ตาม Q3.2
@@ -352,7 +352,8 @@ SELECT a.appointment_id,
     'FMDD / FMMM / YYYY" : "HH24:MI') AS appointment_date,
   CONCAT_WS(' ', o.first_name, o.last_name) AS scheduled_by,
   a.appointment_type,
-  CONCAT_WS(' ', c.first_name, c.last_name) AS consultant_name,
+  CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+    AS consultant_name,
   c.office_location,
   ic.claim_no,
   CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
@@ -396,9 +397,49 @@ SELECT appointment_id, 'application', 'Confirmed', NOW()
 FROM confirmed;
 ```
 
+ระบบส่งข้อความแจ้งที่ปรึกษาว่าผู้ใช้งานยืนยันนัดหมายแล้ว ตาม QN.5
+```sql
+-- QN.5
+WITH appt AS (
+  SELECT a.claim_id, a.consultant_id, a.appointment_status,
+    a.supersedes_appt_id, a.location, ic.claim_no,
+    CONCAT_WS(' ', ip.title_name, ip.first_name, ip.last_name)
+      AS user_name,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appt_time
+  FROM Appointment a
+  JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+  JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+  WHERE a.appointment_id = :appointment_id
+)
+INSERT INTO Notification
+  (claim_id, insured_id, consultant_id, subject, body, sent_at)
+SELECT claim_id, NULL, consultant_id,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN 'Appointment cancelled'
+    WHEN supersedes_appt_id IS NOT NULL THEN 'Appointment rescheduled'
+    ELSE 'Appointment confirmed'
+  END,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') cannot attend the appointment on ', appt_time,
+        '. The appointment is cancelled and the claim is withdrawn.')
+    WHEN supersedes_appt_id IS NOT NULL THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') moved the appointment to ', appt_time, ' at ', location, '.')
+    ELSE
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') confirmed the appointment on ', appt_time, ' at ',
+        location, '.')
+  END,
+  NOW()
+FROM appt;
+```
+
 **System:**
 
-6. ไม่ว่าผู้ใช้งานจะเลือกตัวเลือกใด หลังการดำเนินการนี้ ระบบบันทึกว่าข้อความแจ้งเตือนถูกอ่านแล้ว ตาม Q3.7
+6. ไม่ว่าผู้ใช้งานจะเลือกตัวเลือกใด หลังการดำเนินการนี้ ระบบบันทึกว่าข้อความแจ้งเตือนถูกอ่านแล้ว ตาม Q3.7 (เฉพาะเมื่อผู้ใช้งานเปิดหน้านัดหมายจากข้อความแจ้งเตือน)
 ```sql
 -- Q3.7
 UPDATE Notification
@@ -435,15 +476,16 @@ WHERE notification_id = :notification_id
 5. เมื่อผู้ใช้งานคลิก "Request Another Date" ระบบแสดงกล่องข้อความ Pop-up ดังนี้
 - ช่องเลือกวันที่
 - ปุ่ม "Confirm" (คลิกได้หลังเลือกวันที่)
-- ปุ่ม "Cancel" (คลิกได้หลังเลือกวันที่)
-ระบบค้นหาช่วงเวลาว่างของที่ปรึกษาในวันที่เลือก ตาม Q3.4
+- ปุ่ม "Cancel" (คลิกได้ทุกเมื่อ)
+ระบบค้นหาช่วงเวลาว่างของที่ปรึกษาในวันที่เลือก (09:00 ถึง 15:00 ทุก 1 ชั่วโมง ยกเว้น 12:00) ตาม Q3.4
 ```sql
 -- Q3.4
 SELECT TO_CHAR(s.slot_at, 'HH24:MI') AS slot_time
 FROM generate_series(:slot_date::date + TIME '09:00',
-                     :slot_date::date + TIME '16:00',
+                     :slot_date::date + TIME '15:00',
                      INTERVAL '1 hour') AS s(slot_at)
 WHERE s.slot_at > NOW()
+  AND s.slot_at::time <> TIME '12:00'
   AND NOT EXISTS (
         SELECT 1
         FROM Appointment a
@@ -463,7 +505,7 @@ ORDER BY s.slot_at;
 
 7. ระบบดำเนินการตามปุ่มที่ผู้ใช้งานเลือก
 7.1 คลิก "Confirm"
-- บันทึกนัดหมายใหม่ใน Appointment Schedule และเปลี่ยนสถานะนัดหมายเดิมเป็น "Rescheduled" ตาม Q3.5
+- บันทึกนัดหมายใหม่ใน Appointment Schedule และเปลี่ยนสถานะนัดหมายเดิมเป็น "Rescheduled" ตาม Q3.5 โดยเวลาใหม่ต้องยังว่างและอยู่ในอนาคต หากเวลานั้นไม่ว่างแล้ว ระบบไม่บันทึกและให้ผู้ใช้งานเลือกเวลาใหม่
 - Redirect กลับไปหน้ายืนยันนัดหมาย (Appointment Confirmation Page)
 - แสดงกล่องข้อความแจ้ง "เวลานัดหมายถูกเปลี่ยนเป็น [วัน] [เดือน] [ปี] : [เวลา]"
 ```sql
@@ -473,6 +515,14 @@ WITH old AS (
   SET appointment_status = 'Rescheduled'
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
+    AND :new_date::date + :new_time::time > NOW()
+    AND NOT EXISTS (
+          SELECT 1
+          FROM Appointment b
+          WHERE b.consultant_id = Appointment.consultant_id
+            AND b.schedule_date = :new_date::date
+            AND b.schedule_time = :new_time::time
+            AND b.appointment_status IN ('Pending', 'Confirmed'))
   RETURNING appointment_id, claim_id, officer_id, consultant_id,
     appointment_type, location
 ), new_appt AS (
@@ -495,6 +545,46 @@ WITH old AS (
 SELECT appointment_id FROM new_appt;
 ```
 
+ระบบส่งข้อความแจ้งที่ปรึกษาว่าผู้ใช้งานเปลี่ยนวันและเวลานัดหมาย ตาม QN.5 โดยใช้ appointment_id ของนัดหมายใหม่ที่ได้จาก Q3.5
+```sql
+-- QN.5
+WITH appt AS (
+  SELECT a.claim_id, a.consultant_id, a.appointment_status,
+    a.supersedes_appt_id, a.location, ic.claim_no,
+    CONCAT_WS(' ', ip.title_name, ip.first_name, ip.last_name)
+      AS user_name,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appt_time
+  FROM Appointment a
+  JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+  JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+  WHERE a.appointment_id = :appointment_id
+)
+INSERT INTO Notification
+  (claim_id, insured_id, consultant_id, subject, body, sent_at)
+SELECT claim_id, NULL, consultant_id,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN 'Appointment cancelled'
+    WHEN supersedes_appt_id IS NOT NULL THEN 'Appointment rescheduled'
+    ELSE 'Appointment confirmed'
+  END,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') cannot attend the appointment on ', appt_time,
+        '. The appointment is cancelled and the claim is withdrawn.')
+    WHEN supersedes_appt_id IS NOT NULL THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') moved the appointment to ', appt_time, ' at ', location, '.')
+    ELSE
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') confirmed the appointment on ', appt_time, ' at ',
+        location, '.')
+  END,
+  NOW()
+FROM appt;
+```
+
 **System:**
 
 7.2 คลิก "Cancel" ระบบ Redirect กลับไปหน้ายืนยันนัดหมาย โดยไม่เปลี่ยนแปลงข้อมูล (Alternate Case 1 [Cancel])
@@ -515,7 +605,7 @@ WHERE notification_id = :notification_id
 ## U3.3: ยืนยันนัดหมาย (I cannot attend)
 
 **Use Case Name:** ยืนยันนัดหมาย (Appointment Confirmation: I cannot attend)  
-**Use Case Description:** ผู้ใช้งานปฏิเสธนัดหมายที่เจ้าหน้าที่ประเมินสร้างไว้ และแจ้งว่าไม่สามารถเข้าร่วมได้  
+**Use Case Description:** ผู้ใช้งานปฏิเสธนัดหมายที่เจ้าหน้าที่ประเมินสร้างไว้ และแจ้งว่าไม่สามารถเข้าร่วมได้ คำร้องจึงสิ้นสุดลงด้วยสถานะ Withdrawn  
 **Actor:** ผู้ใช้งาน (User)  
 **Preconditions:** ผู้ใช้งานลงทะเบียนในแอปพลิเคชันแล้ว แบบฟอร์มการประสบอันตรายได้รับการอนุมัติ และเจ้าหน้าที่ประเมินส่งนัดหมายให้ผู้ใช้งานแล้ว (O4)  
 
@@ -535,7 +625,7 @@ WHERE notification_id = :notification_id
 
 **System:**
 
-5. เมื่อผู้ใช้งานคลิก "I cannot attend" ระบบแสดงข้อความเตือนและกล่องยืนยัน "คุณแน่ใจที่จะยกเลิกการนัดหมายหรือไม่" พร้อมปุ่ม "Confirm Cancel Appointment" และ "Go Back"
+5. เมื่อผู้ใช้งานคลิก "I cannot attend" ระบบแสดงข้อความเตือนว่าหากยกเลิก คำร้องนี้จะสิ้นสุดลงและระบบจะแจ้งที่ปรึกษา และกล่องยืนยัน "คุณแน่ใจที่จะยกเลิกการนัดหมายหรือไม่" พร้อมปุ่ม "Confirm Cancel Appointment" และ "Go Back"
 
 **Actor:**
 
@@ -547,7 +637,7 @@ WHERE notification_id = :notification_id
 
 7. ระบบดำเนินการตามปุ่มที่ผู้ใช้งานเลือก
 7.1 คลิก "Confirm Cancel Appointment"
-- เปลี่ยนสถานะนัดหมายใน Appointment Schedule จาก "Pending" เป็น "Cancelled" ตาม Q3.6
+- เปลี่ยนสถานะนัดหมายใน Appointment Schedule จาก "Pending" หรือ "Confirmed" เป็น "Cancelled" และเปลี่ยนสถานะคำร้องใน Injury Application จาก "Covered" เป็น "Withdrawn" ตาม Q3.6
 - Redirect กลับไปหน้ายืนยันนัดหมาย (Appointment Confirmation Page)
 - แสดงกล่องข้อความแจ้ง "เวลานัดหมายถูกยกเลิกแล้ว"
 ```sql
@@ -557,12 +647,65 @@ WITH cancelled AS (
   SET appointment_status = 'Cancelled'
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
-  RETURNING appointment_id
+  RETURNING appointment_id, claim_id
+), withdrawn AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Withdrawn'
+  FROM cancelled
+  WHERE ic.claim_id = cancelled.claim_id
+    AND ic.claim_status = 'Covered'
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, from_status, to_status, changed_at, change_reason)
+  SELECT claim_id, 'Covered', 'Withdrawn', NOW(),
+    'User cannot attend the appointment'
+  FROM withdrawn
 )
 INSERT INTO AppointmentConfirmation
   (appointment_id, channel, outcome, recorded_at)
 SELECT appointment_id, 'application', 'Cannot attend', NOW()
 FROM cancelled;
+```
+
+ระบบส่งข้อความแจ้งที่ปรึกษาว่าผู้ใช้งานไม่สามารถเข้าร่วมนัดหมาย และคำร้องถูกถอน (Withdrawn) ตาม QN.5
+```sql
+-- QN.5
+WITH appt AS (
+  SELECT a.claim_id, a.consultant_id, a.appointment_status,
+    a.supersedes_appt_id, a.location, ic.claim_no,
+    CONCAT_WS(' ', ip.title_name, ip.first_name, ip.last_name)
+      AS user_name,
+    TO_CHAR(a.schedule_date + a.schedule_time,
+      'FMDD FMMonth YYYY" : "HH24:MI') AS appt_time
+  FROM Appointment a
+  JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+  JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
+  WHERE a.appointment_id = :appointment_id
+)
+INSERT INTO Notification
+  (claim_id, insured_id, consultant_id, subject, body, sent_at)
+SELECT claim_id, NULL, consultant_id,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN 'Appointment cancelled'
+    WHEN supersedes_appt_id IS NOT NULL THEN 'Appointment rescheduled'
+    ELSE 'Appointment confirmed'
+  END,
+  CASE
+    WHEN appointment_status = 'Cancelled' THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') cannot attend the appointment on ', appt_time,
+        '. The appointment is cancelled and the claim is withdrawn.')
+    WHEN supersedes_appt_id IS NOT NULL THEN
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') moved the appointment to ', appt_time, ' at ', location, '.')
+    ELSE
+      CONCAT(user_name, ' (claim ', claim_no,
+        ') confirmed the appointment on ', appt_time, ' at ',
+        location, '.')
+  END,
+  NOW()
+FROM appt;
 ```
 
 **System:**
@@ -957,14 +1100,18 @@ WITH prev AS (
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> ec.result,
+SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
   :override_reason::varchar, ec.evidence_ref
-FROM EligibilityCheck ec
-JOIN decided ON decided.claim_id = ec.claim_id
-WHERE ec.officer_id IS NULL
-ORDER BY ec.checked_at DESC
-LIMIT 1;
+FROM decided
+LEFT JOIN LATERAL (
+  SELECT e.coverage_id, e.result, e.evidence_ref
+  FROM EligibilityCheck e
+  WHERE e.claim_id = decided.claim_id
+    AND e.officer_id IS NULL
+  ORDER BY e.checked_at DESC
+  LIMIT 1
+) ec ON TRUE;
 ```
 
 **System:**
@@ -1055,14 +1202,18 @@ WITH prev AS (
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT ec.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, :result::varchar <> ec.result,
+SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
+  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
   :override_reason::varchar, ec.evidence_ref
-FROM EligibilityCheck ec
-JOIN decided ON decided.claim_id = ec.claim_id
-WHERE ec.officer_id IS NULL
-ORDER BY ec.checked_at DESC
-LIMIT 1;
+FROM decided
+LEFT JOIN LATERAL (
+  SELECT e.coverage_id, e.result, e.evidence_ref
+  FROM EligibilityCheck e
+  WHERE e.claim_id = decided.claim_id
+    AND e.officer_id IS NULL
+  ORDER BY e.checked_at DESC
+  LIMIT 1
+) ec ON TRUE;
 ```
 
 **System:**
@@ -1190,12 +1341,13 @@ SELECT c.consultant_id,
   END AS slot_state
 FROM Consultant c
 CROSS JOIN generate_series(:slot_date::date + TIME '09:00',
-                           :slot_date::date + TIME '16:00',
+                           :slot_date::date + TIME '15:00',
                            INTERVAL '1 hour') AS s(slot_at)
 LEFT JOIN Appointment a
        ON a.consultant_id = c.consultant_id
       AND a.schedule_date + a.schedule_time = s.slot_at
       AND a.appointment_status IN ('Pending', 'Confirmed')
+WHERE s.slot_at::time <> TIME '12:00'
 ORDER BY consultant_name, s.slot_at;
 ```
 

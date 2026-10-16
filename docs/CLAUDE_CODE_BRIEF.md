@@ -43,7 +43,7 @@ Actors and use cases (14, some split into sub-cases):
 8. `database/schema.sql`, `database/seed.sql`, `database/queries.sql`, `database/data-dictionary.md`.
 9. `diagrams/`: use case, business process, ER, class, state, sequence and site map diagrams as PNG.
 
-`schema.sql` and `seed.sql` load cleanly into PostgreSQL 16, and all 57 statements in `queries.sql` pass `EXPLAIN`
+`schema.sql` and `seed.sql` load cleanly into PostgreSQL 16, and all 58 statements in `queries.sql` prepare
 against that schema. `docs/spec/README.md` ends with what changed since the previous pack. If `docs/spec/` is missing, stop and ask me for it.
 
 **Live sources (links).** They need our team's Google, Figma or Canva sign-in, so you may not be able to open
@@ -123,7 +123,7 @@ Do these in order, commit after each step, and stop after step 5 with a short su
 1. **Scaffold** the repository with the agreed stack, Docker Compose for PostgreSQL 16, the migration from
    `schema.sql`, the seed from `seed.sql`, lint and test scripts, README and `.env.example`.
 2. **Data layer:** `DBConnector` (pool, `performQuery`, transactions, `:name` parameter conversion) and every
-   Repository class from `04-classes.md` with **all 57 queries** as methods. Add a test per query that runs it
+   Repository class from `04-classes.md` with **all 58 queries** as methods. Add a test per query that runs it
    against the seeded database inside a rolled-back transaction, with parameters taken from the seed rows.
 3. **Login** as agreed in question 2, with seed accounts for one user, one officer and one consultant from the
    seed people.
@@ -142,4 +142,8 @@ use cases yet.
 ## 7. Later sessions (for orientation only)
 
 U3 to U6 (user app), O1 to O6 (officer console), C1 and C2 (consultant console), `AutoCancelJob` for U4.3, the two
-output reports in `06-screens.md`, and Flutter `integration_test` flows that follow `01-business-process.md` from claim to treatment.
+output reports in `06-screens.md`, and Flutter `integration_test` flows (with the server's own tests for the
+SQL) that follow `01-business-process.md` from claim to treatment.
+
+Business-process questions (what the office does, what a status means, who is told what) are the team's to
+answer: list them in your report-back with the report section instead of deciding them in code.

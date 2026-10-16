@@ -320,7 +320,7 @@ COMMENT ON COLUMN InjuryClaim.injury_place IS 'สถานที่ประส
 COMMENT ON COLUMN InjuryClaim.injury_cause IS 'สาเหตุการบาดเจ็บ | ไม่เกิน 255 ตัวอักษร';
 COMMENT ON COLUMN InjuryClaim.body_part IS 'อวัยวะที่บาดเจ็บ | ไม่เกิน 80 ตัวอักษร';
 COMMENT ON COLUMN InjuryClaim.injury_category IS 'ประเภทการบาดเจ็บ | เช่น Fracture, Burn, Sprain';
-COMMENT ON COLUMN InjuryClaim.claim_status IS 'สถานะคำร้อง | Awaiting verification, Register unavailable, Covered, Not covered, Rejected หรือ No treatment required';
+COMMENT ON COLUMN InjuryClaim.claim_status IS 'สถานะคำร้อง | Awaiting verification, Register unavailable, Covered, Not covered, Rejected, No treatment required หรือ Withdrawn';
 COMMENT ON COLUMN InjuryClaim.submitted_at IS 'วันและเวลาที่ยื่นคำร้อง | ระบบใส่ NOW() (Q1.6)';
 COMMENT ON COLUMN InjuryClaim.created_at IS 'วันและเวลาที่สร้างข้อมูล | ระบบใส่ NOW() (Q1.6)';
 COMMENT ON COLUMN DocumentType.doc_type_id IS 'รหัสประเภทเอกสาร | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0';
@@ -367,7 +367,7 @@ COMMENT ON COLUMN Appointment.consultant_id IS 'รหัสที่ปรึ�
 COMMENT ON COLUMN Appointment.supersedes_appt_id IS 'รหัสนัดหมายเดิมที่ถูกแทนที่ | ต้องมีใน Appointment.appointment_id';
 COMMENT ON COLUMN Appointment.appointment_type IS 'ประเภทนัดหมาย | Onsite หรือ Online';
 COMMENT ON COLUMN Appointment.schedule_date IS 'วันนัดหมาย | หลังวันปัจจุบัน';
-COMMENT ON COLUMN Appointment.schedule_time IS 'เวลานัดหมาย | 09:00 ถึง 16:00 ทุก 1 ชั่วโมง';
+COMMENT ON COLUMN Appointment.schedule_time IS 'เวลานัดหมาย | 09:00 ถึง 15:00 ทุก 1 ชั่วโมง ยกเว้น 12:00';
 COMMENT ON COLUMN Appointment.location IS 'สถานที่นัดหมาย | ไม่เกิน 160 ตัวอักษร';
 COMMENT ON COLUMN Appointment.appointment_status IS 'สถานะนัดหมาย | Pending, Confirmed, Rescheduled หรือ Cancelled';
 COMMENT ON COLUMN Appointment.confirm_deadline IS 'กำหนดเวลายืนยันนัดหมาย | 24 ชั่วโมงก่อนเวลานัดหมาย (QO4.3)';
@@ -420,14 +420,14 @@ COMMENT ON COLUMN Treatment.created_at IS 'วันและเวลาที�
 COMMENT ON COLUMN Notification.notification_id IS 'รหัสข้อความแจ้งเตือน | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0';
 COMMENT ON COLUMN Notification.claim_id IS 'รหัสคำร้อง | ต้องมีใน InjuryClaim.claim_id';
 COMMENT ON COLUMN Notification.insured_id IS 'รหัสผู้ประกันตนผู้รับ | ต้องมีใน InsuredPerson.insured_id ต้องมีค่าอย่างน้อยหนึ่งช่องระหว่าง insured_id กับ consultant_id';
-COMMENT ON COLUMN Notification.consultant_id IS 'รหัสที่ปรึกษาผู้รับ | ต้องมีใน Consultant.consultant_id (QN.3)';
+COMMENT ON COLUMN Notification.consultant_id IS 'รหัสที่ปรึกษาผู้รับ | ต้องมีใน Consultant.consultant_id (QN.3, QN.5)';
 COMMENT ON COLUMN Notification.subject IS 'หัวเรื่อง | ไม่เกิน 160 ตัวอักษร';
 COMMENT ON COLUMN Notification.body IS 'เนื้อหาข้อความ | ไม่เกิน 2,000 ตัวอักษร';
 COMMENT ON COLUMN Notification.sent_at IS 'วันและเวลาที่ส่ง | ระบบใส่ NOW()';
 COMMENT ON COLUMN Notification.read_at IS 'วันและเวลาที่อ่าน | หลัง sent_at ค่าว่างคือยังไม่อ่าน (Q2.3, Q3.7)';
 COMMENT ON COLUMN ClaimStatusHistory.history_id IS 'รหัสประวัติ | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0';
 COMMENT ON COLUMN ClaimStatusHistory.claim_id IS 'รหัสคำร้อง | ต้องมีใน InjuryClaim.claim_id';
-COMMENT ON COLUMN ClaimStatusHistory.officer_id IS 'รหัสเจ้าหน้าที่ประเมิน | ต้องมีใน EvaluationOfficer.officer_id ค่าว่างคือระบบ';
+COMMENT ON COLUMN ClaimStatusHistory.officer_id IS 'รหัสเจ้าหน้าที่ประเมิน | ต้องมีใน EvaluationOfficer.officer_id ค่าว่างคือระบบหรือผู้ใช้งาน';
 COMMENT ON COLUMN ClaimStatusHistory.from_status IS 'สถานะเดิม | ค่าเดียวกับ InjuryClaim.claim_status ค่าว่างในแถวแรกของคำร้อง';
 COMMENT ON COLUMN ClaimStatusHistory.to_status IS 'สถานะใหม่ | ค่าเดียวกับ InjuryClaim.claim_status';
 COMMENT ON COLUMN ClaimStatusHistory.changed_at IS 'วันและเวลาที่เปลี่ยน | ระบบใส่ NOW()';

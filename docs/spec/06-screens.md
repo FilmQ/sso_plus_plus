@@ -6,6 +6,15 @@
 - Older September draft pages (0:1 phone M1 to M9, 6:2 console D1 to D8) are superseded; use pages 125:2 and 125:3.
 - Site map: `diagrams/sitemap-user.png`, `diagrams/sitemap-officer.png`, `diagrams/sitemap-consultant.png`. Login is the root; solid boxes are pages, dashed boxes are pop-ups, confirmation cards and result messages.
 - Sample data used on the screens: claim SST-2026-000143, นาย สมชาย ประเสริฐ, officer กัญญา วงศ์ศิริ, consultant นพ. ธนา ศรีสุข.
+- Screen rules from the U3 decisions (2026-10-15):
+  - U3-2 to U3-7: type `Onsite (at the rehabilitation center)` or `Online`; the consultant line shows the title,
+    name and `Office: <Consultant.office_location as stored>` (for example `Office: Building A, Floor 3, Room 305`).
+    O4-1 to O4-3 and U5-1 show stored locations the same way.
+  - A `Confirmed` appointment (U3-3 behind the dialog, U3-5) keeps "Request Another Date" and "I cannot attend";
+    "Confirm Appointment" shows only while `Pending`.
+  - U3-4: Cancel can be pressed at any time; the free times are 09:00, 10:00, 11:00, 13:00, 14:00, 15:00.
+  - U3-6: "If you cancel, your claim will be withdrawn and the consultant will be informed."
+  - O4-1 to O4-3: each consultant row shows the same six hours (no 12:00 or 16:00).
 
 | Code | Screen (use case: page or state) | User | Report figure |
 |---|---|---|---|

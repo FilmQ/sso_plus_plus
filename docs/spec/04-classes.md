@@ -387,6 +387,8 @@ Attributes: `- notificationId: int`, `- claimId: int`, `- subject: String`, `- b
 Methods:
 
 - `+ countUnread(insured_id)`
+- `+ getNotifications(insured_id)` (U3.1 step 1, Q2.2)
+- `+ notifyConsultant(appointment_id)` (U3.1 to U3.3, QN.5; in U3.2 with the new appointment_id from Q3.5)
 - `+ markRead(notification_id)`
 - `+ notifyUser(claim_id, subject, body)`
 - `+ notifyRejection(claim_id)`
@@ -440,7 +442,7 @@ Methods:
 - `+ confirmAppointment(appointment_id) {Q3.3}`
 - `+ findFreeSlots(consultant_id, slot_date) {Q3.4}`
 - `+ rescheduleAppointment(appointment_id, new_date, new_time) {Q3.5}`
-- `+ cancelAppointment(appointment_id) {Q3.6}`
+- `+ cancelAppointment(appointment_id) {Q3.6}` (also sets the claim to Withdrawn and writes ClaimStatusHistory)
 - `+ findUpcomingAppointments(insured_id) {QU5.1}`
 - `+ findClaimsToSchedule() {QO4.1}`
 - `+ findConsultantSlots(slot_date, officer_id) {QO4.2}`
@@ -497,6 +499,7 @@ Methods:
 - `+ findNotifications(insured_id) {Q2.2}`
 - `+ markAsRead(notification_id, insured_id) {Q2.3}`
 - `+ markRead(notification_id, insured_id) {Q3.7}`
+- `+ insertConsultantMessage(appointment_id) {QN.5}`
 - `+ insertNotification(claim_id, subject, body) {QN.1}`
 - `+ insertRejectionNotice(claim_id) {QN.2}`
 - `+ insertAppointmentNotices(appointment_id) {QN.3}`

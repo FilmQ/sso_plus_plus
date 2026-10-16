@@ -11,6 +11,8 @@
 .history
 .idea/
 
+*.zip
+
 
 
 # Flutter repo-specific

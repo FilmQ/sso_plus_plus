@@ -4,7 +4,7 @@ Status columns: `InjuryClaim.claim_status`, `Appointment.appointment_status`, `T
 
 ## InjuryClaim
 
-States: `Awaiting verification`, `Register unavailable`, `Covered`, `Not covered`, `Rejected`, `No treatment required`
+States: `Awaiting verification`, `Register unavailable`, `Covered`, `Not covered`, `Rejected`, `No treatment required`, `Withdrawn`
 
 | From | To | Condition | Event | Use case | SQL |
 |---|---|---|---|---|---|
@@ -16,6 +16,9 @@ States: `Awaiting verification`, `Register unavailable`, `Covered`, `Not covered
 | Register unavailable | Not covered | officer selects Not Covered | rejectApplication | O3 Reject Injury Application | QO3.1: `UPDATE InjuryClaim SET claim_status = 'Not covered'` |
 | Not covered | Rejected | reason_code chosen | rejectApplication | O3 Reject Injury Application | QO3.2: `UPDATE InjuryClaim SET claim_status = 'Rejected'` |
 | Covered | No treatment required | report says no treatment | closeWithoutTreatment | O5.2 No Treatment Required | QO5.4: `UPDATE InjuryClaim SET claim_status = 'No treatment required'` |
+| Covered | Withdrawn | user selects I cannot attend | cancelAppointment | U3.3 Appointment Confirmation (I cannot attend) | Q3.6: `UPDATE InjuryClaim SET claim_status = 'Withdrawn'` (in the same statement as the appointment's Cancelled, with a ClaimStatusHistory row) |
+
+`No treatment required`, `Rejected` and `Withdrawn` are final. A `Withdrawn` claim is not listed by QO4.1 (it lists `Covered` claims without an open appointment), so the officer does not schedule it again.
 
 ## Appointment
 

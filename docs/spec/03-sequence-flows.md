@@ -107,32 +107,44 @@ Participants: User (actor), NotificationPage (ui), AppointmentPage (ui), Appoint
 6. DB connector --> NotificationRepository: result rows
 7. NotificationRepository --> NotificationModel: unread count
 8. NotificationModel --> AppointmentController: unread count
-9. AppointmentController --> NotificationPage: show red dot on the new message
-10. User -> NotificationPage: click notification (claim_id)
-11. NotificationPage -> AppointmentPage: open(claim_id)
-12. AppointmentPage -> AppointmentController: getAppointment(claim_id, insured_id)
-13. AppointmentController -> AppointmentModel: getAppointmentDetail(claim_id, insured_id)
-14. AppointmentModel -> AppointmentRepository: findLatestAppointment(claim_id, insured_id) {Q3.2}
-15. AppointmentRepository -> DB connector: performs query {Q3.2}
-16. DB connector --> AppointmentRepository: result rows
-17. AppointmentRepository --> AppointmentModel: appointment
-18. AppointmentModel --> AppointmentController: appointment
-19. AppointmentController --> AppointmentPage: show appointment + 3 options
-20. User -> AppointmentPage: click "Confirm Appointment"
-21. AppointmentPage -> AppointmentController: confirmAppointment(appointment_id)
-22. AppointmentController -> AppointmentModel: confirm(appointment_id)
-23. AppointmentModel -> AppointmentRepository: confirmAppointment(appointment_id) {Q3.3}
-24. AppointmentRepository -> DB connector: performs query {Q3.3}
-25. DB connector --> AppointmentRepository: ok (committed)
-26. AppointmentRepository --> AppointmentModel: ok
-27. AppointmentModel --> AppointmentController: ok
-28. AppointmentController -> NotificationModel: markRead(notification_id)
-29. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
-30. NotificationRepository -> DB connector: performs query {Q3.7}
-31. DB connector --> NotificationRepository: rows affected
-32. NotificationRepository --> NotificationModel: ok
-33. NotificationModel --> AppointmentController: ok
-34. AppointmentController --> AppointmentPage: show reminder pop-up
+9. AppointmentController -> NotificationModel: getNotifications(insured_id)
+10. NotificationModel -> NotificationRepository: findNotifications(insured_id) {Q2.2}
+11. NotificationRepository -> DB connector: performs query {Q2.2}
+12. DB connector --> NotificationRepository: result rows
+13. NotificationRepository --> NotificationModel: notifications
+14. NotificationModel --> AppointmentController: notifications
+15. AppointmentController --> NotificationPage: show messages, red dot on the new one
+16. User -> NotificationPage: click notification (claim_id)
+17. NotificationPage -> AppointmentPage: open(claim_id)
+18. AppointmentPage -> AppointmentController: getAppointment(claim_id, insured_id)
+19. AppointmentController -> AppointmentModel: getAppointmentDetail(claim_id, insured_id)
+20. AppointmentModel -> AppointmentRepository: findLatestAppointment(claim_id, insured_id) {Q3.2}
+21. AppointmentRepository -> DB connector: performs query {Q3.2}
+22. DB connector --> AppointmentRepository: result rows
+23. AppointmentRepository --> AppointmentModel: appointment
+24. AppointmentModel --> AppointmentController: appointment
+25. AppointmentController --> AppointmentPage: show appointment + 3 options
+26. User -> AppointmentPage: click "Confirm Appointment"
+27. AppointmentPage -> AppointmentController: confirmAppointment(appointment_id)
+28. AppointmentController -> AppointmentModel: confirm(appointment_id)
+29. AppointmentModel -> AppointmentRepository: confirmAppointment(appointment_id) {Q3.3}
+30. AppointmentRepository -> DB connector: performs query {Q3.3}
+31. DB connector --> AppointmentRepository: ok (committed)
+32. AppointmentRepository --> AppointmentModel: ok
+33. AppointmentModel --> AppointmentController: ok
+34. AppointmentController -> NotificationModel: notifyConsultant(appointment_id)
+35. NotificationModel -> NotificationRepository: insertConsultantMessage(appointment_id) {QN.5}
+36. NotificationRepository -> DB connector: performs query {QN.5}
+37. DB connector --> NotificationRepository: rows affected
+38. NotificationRepository --> NotificationModel: ok
+39. NotificationModel --> AppointmentController: ok
+40. AppointmentController -> NotificationModel: markRead(notification_id)
+41. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
+42. NotificationRepository -> DB connector: performs query {Q3.7}
+43. DB connector --> NotificationRepository: rows affected
+44. NotificationRepository --> NotificationModel: ok
+45. NotificationModel --> AppointmentController: ok
+46. AppointmentController --> AppointmentPage: show reminder pop-up
 
 ## U3.2: Appointment Confirmation (Request another date)
 
@@ -161,13 +173,19 @@ Participants: User (actor), AppointmentPage (ui), AppointmentController (control
 19. DB connector --> AppointmentRepository: ok (committed)
 20. AppointmentRepository --> AppointmentModel: new appointment_id
 21. AppointmentModel --> AppointmentController: new appointment_id
-22. AppointmentController -> NotificationModel: markRead(notification_id)
-23. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
-24. NotificationRepository -> DB connector: performs query {Q3.7}
+22. AppointmentController -> NotificationModel: notifyConsultant(new appointment_id)
+23. NotificationModel -> NotificationRepository: insertConsultantMessage(new appointment_id) {QN.5}
+24. NotificationRepository -> DB connector: performs query {QN.5}
 25. DB connector --> NotificationRepository: rows affected
 26. NotificationRepository --> NotificationModel: ok
 27. NotificationModel --> AppointmentController: ok
-28. AppointmentController --> AppointmentPage: show date-changed notice
+28. AppointmentController -> NotificationModel: markRead(notification_id)
+29. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
+30. NotificationRepository -> DB connector: performs query {Q3.7}
+31. DB connector --> NotificationRepository: rows affected
+32. NotificationRepository --> NotificationModel: ok
+33. NotificationModel --> AppointmentController: ok
+34. AppointmentController --> AppointmentPage: show date-changed notice
 
 ## U3.3: Appointment Confirmation (I cannot attend)
 
@@ -185,15 +203,21 @@ Participants: User (actor), AppointmentPage (ui), AppointmentController (control
 8. AppointmentModel -> AppointmentRepository: cancelAppointment(appointment_id) {Q3.6}
 9. AppointmentRepository -> DB connector: performs query {Q3.6}
 10. DB connector --> AppointmentRepository: ok (committed)
-11. AppointmentRepository --> AppointmentModel: ok
-12. AppointmentModel --> AppointmentController: ok
-13. AppointmentController -> NotificationModel: markRead(notification_id)
-14. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
-15. NotificationRepository -> DB connector: performs query {Q3.7}
+11. AppointmentRepository --> AppointmentModel: ok (claim Withdrawn)
+12. AppointmentModel --> AppointmentController: ok (claim Withdrawn)
+13. AppointmentController -> NotificationModel: notifyConsultant(appointment_id)
+14. NotificationModel -> NotificationRepository: insertConsultantMessage(appointment_id) {QN.5}
+15. NotificationRepository -> DB connector: performs query {QN.5}
 16. DB connector --> NotificationRepository: rows affected
 17. NotificationRepository --> NotificationModel: ok
 18. NotificationModel --> AppointmentController: ok
-19. AppointmentController --> AppointmentPage: show cancelled notice
+19. AppointmentController -> NotificationModel: markRead(notification_id)
+20. NotificationModel -> NotificationRepository: markRead(notification_id, insured_id) {Q3.7}
+21. NotificationRepository -> DB connector: performs query {Q3.7}
+22. DB connector --> NotificationRepository: rows affected
+23. NotificationRepository --> NotificationModel: ok
+24. NotificationModel --> AppointmentController: ok
+25. AppointmentController --> AppointmentPage: show cancelled notice
 
 ## U4.1: Treatment Confirmation (Accept Case)
 
