@@ -5,7 +5,7 @@ import '../model/notification_model.dart';
 import 'controller.dart';
 
 /// U3.1 Confirm Appointment, U3.2 Request Another Date, U3.3 I cannot attend
-/// (SA report 2.13, sequences U3.1 to U3.3).
+/// and U5 View Appointment Schedule (SA report 2.13, sequences U3.1 to U3.3, U5).
 ///
 /// The page sends the claim_id. The controller finds the appointment with Q3.2,
 /// which checks that the claim belongs to the signed-in user (D-032).
@@ -80,6 +80,9 @@ class AppointmentController extends Controller {
         await _markRead(notificationId);
         return {...a, 'appointment_status': 'Cancelled'};
       });
+
+  /// U5 step 2 (QU5.1): the Appointments tab of the Schedule Page.
+  Future<List<Map<String, Object?>>> getAppointmentSchedule() => appointmentModel.getUpcomingAppointments(_insuredId);
 
   /// Q3.7 runs only when the page was opened from a message (D-034).
   Future<void> _markRead(int? notificationId) async {

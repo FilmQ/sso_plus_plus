@@ -7,13 +7,13 @@ class TreatmentRepository extends Repository {
 
   final String table = 'Treatment';
 
-  // QU4.1 [U4.1] Gives 0 when the treatment is not Pending.
-  Future<int> updateStatusAccepted(int treatmentId, int claimId) =>
-      execute(TreatmentSql.qU4_1, {'treatment_id': treatmentId, 'claim_id': claimId});
+  // QU4.1 [U4.1] Only a Pending treatment. Else NoRowChangedException.
+  Future<void> updateStatusAccepted(int treatmentId, int claimId) =>
+      guarded('QU4.1', TreatmentSql.qU4_1, {'treatment_id': treatmentId, 'claim_id': claimId});
 
-  // QU4.2 [U4.2] Gives 0 when the treatment is not Pending.
-  Future<int> updateScheduledDate(int treatmentId, int claimId, String newDate) =>
-      execute(TreatmentSql.qU4_2, {
+  // QU4.2 [U4.2] Only a Pending treatment. Else NoRowChangedException.
+  Future<void> updateScheduledDate(int treatmentId, int claimId, String newDate) =>
+      guarded('QU4.2', TreatmentSql.qU4_2, {
         'current_treatment_id': treatmentId,
         'current_claim_id': claimId,
         'new_date': newDate,

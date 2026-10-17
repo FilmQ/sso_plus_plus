@@ -10,6 +10,7 @@ Future<void> main() async {
   final db = config.connector();
   await db.connect();
   final app = App(config, db);
+  app.autoCancelJob().start();
   final server = await io.serve(app.handler, InternetAddress.anyIPv4, config.serverPort);
   print('SST server on http://${server.address.host}:${server.port} (${db.url})');
 }

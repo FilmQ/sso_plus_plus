@@ -37,4 +37,8 @@ class AppointmentModel extends Model {
   /// Q3.6 (U3.3). Only a Pending or Confirmed appointment. The claim changes
   /// from Covered to Withdrawn (final).
   Future<void> cancel(int appointmentId) => appointments.cancelAppointment(appointmentId);
+
+  /// QU5.1 (U5): the Pending and Confirmed appointments from today on.
+  Future<List<Map<String, Object?>>> getUpcomingAppointments(int insuredId) =>
+      appointments.findUpcomingAppointments(insuredId);
 }

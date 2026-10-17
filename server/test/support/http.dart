@@ -8,7 +8,11 @@ import 'package:sst_server/db/db_connector.dart';
 /// Calls the server handler in this process (no network).
 class TestClient {
   TestClient(DBConnector db, {String storageDir = 'build/test-storage'})
-      : handler = App(Config({'STORAGE_DIR': storageDir}), db).handler;
+      : handler = app(db, storageDir: storageDir).handler;
+
+  /// The server object that the test requests go to.
+  static App app(DBConnector db, {String storageDir = 'build/test-storage'}) =>
+      App(Config({'STORAGE_DIR': storageDir}), db);
 
   final Handler handler;
   String? token;

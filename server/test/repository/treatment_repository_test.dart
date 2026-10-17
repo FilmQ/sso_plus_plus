@@ -1,3 +1,4 @@
+import 'package:sst_server/repository/repository.dart';
 import 'package:sst_server/repository/treatment_repository.dart';
 import 'package:test/test.dart';
 
@@ -24,15 +25,15 @@ void main() {
       );
 
   test('QU4.1 updateStatusAccepted: only a Pending treatment of the claim', () => inRollback(db, () async {
-        expect(await repo.updateStatusAccepted(403, 143), 0);
-        expect(await repo.updateStatusAccepted(403, 149), 1);
+        await expectLater(repo.updateStatusAccepted(403, 143), throwsA(isA<NoRowChangedException>()));
+        await repo.updateStatusAccepted(403, 149);
         expect(await status(403), 'Accepted');
-        expect(await repo.updateStatusAccepted(401, 143), 0);
+        await expectLater(repo.updateStatusAccepted(401, 143), throwsA(isA<NoRowChangedException>()));
       }));
 
   test('QU4.2 updateScheduledDate: only a Pending treatment', () => inRollback(db, () async {
-        expect(await repo.updateScheduledDate(403, 149, day(20)), 1);
-        expect(await repo.updateScheduledDate(401, 143, day(20)), 0);
+        await repo.updateScheduledDate(403, 149, day(20));
+        await expectLater(repo.updateScheduledDate(401, 143, day(20)), throwsA(isA<NoRowChangedException>()));
       }));
 
   test('QU4.3 cancelExpiredAndNotifyUser: cancels a Pending treatment on or before today', () => inRollback(db, () async {
