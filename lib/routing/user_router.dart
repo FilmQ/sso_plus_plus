@@ -10,10 +10,11 @@ import '../pages/user/injury_forms_submitted_page.dart';
 import '../pages/user/notifications/notification_page.dart';
 import '../pages/user/profile_page.dart';
 import '../pages/user/register_page.dart';
+import '../pages/user/schedule/schedule_page.dart';
 import '../pages/user/submission_provider.dart';
+import '../pages/user/treatment/treatment_page.dart';
 import '../pages/user/user_shell.dart';
 import '../session/session_providers.dart';
-import '../widgets/pending_page.dart';
 import 'session_redirect.dart';
 import 'session_refresh.dart';
 
@@ -64,11 +65,17 @@ final Provider<GoRouter> userRouterProvider = Provider<GoRouter>((Ref ref) {
           notificationId: int.tryParse(state.uri.queryParameters['n'] ?? ''),
         ),
       ),
+      // U4-1 Confirm Treatment page.
+      GoRoute(
+        path: '/treatment/:treatmentId',
+        builder: (BuildContext context, GoRouterState state) =>
+            TreatmentPage(treatmentId: int.parse(state.pathParameters['treatmentId']!)),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (BuildContext context, GoRouterState state, StatefulNavigationShell shell) => UserShell(shell: shell),
         branches: <StatefulShellBranch>[
           _branch('/home', const HomePage()),
-          _branch('/schedule', _pending('Schedule', 'U5 and U6')),
+          _branch('/schedule', const SchedulePage()),
           _branch('/notifications', const NotificationPage()),
           _branch('/profile', const ProfilePage()),
         ],
@@ -80,6 +87,3 @@ final Provider<GoRouter> userRouterProvider = Provider<GoRouter>((Ref ref) {
 StatefulShellBranch _branch(String path, Widget page) => StatefulShellBranch(
       routes: <RouteBase>[GoRoute(path: path, builder: (BuildContext context, GoRouterState state) => page)],
     );
-
-Widget _pending(String title, String useCases) =>
-    Scaffold(appBar: AppBar(title: Text(title)), body: PendingPage(title: title, useCases: useCases));

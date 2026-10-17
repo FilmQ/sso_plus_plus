@@ -45,7 +45,7 @@ The password of every seed account is `Password123` (`server/db/seeds/001_user_a
 | App | Login name | Person |
 |---|---|---|
 | User app | `1103700123456` | นาย สมชาย ประเสริฐ (claim SST-2026-000143) |
-| User app | `1100800345672` | นาย มานพ ศรีทอง (has an unread message) |
+| User app | `1100800345672` | นาย มานพ ศรีทอง (an unread message and a Pending treatment: U4) |
 | User app | `1209800456789` | นางสาว วิภา ใจงาม (claim rejected) |
 | User app | `1350100678904` | นางสาว อรทัย มั่นคง (claim SST-2026-000160 with a Pending appointment: U3) |
 | User app | `3120100234561`, `1101500567893` | the other sample users |
@@ -60,6 +60,13 @@ ACTIVE in the register stub and not yet registered. `1909900111222` is INACTIVE 
 
 Sign in as `1350100678904`: `seed.sql` has a Pending appointment (510) and its message for claim SST-2026-000160.
 Its date is 22 October 2026; after that day the hours are in the past. `make db-reset` loads it again.
+
+### U4 to U6 demo data
+
+Sign in as `1100800345672` and open Schedule, then Treatments: `seed.sql` has the Pending treatment 403 of claim
+SST-2026-000149 on 26 October 2026 at 10:00. "Accept" (U4.1) and "Request Another Date" (U4.2) change it.
+The server runs `AutoCancelJob` (U4.3) when it starts and every day at 00:05: after 26 October it cancels treatment
+403 and sends the message "Treatment cancelled". `make db-reset` loads the seed again.
 
 ## Lint and test
 

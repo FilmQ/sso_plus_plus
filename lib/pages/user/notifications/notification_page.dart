@@ -9,13 +9,15 @@ import '../home/home_providers.dart';
 import '../home/notification_detail_sheet.dart';
 import 'notification_providers.dart';
 import 'notification_tile.dart';
+import '../treatment/open_treatment.dart';
 
 /// U3-1 Notification Page (red dot) (SA report figure 2-23, U3.1 steps 1 and 2).
 class NotificationPage extends ConsumerWidget {
   const NotificationPage({super.key});
 
   /// U3.1 step 2: a message of QN.3 opens the Appointment Page; Q3.7 marks it
-  /// read after the user's choice. Other messages open as in U2 (Q2.3).
+  /// read after the user's choice. Other messages open as in U2 (Q2.3); a
+  /// "Treatment booked" message has "Open treatment" (U4, D-045).
   Future<void> clickNotification(BuildContext context, WidgetRef ref, NotificationItem item) async {
     if (item.isAppointment) {
       await context.push('/appointment/${item.claimId}?n=${item.id}');
@@ -25,7 +27,9 @@ class NotificationPage extends ConsumerWidget {
     try {
       final NotificationItem opened = await ref.read(notificationApiProvider).markAsRead(item.id);
       refreshUserData(ref);
-      if (context.mounted) await showNotificationDetail(context, opened);
+      if (context.mounted) {
+        await showNotificationDetail(context, opened, onOpen: () => openTreatmentOfClaim(context, ref, opened.claimId));
+      }
     } on ApiException catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     }

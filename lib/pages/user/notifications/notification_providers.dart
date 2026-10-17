@@ -4,6 +4,7 @@ import '../../../api/appointment_api.dart';
 import '../../../api/notification_api.dart';
 import '../../../session/session_providers.dart';
 import '../home/home_providers.dart';
+import '../schedule/schedule_providers.dart';
 
 final Provider<AppointmentApi> appointmentApiProvider =
     Provider<AppointmentApi>((Ref ref) => AppointmentApi(ref.watch(apiClientProvider)));
@@ -20,10 +21,13 @@ final FutureProvider<List<NotificationItem>> notificationsProvider = FutureProvi
   return ref.read(appointmentApiProvider).getNotifications();
 });
 
-/// Reloads every value that a read message or an appointment change can alter.
+/// Reloads every value that a read message, an appointment change or a
+/// treatment change can alter.
 void refreshUserData(WidgetRef ref) {
   ref.invalidate(unreadCountProvider);
   ref.invalidate(unreadOnNotificationPageProvider);
   ref.invalidate(notificationsProvider);
   ref.invalidate(homeClaimProvider);
+  ref.invalidate(appointmentScheduleProvider);
+  ref.invalidate(treatmentScheduleProvider);
 }

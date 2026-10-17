@@ -5,21 +5,22 @@ import '../../../widgets/info_card.dart';
 
 /// U2-3 Message opened (marked as read) and U2-4 Rejection message
 /// (SA report figures 2-19 and 2-20).
-/// [onOpenAppointment] adds "Open appointment" to a QN.3 message (U2-3).
-Future<void> showNotificationDetail(BuildContext context, NotificationItem item, {VoidCallback? onOpenAppointment}) {
+/// [onOpen] adds "Open appointment" to a QN.3 message (U2-3) and "Open
+/// treatment" to a "Treatment booked" message of QN.1 (U4).
+Future<void> showNotificationDetail(BuildContext context, NotificationItem item, {VoidCallback? onOpen}) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
-    builder: (BuildContext sheet) => _Detail(item: item, onOpenAppointment: onOpenAppointment),
+    builder: (BuildContext sheet) => _Detail(item: item, onOpen: onOpen),
   );
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail({required this.item, this.onOpenAppointment});
+  const _Detail({required this.item, this.onOpen});
 
   final NotificationItem item;
-  final VoidCallback? onOpenAppointment;
+  final VoidCallback? onOpen;
 
   /// QN.2 writes the reason and the officer message with an empty line between
   /// them (U2-4). Other messages show the body in one card (U2-3).
@@ -66,13 +67,13 @@ class _Detail extends StatelessWidget {
                 Text(item.subject, style: text.headlineSmall),
                 Text(item.sentTime, style: text.bodySmall),
                 ..._cards(context),
-                if (item.isAppointment && onOpenAppointment != null) ...<Widget>[
+                if ((item.isAppointment || item.isTreatment) && onOpen != null) ...<Widget>[
                   FilledButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      onOpenAppointment!();
+                      onOpen!();
                     },
-                    child: const Text('Open appointment'),
+                    child: Text(item.isAppointment ? 'Open appointment' : 'Open treatment'),
                   ),
                   TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
                 ] else

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../api/api_exception.dart';
 import '../../../api/notification_api.dart';
 import '../notifications/notification_providers.dart';
+import '../treatment/open_treatment.dart';
 import 'home_providers.dart';
 import 'notification_detail_sheet.dart';
 import 'pop_up_controller.dart';
@@ -33,7 +34,9 @@ class NotificationBell extends ConsumerWidget {
     refreshUserData(ref);
     if (context.mounted) {
       await showNotificationDetail(context, item,
-          onOpenAppointment: () => context.push('/appointment/${item.claimId}?n=${item.id}'));
+          onOpen: () => item.isTreatment
+              ? openTreatmentOfClaim(context, ref, item.claimId)
+              : context.push('/appointment/${item.claimId}?n=${item.id}'));
     }
   }
 

@@ -31,6 +31,9 @@ class NotificationItem {
 
   /// QN.3 writes this subject. Its message leads to the Appointment Page (U3).
   bool get isAppointment => subject == 'Appointment scheduled';
+
+  /// QN.1 of O5.1 writes this subject. Its message leads to the Confirm Treatment page (U4).
+  bool get isTreatment => subject == 'Treatment booked';
 }
 
 /// The page side of server NotificationController (U2, D-002).

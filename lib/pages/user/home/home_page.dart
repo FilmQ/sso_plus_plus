@@ -6,6 +6,7 @@ import '../../../session/session_providers.dart';
 import '../../../widgets/centered_body.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/key_value.dart';
+import '../treatment/open_treatment.dart';
 import 'claim_progress_card.dart';
 import 'home_providers.dart';
 import 'notification_bell.dart';
@@ -73,6 +74,15 @@ class _HomeBody extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          // U4: a Pending treatment waits for the user's answer (D-045).
+          if (claim['treatment_status'] == 'Pending')
+            Align(
+              alignment: Alignment.centerLeft,
+              child: FilledButton.tonal(
+                onPressed: () => openTreatmentOfClaim(context, ref, claim['claim_id']! as int),
+                child: const Text('View treatment'),
+              ),
             ),
         ],
       ],

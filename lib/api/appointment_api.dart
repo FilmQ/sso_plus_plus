@@ -43,4 +43,8 @@ class AppointmentApi {
   /// Q3.6, Q3.7
   Future<Map<String, Object?>> cancelAppointment(int claimId, int? notificationId) async =>
       _row(await api.post('${_base(claimId)}/cancel', <String, Object?>{'notification_id': notificationId}));
+
+  /// QU5.1: the Appointments tab of the Schedule Page (getAppointmentSchedule).
+  Future<List<Map<String, Object?>>> getAppointmentSchedule() async =>
+      ((await api.get('/u5/appointments'))['appointments']! as List<Object?>).cast<Map<String, Object?>>();
 }

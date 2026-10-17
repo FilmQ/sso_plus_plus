@@ -75,3 +75,26 @@ class AppointmentStatusChip extends StatelessWidget {
     return StatusPill(icon: icon, label: label, background: bg, foreground: fg);
   }
 }
+
+/// The chip of a Treatment.treatment_status (05-states.md), as in U4-1, U4-2
+/// and U6-1. 'Pending' shows as "Waiting for your answer" (U4-1), or as
+/// "Awaiting you" when [short] (U6-1).
+class TreatmentStatusChip extends StatelessWidget {
+  const TreatmentStatusChip(this.status, {super.key, this.short = false});
+
+  final String status;
+  final bool short;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    final StatusColors s = StatusColors.of(context);
+    final (IconData icon, String label, Color bg, Color fg) = switch (status) {
+      'Pending' => (Icons.schedule, short ? 'Awaiting you' : 'Waiting for your answer', s.warningContainer, s.warning),
+      'Accepted' => (Icons.event_available, 'Accepted', s.successContainer, s.success),
+      'Cancelled' => (Icons.event_busy, 'Cancelled', colors.errorContainer, colors.onErrorContainer),
+      _ => (Icons.update, status, colors.secondaryContainer, colors.onSecondaryContainer),
+    };
+    return StatusPill(icon: icon, label: label, background: bg, foreground: fg);
+  }
+}
