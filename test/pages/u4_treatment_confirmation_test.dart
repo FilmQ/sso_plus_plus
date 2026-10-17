@@ -69,7 +69,7 @@ Future<void> _openTreatment(WidgetTester tester, FakeServer server) async {
   expect(find.text('Waiting for your answer'), findsOneWidget);
   expect(find.text('23 / 10 / 2026 : 13:00'), findsOneWidget);
   expect(find.text('60 minutes'), findsOneWidget);
-  expect(find.text('กัญญา วงศ์ศิริ'), findsOneWidget);
+  expect(find.text('กัญญา วงศ์ศิริ (Evaluation Officer)'), findsOneWidget);
   expect(find.text('Signed 15 October 2026 by นพ. ธนา ศรีสุข'), findsOneWidget);
   expect(find.textContaining('cancelled automatically and your claim is closed'), findsOneWidget);
 }
@@ -155,6 +155,7 @@ void main() {
       });
     await signInToUserApp(tester, server);
     await tapText(tester, 'Notifications');
+    expect(find.byIcon(Icons.healing), findsOneWidget, reason: 'the icon of a "Treatment booked" message');
     await tapText(tester, 'Treatment booked');
     await tapText(tester, 'Open treatment');
     expect(find.text('Confirm Treatment'), findsOneWidget);

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_server.dart';
@@ -115,6 +116,8 @@ void main() {
     expect(find.text('23 October 2026 : 13:00'), findsOneWidget);
     expect(find.text('Accepted'), findsOneWidget);
     expect(find.text('Physiotherapy · 60 minutes'), findsOneWidget);
+    expect(find.byIcon(Icons.local_hospital), findsWidgets);
+    expect(find.byIcon(Icons.event_available), findsNothing, reason: 'the short chips have no icon');
     await tester.scrollUntilVisible(find.text('Awaiting you'), 200);
     expect(find.text('Awaiting you'), findsOneWidget);
   });

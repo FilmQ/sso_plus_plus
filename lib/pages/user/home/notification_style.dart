@@ -18,6 +18,7 @@ class NotificationIcon extends StatelessWidget {
       'Claim confirmed' => (Icons.verified, ok.successContainer, ok.success),
       'No treatment required' => (Icons.task_alt, ok.successContainer, ok.success),
       'Application rejected' => (Icons.block, c.errorContainer, c.onErrorContainer),
+      'Treatment booked' => (Icons.healing, c.secondaryContainer, c.onSecondaryContainer),
       'Treatment cancelled' => (Icons.event_busy, c.errorContainer, c.onErrorContainer),
       _ => (Icons.mark_email_read, c.secondaryContainer, c.onSecondaryContainer),
     };

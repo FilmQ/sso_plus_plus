@@ -7,13 +7,12 @@ import '../treatment/treatment_text.dart';
 
 /// A card of the Schedule Page: the header, the date line and the claim lines.
 class _ScheduleCard extends StatelessWidget {
-  const _ScheduleCard({required this.row, required this.header, required this.date, this.chip, this.banner, this.onTap});
+  const _ScheduleCard({required this.row, required this.header, required this.date, this.chip, this.onTap});
 
   final Map<String, Object?> row;
   final Widget header;
   final String date;
   final Widget? chip;
-  final Widget? banner;
   final VoidCallback? onTap;
 
   String _s(String key) => (row[key] as String?) ?? '';
@@ -27,30 +26,24 @@ class _ScheduleCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            ?banner,
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: 12,
-                children: <Widget>[
-                  header,
-                  Row(spacing: 8, children: <Widget>[
-                    Icon(Icons.calendar_month, color: colors.primary),
-                    Expanded(child: Text(date, style: Theme.of(context).textTheme.titleMedium)),
-                    ?chip,
-                  ]),
-                  const Divider(height: 1),
-                  SideKeyValue('Claim ID', _s('claim_no'), labelWidth: 88),
-                  SideKeyValue('Injury', _s('injury'), labelWidth: 88),
-                  SideKeyValue('Injury date', _s('injury_date'), labelWidth: 88),
-                ],
-              ),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 12,
+            children: <Widget>[
+              header,
+              Row(spacing: 8, children: <Widget>[
+                Icon(Icons.calendar_month, color: colors.primary),
+                Expanded(child: Text(date, style: Theme.of(context).textTheme.titleMedium)),
+                ?chip,
+              ]),
+              const Divider(height: 1),
+              SideKeyValue('Claim ID', _s('claim_no'), labelWidth: 88),
+              SideKeyValue('Injury', _s('injury'), labelWidth: 88),
+              SideKeyValue('Injury date', _s('injury_date'), labelWidth: 88),
+            ],
+          ),
         ),
       ),
     );
@@ -89,7 +82,8 @@ class AppointmentScheduleCard extends StatelessWidget {
 }
 
 /// U6-1: one Q6.1 row. The schema has no picture or address of the facility,
-/// so the card shows an icon, the facility name, the type and the duration.
+/// so the card shows a round icon, the facility name, the type and the
+/// duration (Figma U6-1).
 class TreatmentScheduleCard extends StatelessWidget {
   const TreatmentScheduleCard({super.key, required this.row, this.onTap});
 
@@ -105,15 +99,18 @@ class TreatmentScheduleCard extends StatelessWidget {
       onTap: onTap,
       date: (row['treatment_date'] as String?) ?? '',
       chip: TreatmentStatusChip((row['treatment_status'] as String?) ?? '', short: true),
-      banner: Container(
-        height: 96,
-        color: colors.primaryContainer,
-        child: Icon(Icons.local_hospital, size: 40, color: colors.onPrimaryContainer),
-      ),
-      header: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-        Text((row['facility_name'] as String?) ?? '', style: text.titleSmall),
-        Text('${(row['treatment_type'] as String?) ?? ''} · ${TreatmentText.duration(row['duration_minutes'])}',
-            style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+      header: Row(spacing: 12, children: <Widget>[
+        CircleAvatar(
+          backgroundColor: colors.primaryContainer,
+          child: Icon(Icons.local_hospital, color: colors.onPrimaryContainer),
+        ),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+            Text((row['facility_name'] as String?) ?? '', style: text.titleSmall),
+            Text('${(row['treatment_type'] as String?) ?? ''} · ${TreatmentText.duration(row['duration_minutes'])}',
+                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+          ]),
+        ),
       ]),
     );
   }

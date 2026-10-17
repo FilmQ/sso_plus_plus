@@ -100,6 +100,8 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
   Widget build(BuildContext context) {
     final Map<String, Object?>? t = _treatment;
     return Scaffold(
+      // QU4.1 and QU4.2 change only a Pending treatment (05-states.md).
+      bottomNavigationBar: t?['treatment_status'] == 'Pending' ? _buttons() : null,
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/schedule')),
         title: const Text('Confirm Treatment'),
@@ -131,22 +133,42 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
           Flexible(flex: 3, child: TreatmentStatusChip(t['treatment_status']! as String)),
         ]),
         TreatmentCards(treatment: t),
-        // QU4.1 and QU4.2 change only a Pending treatment (05-states.md).
-        if (pending) ...<Widget>[
-          const AnswerBeforeNote(),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _busy ? null : clickAccept,
-            icon: const Icon(Icons.check),
-            label: const Text('Accept'),
-          ),
-          OutlinedButton.icon(
-            onPressed: _busy ? null : clickRequestAnotherDate,
-            icon: const Icon(Icons.edit_calendar),
-            label: const Text('Request Another Date'),
-          ),
-        ],
+        if (pending) const AnswerBeforeNote(),
       ],
     );
   }
+
+  /// "Accept" and "Request Another Date", fixed at the bottom (Figma U4-1).
+  Widget _buttons() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        // Center with heightFactor 1, because Align (CenteredBody) fills the height.
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: 12,
+              children: <Widget>[
+                FilledButton.icon(
+                  onPressed: _busy ? null : clickAccept,
+                  icon: const Icon(Icons.check),
+                  label: const Text('Accept'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : clickRequestAnotherDate,
+                  icon: const Icon(Icons.edit_calendar),
+                  label: const Text('Request Another Date'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
 }

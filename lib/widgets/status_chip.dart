@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../theme/status_colors.dart';
 
-/// The small status pill of the Figma frames: an icon and a label.
+/// The small status pill of the Figma frames: an icon and a label, or only a
+/// label (the short chips of U5-1 and U6-1).
 class StatusPill extends StatelessWidget {
-  const StatusPill({super.key, required this.icon, required this.label, required this.background, required this.foreground});
+  const StatusPill(
+      {super.key, required this.icon, required this.label, required this.background, required this.foreground});
 
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final Color background;
   final Color foreground;
@@ -19,8 +21,10 @@ class StatusPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(icon, size: 16, color: foreground),
-          const SizedBox(width: 6),
+          if (icon != null) ...<Widget>[
+            Icon(icon, size: 16, color: foreground),
+            const SizedBox(width: 6),
+          ],
           Flexible(
             child: Text(label,
                 overflow: TextOverflow.ellipsis,
@@ -57,7 +61,8 @@ class ClaimStatusChip extends StatelessWidget {
 
 /// The chip of an Appointment.appointment_status (05-states.md), as in U3-2,
 /// U3-5, U3-7 and U5-1. 'Pending' shows as "Awaiting your confirmation"
-/// (U3.1 step 3), or as "Awaiting you" when [short] (U5-1).
+/// (U3.1 step 3), or as "Awaiting you" when [short] (U5-1). A [short] chip has
+/// no icon.
 class AppointmentStatusChip extends StatelessWidget {
   const AppointmentStatusChip(this.status, {super.key, this.short = false});
 
@@ -75,13 +80,13 @@ class AppointmentStatusChip extends StatelessWidget {
       'Cancelled' => (Icons.event_busy, 'Cancelled', colors.errorContainer, colors.onErrorContainer),
       _ => (Icons.update, status, colors.secondaryContainer, colors.onSecondaryContainer),
     };
-    return StatusPill(icon: icon, label: label, background: bg, foreground: fg);
+    return StatusPill(icon: short ? null : icon, label: label, background: bg, foreground: fg);
   }
 }
 
 /// The chip of a Treatment.treatment_status (05-states.md), as in U4-1, U4-2
 /// and U6-1. 'Pending' shows as "Waiting for your answer" (U4-1), or as
-/// "Awaiting you" when [short] (U6-1).
+/// "Awaiting you" when [short] (U6-1). A [short] chip has no icon.
 class TreatmentStatusChip extends StatelessWidget {
   const TreatmentStatusChip(this.status, {super.key, this.short = false});
 
@@ -98,6 +103,6 @@ class TreatmentStatusChip extends StatelessWidget {
       'Cancelled' => (Icons.event_busy, 'Cancelled', colors.errorContainer, colors.onErrorContainer),
       _ => (Icons.update, status, colors.secondaryContainer, colors.onSecondaryContainer),
     };
-    return StatusPill(icon: icon, label: label, background: bg, foreground: fg);
+    return StatusPill(icon: short ? null : icon, label: label, background: bg, foreground: fg);
   }
 }

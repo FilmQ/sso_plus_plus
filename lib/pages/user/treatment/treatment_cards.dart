@@ -24,12 +24,13 @@ class TreatmentCards extends StatelessWidget {
           SideKeyValue('Type', _s('treatment_type')),
           SideKeyValue('Duration', TreatmentText.duration(treatment['duration_minutes'])),
           SideKeyValue('Facility', _s('facility_name')),
-          SideKeyValue('Booked by', _s('booked_by')),
-          SideKeyValue('Report', 'Signed ${_s('report_signed_date')} by ${_s('report_author')}'),
+          // QU4.4 booked_by is an EvaluationOfficer name (Figma U4-1).
+          SideKeyValue('Booked by', '${_s('booked_by')} (Evaluation Officer)'),
         ]),
         InfoCard(icon: Icons.assignment, title: 'Claim', children: <Widget>[
           SideKeyValue('Claim ID', _s('claim_no')),
           SideKeyValue('Injury', _s('injury')),
+          SideKeyValue('Report', 'Signed ${_s('report_signed_date')} by ${_s('report_author')}'),
         ]),
       ],
     );
