@@ -3,8 +3,27 @@ import 'package:sst_server/repository/claim_repository.dart';
 
 /// A date [offset] days from today, as 'yyyy-MM-dd'.
 /// Tests use dates near today, because many queries compare with NOW().
-String day(int offset) {
-  final d = DateTime.now().add(Duration(days: offset));
+String day(int offset) => addDays(_iso(DateTime.now()), offset);
+
+/// The first weekday (Monday to Friday) on or after [day] of [offset].
+/// QO5.2, QU4.2 and QU4.5 accept only weekdays.
+String weekday(int offset) {
+  var d = day(offset);
+  while (!isWeekday(d)) {
+    d = addDays(d, 1);
+  }
+  return d;
+}
+
+bool isWeekday(String date) => DateTime.parse(date).weekday <= DateTime.friday;
+
+/// [date] ('yyyy-MM-dd') plus [days] calendar days.
+String addDays(String date, int days) {
+  final d = DateTime.parse(date);
+  return _iso(DateTime(d.year, d.month, d.day + days));
+}
+
+String _iso(DateTime d) {
   String two(int n) => n.toString().padLeft(2, '0');
   return '${d.year}-${two(d.month)}-${two(d.day)}';
 }

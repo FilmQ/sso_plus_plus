@@ -223,31 +223,48 @@ Participants: User (actor), AppointmentPage (ui), AppointmentController (control
 
 Participants: User (actor), TreatmentPage (ui), TreatmentController (controller), TreatmentModel (model), TreatmentRepository (repository), DB connector (db)
 
-1. User -> TreatmentPage: click "Accept"
-2. TreatmentPage -> TreatmentController: acceptTreatment(treatment_id, claim_id)
-3. TreatmentController -> TreatmentModel: accept(treatment_id, claim_id)
-4. TreatmentModel -> TreatmentRepository: updateStatusAccepted(treatment_id, claim_id) {QU4.1}
-5. TreatmentRepository -> DB connector: performs query {QU4.1}
-6. DB connector --> TreatmentRepository: rows affected
-7. TreatmentRepository --> TreatmentModel: ok
-8. TreatmentModel --> TreatmentController: ok
-9. TreatmentController --> TreatmentPage: show accepted pop-up
+1. User -> TreatmentPage: open "Confirm Treatment" (treatment_id)
+2. TreatmentPage -> TreatmentController: getTreatment(treatment_id, insured_id)
+3. TreatmentController -> TreatmentModel: getTreatmentDetail(treatment_id, insured_id)
+4. TreatmentModel -> TreatmentRepository: findTreatmentDetail(treatment_id, insured_id) {QU4.4}
+5. TreatmentRepository -> DB connector: performs query {QU4.4}
+6. DB connector --> TreatmentRepository: result rows
+7. TreatmentRepository --> TreatmentModel: treatment detail
+8. TreatmentModel --> TreatmentController: treatment detail
+9. TreatmentController --> TreatmentPage: show Confirm Treatment page
+10. User -> TreatmentPage: click "Accept"
+11. TreatmentPage -> TreatmentController: acceptTreatment(treatment_id, claim_id, insured_id)
+12. TreatmentController -> TreatmentModel: accept(treatment_id, claim_id, insured_id)
+13. TreatmentModel -> TreatmentRepository: updateStatusAccepted(treatment_id, claim_id, insured_id) {QU4.1}
+14. TreatmentRepository -> DB connector: performs query {QU4.1}
+15. DB connector --> TreatmentRepository: treatment_id
+16. TreatmentRepository --> TreatmentModel: ok (Accepted)
+17. TreatmentModel --> TreatmentController: ok (Accepted)
+18. TreatmentController --> TreatmentPage: show accepted pop-up
 
 ## U4.2: Treatment Confirmation (Change Date)
 
 Participants: User (actor), TreatmentPage (ui), TreatmentController (controller), TreatmentModel (model), TreatmentRepository (repository), DB connector (db)
 
+- ref U4.1: Treatment Confirmation (steps 1-2)
 1. User -> TreatmentPage: click "Request Another Date"
-2. TreatmentPage -> TreatmentPage: showAvailableDates()
-3. User -> TreatmentPage: selectDate(new_date)
-4. TreatmentPage -> TreatmentController: changeDate(treatment_id, claim_id, new_date)
-5. TreatmentController -> TreatmentModel: changeDate(treatment_id, claim_id, new_date)
-6. TreatmentModel -> TreatmentRepository: updateScheduledDate(treatment_id, claim_id, new_date) {QU4.2}
-7. TreatmentRepository -> DB connector: performs query {QU4.2}
-8. DB connector --> TreatmentRepository: rows affected
-9. TreatmentRepository --> TreatmentModel: ok
-10. TreatmentModel --> TreatmentController: ok
-11. TreatmentController --> TreatmentPage: show new treatment date
+2. TreatmentPage -> TreatmentController: getAvailableDates(treatment_id, insured_id)
+3. TreatmentController -> TreatmentModel: getAvailableDates(treatment_id, insured_id)
+4. TreatmentModel -> TreatmentRepository: findAvailableDates(treatment_id, insured_id) {QU4.5}
+5. TreatmentRepository -> DB connector: performs query {QU4.5}
+6. DB connector --> TreatmentRepository: result rows
+7. TreatmentRepository --> TreatmentModel: free weekdays
+8. TreatmentModel --> TreatmentController: free weekdays
+9. TreatmentController --> TreatmentPage: show "Choose another date"
+10. User -> TreatmentPage: select date, click "Save date"
+11. TreatmentPage -> TreatmentController: changeDate(treatment_id, claim_id, new_date, insured_id)
+12. TreatmentController -> TreatmentModel: changeDate(treatment_id, claim_id, new_date, insured_id)
+13. TreatmentModel -> TreatmentRepository: updateScheduledDate(treatment_id, claim_id, new_date, insured_id) {QU4.2}
+14. TreatmentRepository -> DB connector: performs query {QU4.2}
+15. DB connector --> TreatmentRepository: treatment_id, scheduled_date, scheduled_time
+16. TreatmentRepository --> TreatmentModel: new date (Accepted)
+17. TreatmentModel --> TreatmentController: new date (Accepted)
+18. TreatmentController --> TreatmentPage: show date-changed message
 
 ## U4.3: Treatment Confirmation (Reject)
 
@@ -259,8 +276,8 @@ Participants: AutoCancelJob (ui), TreatmentController (controller), TreatmentMod
 4. TreatmentModel -> TreatmentRepository: cancelExpiredAndNotifyUser() {QU4.3}
 5. TreatmentRepository -> DB connector: performs query {QU4.3}
 6. DB connector --> TreatmentRepository: rows affected
-7. TreatmentRepository --> TreatmentModel: cancelled treatments
-8. TreatmentModel --> TreatmentController: cancelled treatments
+7. TreatmentRepository --> TreatmentModel: cancelled treatments (claims Withdrawn)
+8. TreatmentModel --> TreatmentController: cancelled treatments (claims Withdrawn)
 9. TreatmentController --> AutoCancelJob: done
 
 ## U5: View Appointment Schedule

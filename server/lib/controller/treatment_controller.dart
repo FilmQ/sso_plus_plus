@@ -6,9 +6,9 @@ import 'controller.dart';
 /// U4.1 Accept Case, U4.2 Change Date, U4.3 Reject and U6 View Treatment
 /// Schedule (SA report 2.13, sequences U4.1 to U4.3 and U6).
 ///
-/// The page sends the treatment_id. The controller finds the treatment with
-/// Q6.1, which checks that it belongs to the signed-in user, and takes the
-/// claim_id from that row (D-041).
+/// The page sends the treatment_id. The controller reads the treatment with
+/// QU4.4, which checks that it belongs to the signed-in user, and takes the
+/// claim_id from that row. QU4.1 and QU4.2 check the owner again (D-041).
 class TreatmentController extends Controller {
   TreatmentController(super.session, this.db, this.treatmentModel);
 
@@ -22,31 +22,33 @@ class TreatmentController extends Controller {
   /// U6 step 2 (Q6.1): the Treatments tab of the Schedule Page.
   Future<List<Map<String, Object?>>> getTreatmentSchedule() => treatmentModel.getUpcomingTreatments(_insuredId);
 
-  /// The Confirm Treatment page (U4-1): one Q6.1 row.
+  /// U4.1 steps 1 to 2 (QU4.4): the Confirm Treatment page (U4-1).
   Future<Map<String, Object?>> getTreatment(int treatmentId) async {
-    final treatment = await treatmentModel.getTreatment(treatmentId, _insuredId);
-    if (treatment == null) throw const ControllerException(404, 'There is no upcoming treatment with this ID.');
+    final treatment = await treatmentModel.getTreatmentDetail(treatmentId, _insuredId);
+    if (treatment == null) throw const ControllerException(404, 'There is no treatment with this ID.');
     return treatment;
   }
 
-  /// U4.1 step 2 (QU4.1). Gives the treatment again (Accepted).
+  /// U4.1 step 4 (QU4.1). Gives the treatment again (Accepted).
   Future<Map<String, Object?>> acceptTreatment(int treatmentId) => db.transaction(() async {
         final t = await getTreatment(treatmentId);
-        await treatmentModel.accept(treatmentId, t['claim_id']! as int);
+        await treatmentModel.accept(treatmentId, t['claim_id']! as int, _insuredId);
         return getTreatment(treatmentId);
       });
 
-  /// U4.2 step 2 (showAvailableDates, QO5.2).
-  Future<List<String>> getAvailableDates(int treatmentId) async =>
-      treatmentModel.getAvailableDates(await getTreatment(treatmentId));
+  /// U4.2 step 2 (QU4.5): the dates of "Choose another date".
+  Future<List<Map<String, Object?>>> getAvailableDates(int treatmentId) async {
+    await getTreatment(treatmentId);
+    return treatmentModel.getAvailableDates(treatmentId, _insuredId);
+  }
 
-  /// U4.2 step 4 (QU4.2). Gives the treatment with the new date (still Pending).
+  /// U4.2 step 4 (QU4.2). Gives the treatment with the new date (Accepted).
   Future<Map<String, Object?>> changeDate(int treatmentId, String newDate) {
     if (!_date.hasMatch(newDate) || DateTime.tryParse(newDate) == null) {
       throw const FormatException('new_date must be yyyy-MM-dd');
     }
     return db.transaction(() async {
-      await treatmentModel.changeDate(await getTreatment(treatmentId), newDate);
+      await treatmentModel.changeDate(await getTreatment(treatmentId), newDate, _insuredId);
       return getTreatment(treatmentId);
     });
   }

@@ -516,6 +516,8 @@ WITH old AS (
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
     AND :new_date::date + :new_time::time > NOW()
+    AND :new_time::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
+                            TIME '13:00', TIME '14:00', TIME '15:00')
     AND NOT EXISTS (
           SELECT 1
           FROM Appointment b
@@ -736,29 +738,73 @@ WHERE notification_id = :notification_id
 
 **Actor:**
 
-1. ผู้ใช้งานคลิกปุ่ม "Accept" ในการ์ดหรือหน้า "Confirm Treatment"
+1. ผู้ใช้งานเปิดหน้า "Confirm Treatment" จากหน้า Schedule Page แท็บ Treatments (U6) จากข้อความแจ้งเตือน "Treatment booked" หรือจากการ์ดคำร้องในหน้าหลัก
 
 **System:**
 
-2. ระบบบันทึกสถานะการยืนยันเป็น "Accepted" ลงฐานข้อมูล ตาม QU4.1
+2. ระบบแสดงหน้า "Confirm Treatment" ดังนี้
+- สถานะการรักษา: Waiting for your answer (Pending) หรือ Accepted
+- การรักษา: วันและเวลา ประเภทการรักษา ระยะเวลา (นาที) และสถานพยาบาล
+- ผู้จองการรักษา (Booked by) และรายงานการให้คำปรึกษาที่ใช้จอง: วันที่ลงนามและชื่อที่ปรึกษา
+- รายละเอียดคำร้อง: Claim ID และการบาดเจ็บ
+- ปุ่ม "Accept" และ "Request Another Date" แสดงเฉพาะเมื่อสถานะเป็น "Pending"
+ระบบดึงข้อมูลการรักษาของผู้ใช้งาน ตาม QU4.4
+```sql
+-- QU4.4
+SELECT t.treatment_id,
+  t.claim_id,
+  t.treatment_status,
+  TO_CHAR(t.scheduled_date + t.scheduled_time,
+    'FMDD / FMMM / YYYY" : "HH24:MI') AS treatment_date,
+  t.treatment_type,
+  t.duration_minutes,
+  t.facility_name,
+  CONCAT_WS(' ', o.first_name, o.last_name) AS booked_by,
+  ic.claim_no,
+  CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
+  TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS report_signed_date,
+  CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+    AS report_author
+FROM Treatment t
+JOIN InjuryClaim ic ON ic.claim_id = t.claim_id
+JOIN EvaluationOfficer o ON o.officer_id = t.officer_id
+JOIN ConsultationReport cr ON cr.report_id = t.report_id
+JOIN Consultant c ON c.consultant_id = cr.consultant_id
+WHERE t.treatment_id = :treatment_id
+  AND ic.insured_id = :insured_id;
+```
+
+**Actor:**
+
+3. ผู้ใช้งานคลิกปุ่ม "Accept" ในหน้า "Confirm Treatment"
+
+**System:**
+
+4. ระบบบันทึกสถานะการยืนยันเป็น "Accepted" ลงฐานข้อมูล ตาม QU4.1 (เฉพาะการรักษาของผู้ใช้งานที่ยังมีสถานะ "Pending")
 ```sql
 -- QU4.1
 UPDATE Treatment
 SET treatment_status = 'Accepted'
 WHERE treatment_id = :treatment_id
   AND claim_id = :claim_id
-  AND treatment_status = 'Pending';
+  AND treatment_status = 'Pending'
+  AND EXISTS (
+        SELECT 1
+        FROM InjuryClaim ic
+        WHERE ic.claim_id = Treatment.claim_id
+          AND ic.insured_id = :insured_id)
+RETURNING treatment_id;
 ```
 
 **System:**
 
-3. ระบบแสดงการ์ด Pop-up แจ้งผู้ใช้งานว่ายอมรับการรักษาเรียบร้อยแล้ว
+5. ระบบแสดงการ์ด Pop-up แจ้งผู้ใช้งานว่ายอมรับการรักษาเรียบร้อยแล้ว
 
 
 ## U4.2: ยืนยันการรักษา (Change Date)
 
 **Use Case Name:** ยืนยันการรักษา (Treatment Confirmation: Change Date)  
-**Use Case Description:** ผู้ใช้งานขอเปลี่ยนวันรักษาที่เจ้าหน้าที่ประเมินนัดหมายไว้  
+**Use Case Description:** ผู้ใช้งานขอเปลี่ยนวันรักษาที่เจ้าหน้าที่ประเมินนัดหมายไว้ โดยเลือกจากวันที่ว่าง และวันใหม่ถือเป็นการยอมรับการรักษา  
 **Actor:** ผู้ใช้งาน (User)  
 **Preconditions:** เจ้าหน้าที่ประเมินนัดหมายวันรักษาให้ผู้ใช้งานแล้ว (O5.1)  
 
@@ -766,33 +812,75 @@ WHERE treatment_id = :treatment_id
 
 **Actor:**
 
-1. ผู้ใช้งานคลิกปุ่ม "Request Another Date" ในหน้า "Treatment"
+1. ผู้ใช้งานคลิกปุ่ม "Request Another Date" ในหน้า "Confirm Treatment" (U4.1 ขั้นตอนที่ 1 ถึง 2, QU4.4)
 
 **System:**
 
-2. ระบบแสดงกล่องหรือหน้าต่างแสดงวันที่ว่างทั้งหมด
+2. ระบบแสดงหน้าต่าง "Choose another date" ซึ่งแสดงวันที่ว่างที่สถานพยาบาลเดิมในเวลาเดิม ได้แก่ วันจันทร์ถึงวันศุกร์ ตั้งแต่วันพรุ่งนี้ถึง 7 วันหลังวันรักษาเดิม ที่ยังไม่มีการรักษาอื่นในเวลานั้น ตาม QU4.5
+```sql
+-- QU4.5
+SELECT s.slot_day::date AS slot_date,
+  TO_CHAR(s.slot_day, 'Dy FMDD FMMonth YYYY') AS date_label
+FROM Treatment t
+JOIN InjuryClaim ic ON ic.claim_id = t.claim_id
+CROSS JOIN LATERAL generate_series(
+       (CURRENT_DATE + 1)::timestamp,
+       (t.scheduled_date + 7)::timestamp,
+       INTERVAL '1 day') AS s(slot_day)
+WHERE t.treatment_id = :treatment_id
+  AND ic.insured_id = :insured_id
+  AND t.treatment_status = 'Pending'
+  AND s.slot_day::date <> t.scheduled_date
+  AND EXTRACT(ISODOW FROM s.slot_day) < 6
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.facility_name = t.facility_name
+          AND o.scheduled_date = s.slot_day::date
+          AND o.scheduled_time = t.scheduled_time
+          AND o.treatment_status IN ('Pending', 'Accepted'))
+ORDER BY s.slot_day;
+```
 
 **Actor:**
 
-3. ผู้ใช้งานเลือกวันที่ต้องการ
+3. ผู้ใช้งานเลือกวันที่ต้องการ แล้วคลิก "Save date"
 
 **System:**
 
-4. ระบบบันทึกวันรักษาใหม่ลงฐานข้อมูล ตาม QU4.2
+4. ระบบบันทึกวันรักษาใหม่และเปลี่ยนสถานะเป็น "Accepted" (ถือว่ายอมรับการรักษา) ลงฐานข้อมูล ตาม QU4.2 หากวันนั้นไม่อยู่ในช่วงที่กำหนดหรือไม่ว่างแล้ว ระบบไม่บันทึกและให้ผู้ใช้งานเลือกวันใหม่ เมื่อบันทึกแล้วระบบแสดงข้อความ "Treatment date changed to [วัน] [เดือน] [ปี] : [เวลา]"
 ```sql
 -- QU4.2
-UPDATE treatment
-SET scheduled_date = :new_date
-WHERE claim_id = :current_claim_id
-  AND treatment_id = :current_treatment_id
-  AND treatment_status = 'Pending';
+UPDATE Treatment
+SET scheduled_date = :new_date::date,
+    treatment_status = 'Accepted'
+WHERE treatment_id = :treatment_id
+  AND claim_id = :claim_id
+  AND treatment_status = 'Pending'
+  AND EXISTS (
+        SELECT 1
+        FROM InjuryClaim ic
+        WHERE ic.claim_id = Treatment.claim_id
+          AND ic.insured_id = :insured_id)
+  AND :new_date::date BETWEEN CURRENT_DATE + 1 AND scheduled_date + 7
+  AND :new_date::date <> scheduled_date
+  AND EXTRACT(ISODOW FROM :new_date::date) < 6
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.facility_name = Treatment.facility_name
+          AND o.scheduled_date = :new_date::date
+          AND o.scheduled_time = Treatment.scheduled_time
+          AND o.treatment_status IN ('Pending', 'Accepted')
+          AND o.treatment_id <> Treatment.treatment_id)
+RETURNING treatment_id, scheduled_date, scheduled_time;
 ```
 
 
 ## U4.3: ยืนยันการรักษา (Reject)
 
 **Use Case Name:** ยืนยันการรักษา (Treatment Confirmation: Reject)  
-**Use Case Description:** ระบบยกเลิกวันรักษาโดยอัตโนมัติเมื่อผู้ใช้งานไม่ตอบรับภายในกำหนด เช่น ไม่เข้ารับการรักษา หรือไม่ตอบกลับการ์ดยืนยัน  
+**Use Case Description:** ระบบยกเลิกวันรักษาโดยอัตโนมัติเมื่อผู้ใช้งานไม่ตอบรับภายในกำหนด เช่น ไม่เข้ารับการรักษา หรือไม่ตอบกลับการ์ดยืนยัน และคำร้องสิ้นสุดลงด้วยสถานะ Withdrawn  
 **Actor:** ผู้ใช้งาน (User)  
 **Preconditions:** เจ้าหน้าที่ประเมินนัดหมายวันรักษาให้ผู้ใช้งานแล้ว (O5.1)  
 
@@ -808,7 +896,7 @@ WHERE claim_id = :current_claim_id
 
 **System:**
 
-3. ระบบยกเลิกวันรักษาในฐานข้อมูลเป็นงานเบื้องหลัง (Subroutine) และส่งข้อความแจ้งเตือนผู้ใช้งานว่าการรักษาถูกยกเลิก ตาม QU4.3
+3. ระบบยกเลิกวันรักษาในฐานข้อมูลเป็นงานเบื้องหลัง (Subroutine ที่ทำงานเมื่อเริ่มระบบและทุกวันเวลา 00:05 น.) เปลี่ยนสถานะคำร้องจาก "Covered" เป็น "Withdrawn" ซึ่งทำให้คำร้องสิ้นสุด และส่งข้อความแจ้งเตือนผู้ใช้งานว่าการรักษาถูกยกเลิกและคำร้องถูกปิด ตาม QU4.3
 ```sql
 -- QU4.3
 WITH cancelled AS (
@@ -817,6 +905,19 @@ WITH cancelled AS (
   WHERE treatment_status = 'Pending'
     AND scheduled_date <= CURRENT_DATE
   RETURNING claim_id, facility_name, scheduled_date
+), withdrawn AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Withdrawn'
+  FROM (SELECT DISTINCT claim_id FROM cancelled) c
+  WHERE ic.claim_id = c.claim_id
+    AND ic.claim_status = 'Covered'
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, from_status, to_status, changed_at, change_reason)
+  SELECT claim_id, 'Covered', 'Withdrawn', NOW(),
+    'Treatment not accepted in time'
+  FROM withdrawn
 )
 INSERT INTO Notification
   (claim_id, insured_id, subject, body, sent_at)
@@ -825,7 +926,8 @@ SELECT ic.claim_id,
   'Treatment cancelled',
   'Your treatment at ' || c.facility_name || ' on '
     || TO_CHAR(c.scheduled_date, 'FMDD FMMonth YYYY')
-    || ' was cancelled because it was not accepted in time.',
+    || ' was cancelled because it was not accepted in time.'
+    || ' Your claim ' || ic.claim_no || ' is now closed.',
   NOW()
 FROM cancelled c
 JOIN InjuryClaim ic ON ic.claim_id = c.claim_id;
@@ -843,7 +945,7 @@ JOIN InjuryClaim ic ON ic.claim_id = c.claim_id;
 
 **Actor:**
 
-1. ผู้ใช้งานคลิก "Schedule Page" ในแถบนำทาง (Navigation Bar) เพื่อดูตารางนัดหมาย
+1. ผู้ใช้งานคลิก "Schedule Page" ในแถบนำทาง (Navigation Bar) เพื่อดูตารางนัดหมาย (แท็บ Appointments ของหน้า Schedule Page ซึ่งมีแท็บ Treatments ของ U6 อยู่ด้วย)
 
 **System:**
 
@@ -851,8 +953,9 @@ JOIN InjuryClaim ic ON ic.claim_id = c.claim_id;
 - ข้อมูลที่ปรึกษา: คำนำหน้าชื่อ ชื่อ และนามสกุล
 - สถานที่ทำงาน (Office Location)
 - วันนัดหมาย: [วัน] [เดือน] [ปี] : [เวลา]
+- สถานะนัดหมาย: Confirmed หรือ Awaiting you (Pending)
 - รายละเอียดคำร้อง: Claim ID การบาดเจ็บ และวันที่บาดเจ็บ
-ระบบดึงตารางนัดหมายจากฐานข้อมูล ตาม QU5.1
+ระบบดึงตารางนัดหมายจากฐานข้อมูล ตาม QU5.1 ผู้ใช้งานคลิกรายการเพื่อเปิดหน้านัดหมาย (Appointment Page) ของคำร้องนั้นได้ (U3.1 ขั้นตอนที่ 3)
 ```sql
 -- QU5.1
 SELECT CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
@@ -862,7 +965,9 @@ SELECT CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     'FMDD FMMonth YYYY" : "HH24:MI') AS appointment_date,
   ic.claim_no,
   CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
-  TO_CHAR(ic.injury_datetime, 'FMDD FMMonth YYYY') AS injury_date
+  TO_CHAR(ic.injury_datetime, 'FMDD FMMonth YYYY') AS injury_date,
+  a.appointment_status,
+  ic.claim_id
 FROM Appointment a
 JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
 JOIN Consultant c ON c.consultant_id = a.consultant_id
@@ -884,20 +989,22 @@ ORDER BY a.schedule_date, a.schedule_time;
 
 **Actor:**
 
-1. ผู้ใช้งานคลิก "Schedule Page" ในแถบนำทาง (Navigation Bar) เพื่อดูตารางการรักษา
+1. ผู้ใช้งานคลิก "Schedule Page" ในแถบนำทาง (Navigation Bar) เพื่อดูตารางการรักษา (แท็บ Treatments ของหน้า Schedule Page)
 
 **System:**
 
 2. ระบบแสดงหน้าตารางการรักษาในรูปแบบรายการ (List View) แต่ละรายการประกอบด้วย
-- ข้อมูลสถานพยาบาล: ชื่อ รูปภาพ และที่ตั้ง
+- สถานพยาบาล ประเภทการรักษา และระยะเวลา (นาที)
 - วันรักษา: [วัน] [เดือน] [ปี] : [เวลา]
+- สถานะการรักษา: Accepted หรือ Awaiting you (Pending)
 - รายละเอียดคำร้อง: Claim ID การบาดเจ็บ และวันที่บาดเจ็บ
-ระบบดึงตารางการรักษาจากฐานข้อมูล ตาม Q6.1
+ระบบดึงตารางการรักษาจากฐานข้อมูล ตาม Q6.1 ผู้ใช้งานคลิกรายการเพื่อเปิดหน้า "Confirm Treatment" (U4.1) ได้
 ```sql
 -- Q6.1
 SELECT t.treatment_id,
   t.facility_name,
   t.treatment_type,
+  t.duration_minutes,
   TO_CHAR(t.scheduled_date + t.scheduled_time,
     'FMDD FMMonth YYYY" : "HH24:MI') AS treatment_date,
   t.treatment_status,
@@ -1506,6 +1613,7 @@ LEFT JOIN Treatment t
       AND t.treatment_status IN ('Pending', 'Accepted')
 WHERE s.slot_at::time BETWEEN TIME '09:00' AND TIME '16:00'
   AND s.slot_at > NOW()
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY s.slot_at;
 ```
 
@@ -1537,10 +1645,10 @@ ORDER BY s.slot_at;
 -- QO5.3
 INSERT INTO Treatment
   (claim_id, report_id, officer_id, treatment_type,
-   facility_name, scheduled_date, scheduled_time,
+   duration_minutes, facility_name, scheduled_date, scheduled_time,
    treatment_status, created_at)
 VALUES (:claim_id, :report_id, :officer_id, :treatment_type,
-  :facility_name, :scheduled_date, :scheduled_time, 'Pending',
+  :duration_minutes, :facility_name, :scheduled_date, :scheduled_time, 'Pending',
   NOW())
 RETURNING treatment_id;
 ```

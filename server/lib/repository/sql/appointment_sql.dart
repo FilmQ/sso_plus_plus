@@ -70,6 +70,8 @@ WITH old AS (
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
     AND :new_date::date + :new_time::time > NOW()
+    AND :new_time::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
+                            TIME '13:00', TIME '14:00', TIME '15:00')
     AND NOT EXISTS (
           SELECT 1
           FROM Appointment b
@@ -136,7 +138,9 @@ SELECT CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     'FMDD FMMonth YYYY" : "HH24:MI') AS appointment_date,
   ic.claim_no,
   CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
-  TO_CHAR(ic.injury_datetime, 'FMDD FMMonth YYYY') AS injury_date
+  TO_CHAR(ic.injury_datetime, 'FMDD FMMonth YYYY') AS injury_date,
+  a.appointment_status,
+  ic.claim_id
 FROM Appointment a
 JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
 JOIN Consultant c ON c.consultant_id = a.consultant_id

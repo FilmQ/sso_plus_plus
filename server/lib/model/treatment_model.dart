@@ -8,57 +8,40 @@ class TreatmentModel extends Model {
 
   final TreatmentRepository treatments;
 
-  /// U4.2: the user can choose a date up to this many days after the booked
-  /// date (D-042).
-  static const changeWindowDays = 14;
-
   /// Q6.1 (U6): the Pending and Accepted treatments from today on.
   Future<List<Map<String, Object?>>> getUpcomingTreatments(int insuredId) =>
       treatments.findUpcomingTreatments(insuredId);
 
-  /// One Q6.1 row of the user, or null. Q6.1 has the user's insured_id, so a
-  /// user cannot read the treatment of another claim (D-041).
-  Future<Map<String, Object?>?> getTreatment(int treatmentId, int insuredId) async =>
-      (await getUpcomingTreatments(insuredId)).where((t) => t['treatment_id'] == treatmentId).firstOrNull;
+  /// QU4.4 (U4.1 steps 1 to 2): one treatment of the user, or null.
+  Future<Map<String, Object?>?> getTreatmentDetail(int treatmentId, int insuredId) =>
+      treatments.findTreatmentDetail(treatmentId, insuredId);
 
-  /// QU4.1 (U4.1). Only a Pending treatment; else NoRowChangedException (409).
-  Future<void> accept(int treatmentId, int claimId) => treatments.updateStatusAccepted(treatmentId, claimId);
+  /// QU4.1 (U4.1). Only a Pending treatment of the user; else
+  /// NoRowChangedException (409).
+  Future<void> accept(int treatmentId, int claimId, int insuredId) =>
+      treatments.updateStatusAccepted(treatmentId, claimId, insuredId);
 
-  /// U4.2 step 2 (showAvailableDates), from a Q6.1 row: the dates ('yyyy-MM-dd')
-  /// from tomorrow to [changeWindowDays] days after the booked date on which
-  /// the facility is free at the same hour. It uses QO5.2 of O5.1, because U4.2
-  /// has no query of its own (D-042). Officer 0 does not exist, so every booked
-  /// hour is 'busy'.
-  Future<List<String>> getAvailableDates(Map<String, Object?> treatment, {DateTime? today}) async {
-    final booked = DateText.parseDateTime(treatment['treatment_date']! as String)!;
-    final now = today ?? DateTime.now();
-    final rows = await treatments.findFacilitySlots(
-      facilityName: treatment['facility_name']! as String,
-      dateFrom: DateText.iso(DateTime(now.year, now.month, now.day + 1)),
-      dateTo: DateText.iso(DateTime(booked.year, booked.month, booked.day + changeWindowDays)),
-      officerId: 0,
-    );
-    return [
-      for (final row in rows)
-        if (row['slot_state'] == 'free')
-          if (row['slot_at']! as DateTime case final DateTime slot
-              when slot.hour == booked.hour && slot.minute == booked.minute)
-            if (DateText.iso(slot) != DateText.iso(booked)) DateText.iso(slot),
-    ];
-  }
+  /// QU4.5 (U4.2 step 2): the free weekdays, each as slot_date ('yyyy-MM-dd')
+  /// and date_label (for example 'Tue 27 October 2026').
+  Future<List<Map<String, Object?>>> getAvailableDates(int treatmentId, int insuredId) async => [
+        for (final row in await treatments.findAvailableDates(treatmentId, insuredId))
+          {'slot_date': DateText.iso(row['slot_date']! as DateTime), 'date_label': row['date_label']},
+      ];
 
-  /// QU4.2 (U4.2 step 4). The time stays. QU4.2 does not check that the
-  /// facility is free, so the Model accepts only a date of
-  /// [getAvailableDates] (422, D-042).
-  Future<void> changeDate(Map<String, Object?> treatment, String newDate) async {
-    if (!(await getAvailableDates(treatment)).contains(newDate)) {
+  /// QU4.2 (U4.2 step 4): saves the new date and sets Accepted. For a Pending
+  /// treatment, a date that QU4.5 does not give is a validation error (422);
+  /// other refusals of QU4.2 are NoRowChangedException (409) (D-046).
+  Future<void> changeDate(Map<String, Object?> treatment, String newDate, int insuredId) async {
+    final treatmentId = treatment['treatment_id']! as int;
+    if (treatment['treatment_status'] == 'Pending' &&
+        !(await getAvailableDates(treatmentId, insuredId)).any((d) => d['slot_date'] == newDate)) {
       throw const ValidationFailedException({'new_date': 'Choose one of the available dates.'});
     }
-    await treatments.updateScheduledDate(
-        treatment['treatment_id']! as int, treatment['claim_id']! as int, newDate);
+    await treatments.updateScheduledDate(treatmentId, treatment['claim_id']! as int, newDate, insuredId);
   }
 
-  /// QU4.3 (U4.3): cancels each Pending treatment on or before today and
-  /// tells its user. Gives the number of cancelled treatments.
+  /// QU4.3 (U4.3): cancels each Pending treatment on or before today, tells
+  /// its user and closes its claim (Withdrawn). Gives the number of
+  /// cancelled treatments.
   Future<int> cancelExpired() => treatments.cancelExpiredAndNotifyUser();
 }

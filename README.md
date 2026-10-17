@@ -59,14 +59,16 @@ ACTIVE in the register stub and not yet registered. `1909900111222` is INACTIVE 
 ### U3 demo data
 
 Sign in as `1350100678904`: `seed.sql` has a Pending appointment (510) and its message for claim SST-2026-000160.
-Its date is 22 October 2026; after that day the hours are in the past. `make db-reset` loads it again.
+Its date is 5 days after the day you load the seed, at 09:00. `make db-reset` loads it again with new dates.
 
 ### U4 to U6 demo data
 
 Sign in as `1100800345672` and open Schedule, then Treatments: `seed.sql` has the Pending treatment 403 of claim
-SST-2026-000149 on 26 October 2026 at 10:00. "Accept" (U4.1) and "Request Another Date" (U4.2) change it.
-The server runs `AutoCancelJob` (U4.3) when it starts and every day at 00:05: after 26 October it cancels treatment
-403 and sends the message "Treatment cancelled". `make db-reset` loads the seed again.
+SST-2026-000149 at 10:00 on the first weekday 7 or more days after the day you load the seed. "Accept" (U4.1) and
+"Request Another Date" (U4.2: a free weekday up to 7 days after the booked date) make it `Accepted`.
+The server runs `AutoCancelJob` (U4.3) when it starts and every day at 00:05: on the treatment date it cancels a
+treatment that is still Pending, sets the claim to `Withdrawn` and sends the message "Treatment cancelled".
+`make db-reset` loads the seed again with new dates.
 
 ## Lint and test
 

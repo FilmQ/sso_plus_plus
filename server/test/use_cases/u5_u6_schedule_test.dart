@@ -34,6 +34,8 @@ void main() {
           'claim_no': 'SST-2026-000160',
           'injury': 'Laceration, left forearm',
           'injury_date': '7 October 2026',
+          'appointment_status': 'Pending',
+          'claim_id': 160,
         });
         expect(rows.where((r) => (r['appointment_date'] as String).startsWith(dayText(41))), isEmpty,
             reason: 'a Cancelled appointment is not shown');
@@ -53,12 +55,13 @@ void main() {
               reportId: 86,
               officerId: 2,
               treatmentType: 'Occupational therapy',
+              durationMinutes: 45,
               facilityName: 'SSO Rehabilitation Center',
               scheduledDate: date,
               scheduledTime: '14:00',
             );
         final accepted = await book(day(50));
-        await repo.updateStatusAccepted(accepted, 149);
+        await repo.updateStatusAccepted(accepted, 149, 103);
         final pending = await book(day(45));
         await book(day(-3)); // in the past: not shown
         final c = TestClient(db);
@@ -69,7 +72,9 @@ void main() {
         expect(ids.indexOf(pending), lessThan(ids.indexOf(accepted)));
         expect(rows.firstWhere((r) => r['treatment_id'] == accepted)['treatment_status'], 'Accepted');
         expect(rows.every((r) => r['treatment_status'] != 'Cancelled'), isTrue);
-        expect(rows.firstWhere((r) => r['treatment_id'] == pending)['facility_name'], 'SSO Rehabilitation Center');
+        final p = rows.firstWhere((r) => r['treatment_id'] == pending);
+        expect(p['facility_name'], 'SSO Rehabilitation Center');
+        expect(p['duration_minutes'], 45);
       }));
 
   test('U5, U6: the Schedule Page needs a signed-in user (401)', () async {

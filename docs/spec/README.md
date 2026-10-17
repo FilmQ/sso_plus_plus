@@ -2,7 +2,7 @@
 
 Extract of the SA report **SA Documents** for building the SST Injury Claim & Treatment Application
 (ระบบยื่นคำร้องและนัดหมายการรักษากรณีประสบอันตราย, ศูนย์ฟื้นฟูผู้ป่วย สำนักงานประกันสังคม).
-Generated on 2026-10-15 (evening, U3 round) from the report as it stood that day. The report is the source of truth: if this pack
+Generated on 2026-10-17 (U4 to U6 round) from the report as it stood that day. The report is the source of truth: if this pack
 and the report disagree, the report wins, and the difference should be raised with the team.
 
 Report: https://docs.google.com/document/d/1qg-tSl0xflyYIMIpSg_7QGSjlLTMwYC9Z2lKpnLsHHk/edit
@@ -18,20 +18,56 @@ Report: https://docs.google.com/document/d/1qg-tSl0xflyYIMIpSg_7QGSjlLTMwYC9Z2lK
 | `07-open-questions.md` | Gaps the report leaves open (login, file storage, signatures, ...) and how the seed data was cleaned | n/a |
 | `database/schema.sql` | PostgreSQL 16 DDL for the 19 tables, plus a stub of the external SSO register (`master_table`) | 2.17 |
 | `database/seed.sql` | The report's sample rows (5 per table, minus 13 rows whose parents are not among the samples), plus a marked block of development rows | 2.17 |
-| `database/queries.sql` | All 58 SQL statements with Query ID, use case ID and name | 2.16 |
+| `database/queries.sql` | All 60 SQL statements with Query ID, use case ID and name | 2.16 |
 | `database/data-dictionary.md` | Every attribute with key, NOT NULL, type and range / validation rule (Thai) | 2.17 |
 | `diagrams/` | Use case diagram, CRUD table, business process, ER with queries, class, state, sequence and site map diagrams | various |
 
-Checked on 2026-10-15 against PostgreSQL 16.15: `schema.sql` and `seed.sql` load without errors, every
-statement in `queries.sql` prepares against that schema with untyped parameters, and the U3 flows (confirm,
-reschedule, cannot attend, QN.5) were run against the seed inside rolled-back transactions.
+Checked on 2026-10-17 against PostgreSQL 16.15: `schema.sql` and `seed.sql` load without errors, every
+statement in `queries.sql` prepares against that schema with untyped parameters, and the U4 flows were run against
+the seed inside rolled-back transactions: QU4.4 and QU4.5 read the treatment and its free weekdays, QU4.2 accepts a
+free weekday and refuses a weekend, a date past the booked date + 7, the booked date, another user's treatment and
+a taken slot, QU4.3 cancels and closes the claim, QO5.2 offers no weekend, and Q3.5 refuses 12:30.
 
 ## Naming that ties code to the report
 
 - **Use case IDs:** U1 to U6 (User), O1 to O6 (Evaluation Officer), C1 and C2 (Consultant). Sub-cases such as U3.1 to U3.3 are separate use case descriptions.
-- **Query IDs:** Q1.1 to Q1.10 (U1), Q2.1 to Q2.4 (U2), Q3.1 to Q3.7 (U3), QU4.1 to QU4.3 (U4), QU5.1 (U5), Q6.1 (U6), QO1.1 to QO6.3 (officer), QC1.1 and QC2.1 to QC2.7 (consultant), QN.1 to QN.5 (notifications: QN.1 to QN.4 written by officer use cases, QN.5 by U3.1 to U3.3). Mixed prefixes (Q6.1 vs QU5.1) are as in the report; keep them.
+- **Query IDs:** Q1.1 to Q1.10 (U1), Q2.1 to Q2.4 (U2), Q3.1 to Q3.7 (U3), QU4.1 to QU4.5 (U4), QU5.1 (U5), Q6.1 (U6), QO1.1 to QO6.3 (officer), QC1.1 and QC2.1 to QC2.7 (consultant), QN.1 to QN.5 (notifications: QN.1 to QN.4 written by officer use cases, QN.5 by U3.1 to U3.3). Mixed prefixes (Q6.1 vs QU5.1) are as in the report; keep them.
 - **Screen codes:** `<use case>-<n>`, for example U1-2 or O4-3, matching the Figma frame names.
 - **Class names** come from the sequence diagrams (`InjuryFormPage`, `InsuredFormController`, `InsuredPersonModel`, `InsuredPersonRepository`, `DBConnector`, ...).
+
+## Changes since the 2026-10-15 evening pack (report-back 3, U4 to U6)
+
+Business decisions from the team (R-028, R-030, R-031, R-033, R-035) and documentation decisions on the rest; the
+full list is in `07-open-questions.md`, "Settled on 2026-10-17 (U4 to U6)".
+
+- **SQL (60 statements):**
+  - New **QU4.4** (U4.1 and U4.2 page): one treatment of `:insured_id` with `duration_minutes`, `booked_by`
+    (officer), `report_signed_date`, `report_author`, `claim_no` and `injury`.
+  - New **QU4.5** (U4.2 step 2): the free weekdays from tomorrow to the booked date + 7, at the same hour, without
+    the booked date and without days when the facility has another `Pending` or `Accepted` treatment then.
+  - **QU4.2** sets `treatment_status = 'Accepted'` with the new date, and refuses (0 rows) a date outside that rule,
+    a taken slot or a treatment of another user. It returns `treatment_id, scheduled_date, scheduled_time`.
+  - **QU4.1** checks the owner (`:insured_id`) and returns `treatment_id`.
+  - **QU4.3** also sets the claims of the cancelled treatments from `Covered` to `Withdrawn`, writes their
+    ClaimStatusHistory rows and ends the message with "Your claim <claim_no> is now closed."
+  - **QO5.2** offers weekdays only; **QO5.3** saves `:duration_minutes`; **Q6.1** returns `duration_minutes`;
+    **QU5.1** returns `appointment_status` and `claim_id`; **Q3.5** accepts only the six bookable hours.
+- **Schema and data dictionary:** new column `Treatment.duration_minutes integer NOT NULL CHECK (> 0)`;
+  `scheduled_date` is a weekday (QO5.2) and the user may move it up to 7 days later (QU4.2).
+- **Seed:** treatments 401 to 403 have durations 60, 45, 45. In the dev block, appointment 510 (and its QN.3
+  message) is on `CURRENT_DATE + 5`, and treatment 403 is on the first weekday on or after `CURRENT_DATE + 7`.
+- **Use cases (02):** U4.1 starts by opening the Confirm Treatment page (QU4.4); U4.2 lists the dates with QU4.5 and
+  a saved date counts as accepting; U4.3 runs at server start and daily at 00:05 and closes the claim; U5 and U6 are
+  the two tabs of the Schedule Page and their cards open the Appointment Page and U4-1.
+- **States (05):** Treatment `Pending` to `Accepted` also by U4.2 (no self-transition any more); InjuryClaim
+  `Covered` to `Withdrawn` also by U4.3.
+- **Classes (04):** TreatmentPage `open`, `saveDate`; TreatmentController and TreatmentModel `getTreatment` /
+  `getTreatmentDetail`, `getAvailableDates`, and `insured_id` on accept and changeDate; TreatmentRepository
+  `findTreatmentDetail {QU4.4}`, `findAvailableDates {QU4.5}`; TreatmentModel `durationMinutes`.
+- **Sequence flows (03) and diagrams:** U4.1 to U4.3 redrawn; class diagram of U4, Treatment and InjuryClaim state
+  diagrams, the CRUD table (U4 reads and updates Injury Application and reads Consultation Report) and the ER
+  diagram with queries.
+- **Screens (06):** see "Screen rules from the U4 to U6 decisions" there (U4-1 to U4-5, U5-1, U6-1, O5.1-1 to O5.1-3).
 
 ## Changes since the 2026-10-15 morning pack (report-back 2, U3)
 

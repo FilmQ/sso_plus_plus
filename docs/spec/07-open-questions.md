@@ -39,6 +39,43 @@ back into the report.
 11. **Software platform.** The stack is settled (D-001: Flutter, a Dart server, PostgreSQL 16), but the stack
     figure in report section 2.20 is still a placeholder for the team to fill.
 
+## Settled on 2026-10-17 (report-back 3, U4 to U6)
+
+Business decisions (the team):
+
+- **R-028:** in U4.2 the user can choose Monday to Friday, from tomorrow to 7 days after the booked date, at the
+  same hour, when the facility is free. The new query **QU4.5** lists those dates (U4.2 step 2). QO5.2, the
+  officer's slots, also leaves out Saturday and Sunday so the two agree.
+- **R-030:** choosing a new date counts as accepting: QU4.2 saves the date and sets `Accepted`. U4-4 has no Accept or
+  Request Another Date button. The officer sees the change on the Treatment page; no message is sent (Notification
+  has no officer recipient).
+- **R-035:** when U4.3 cancels a treatment the user never answered, the claim ends: QU4.3 also sets the claim from
+  `Covered` to `Withdrawn` with a ClaimStatusHistory row ('Treatment not accepted in time'), and the message ends
+  "Your claim <claim_no> is now closed." QO5.1 no longer lists the claim.
+- **R-031, R-033:** new column `Treatment.duration_minutes` (integer, more than 0), saved by QO5.3 from the O5.1
+  duration field. The new page query **QU4.4** reads one treatment for U4-1 to U4-4 with duration, "Booked by"
+  (officer) and the report line (signed date and author), checking `insured_id`. The facility address and picture
+  leave U4-1 to U4-4 and U6-1 (the schema keeps only `facility_name`); U6-1 shows type and duration from Q6.1.
+
+Documentation decisions:
+
+- **R-029:** QU4.2 also checks that the new date is a weekday in the allowed range, differs from the booked date,
+  and that the facility has no other `Pending` or `Accepted` treatment at that date and hour (0 rows = refused).
+- **R-026:** Q3.5 accepts only 09:00, 10:00, 11:00, 13:00, 14:00 or 15:00, as Q3.4 lists.
+- **R-032:** QU5.1 also returns `a.appointment_status` and `ic.claim_id`, so U5-1 shows the status chip and a card
+  opens the Appointment Page.
+- **R-027, R-034:** the seed's dev block uses dates relative to the load day: appointment 510 is on `CURRENT_DATE + 5`
+  at 09:00 (its QN.3 message says the same date), and treatment 403 moves to the first weekday on or after
+  `CURRENT_DATE + 7`, so the job does not cancel it when the server starts.
+- **D-041:** QU4.1 and QU4.2 also check that the claim belongs to `:insured_id` (the controller may still read the row
+  first). 0 rows means refused.
+- **D-043:** `AutoCancelJob` runs QU4.3 once when the server starts and every day at 00:05 Asia/Bangkok.
+- **D-044:** U5 and U6 are the two tabs of one Schedule Page.
+- **D-045:** U4-1 is opened from the Schedule Page, from a "Treatment booked" message and from Home; "Accept" and
+  "Request Another Date" show only while `Pending`.
+- **O5.1 screens (documentation):** the booking summary on O5.1-1 to O5.1-3 shows only the facility name, for the
+  same reason as R-031 (no building or floor in the schema).
+
 ## Settled on 2026-10-15 (report-back 2, U3)
 
 Business decisions (the team):

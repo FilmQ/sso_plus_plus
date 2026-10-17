@@ -210,6 +210,7 @@ CREATE TABLE Treatment (
   report_id integer NOT NULL,
   officer_id integer NOT NULL,
   treatment_type varchar(80) NOT NULL,
+  duration_minutes integer NOT NULL CHECK (duration_minutes > 0),
   facility_name varchar(160) NOT NULL,
   scheduled_date date NOT NULL,
   scheduled_time time NOT NULL,
@@ -412,8 +413,9 @@ COMMENT ON COLUMN Treatment.claim_id IS 'รหัสคำร้อง | ต้
 COMMENT ON COLUMN Treatment.report_id IS 'รหัสรายงาน | ต้องมีใน ConsultationReport.report_id ที่ยื่นแล้ว (QO5.1)';
 COMMENT ON COLUMN Treatment.officer_id IS 'รหัสเจ้าหน้าที่ประเมินผู้จอง | ต้องมีใน EvaluationOfficer.officer_id';
 COMMENT ON COLUMN Treatment.treatment_type IS 'ประเภทการรักษา | เช่น Physiotherapy, Occupational therapy';
+COMMENT ON COLUMN Treatment.duration_minutes IS 'ระยะเวลาการรักษา (นาที) | ค่ามากกว่า 0 เช่น 45 หรือ 60 นาที (QO5.3)';
 COMMENT ON COLUMN Treatment.facility_name IS 'ชื่อสถานพยาบาล | ไม่เกิน 160 ตัวอักษร';
-COMMENT ON COLUMN Treatment.scheduled_date IS 'วันรักษา | หลังวันปัจจุบันเมื่อจอง';
+COMMENT ON COLUMN Treatment.scheduled_date IS 'วันรักษา | หลังวันปัจจุบันเมื่อจอง เฉพาะวันจันทร์ถึงวันศุกร์ (QO5.2) ผู้ใช้งานเปลี่ยนได้ภายใน 7 วันหลังวันเดิม (QU4.2)';
 COMMENT ON COLUMN Treatment.scheduled_time IS 'เวลารักษา | 09:00 ถึง 16:00 (QO5.2)';
 COMMENT ON COLUMN Treatment.treatment_status IS 'สถานะการรักษา | Pending, Accepted หรือ Cancelled';
 COMMENT ON COLUMN Treatment.created_at IS 'วันและเวลาที่จอง | ระบบใส่ NOW() (QO5.3)';

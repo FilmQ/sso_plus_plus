@@ -12,13 +12,13 @@ void addU4Routes(
   const base = '/u4/treatments/<treatment|[0-9]+>';
 
   router
-    // Q6.1 (one row)
+    // QU4.4
     ..get(base, (Request r, String treatment) async =>
         jsonOk({'treatment': await treatments(r).getTreatment(int.parse(treatment))}))
     // QU4.1
     ..post('$base/accept', (Request r, String treatment) async =>
         jsonOk({'treatment': await treatments(r).acceptTreatment(int.parse(treatment))}))
-    // QO5.2 (D-042)
+    // QU4.5
     ..get('$base/available-dates', (Request r, String treatment) async =>
         jsonOk({'dates': await treatments(r).getAvailableDates(int.parse(treatment))}))
     // QU4.2

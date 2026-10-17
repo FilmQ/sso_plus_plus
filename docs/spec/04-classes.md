@@ -209,14 +209,14 @@ Methods:
 
 Used in: U4.1, U4.2
 
-Attributes: `- treatment: Treatment`, `- availableDates: List<Date>`
+Attributes: `- treatment: TreatmentDetail`, `- availableDates: List<Date>`
 
 Methods:
 
+- `+ open(treatment_id)`
 - `+ clickAccept()`
 - `+ clickRequestAnotherDate()`
-- `+ showAvailableDates()`
-- `+ selectDate(new_date)`
+- `+ saveDate(new_date)`
 
 ### VerificationPage
 
@@ -309,8 +309,10 @@ Attributes: `- treatmentModel: TreatmentModel`, `- claimModel: ClaimModel`, `- n
 
 Methods:
 
-- `+ acceptTreatment(treatment_id, claim_id)`
-- `+ changeDate(treatment_id, claim_id, new_date)`
+- `+ getTreatment(treatment_id, insured_id)`
+- `+ acceptTreatment(treatment_id, claim_id, insured_id)`
+- `+ getAvailableDates(treatment_id, insured_id)`
+- `+ changeDate(treatment_id, claim_id, new_date, insured_id)`
 - `+ cancelUnacceptedTreatments()`
 - `+ getTreatmentSchedule(insured_id)`
 - `+ getClaimsForTreatment()`
@@ -416,12 +418,14 @@ Methods:
 
 Used in: U4.1, U4.2, U4.3, U6, O5.1
 
-Attributes: `- treatmentId: int`, `- claimId: int`, `- facilityName: String`, `- scheduledDate: Date`, `- treatmentStatus: String`
+Attributes: `- treatmentId: int`, `- claimId: int`, `- facilityName: String`, `- scheduledDate: Date`, `- durationMinutes: int`, `- treatmentStatus: String`
 
 Methods:
 
-- `+ accept(treatment_id, claim_id)`
-- `+ changeDate(treatment_id, claim_id, new_date)`
+- `+ getTreatmentDetail(treatment_id, insured_id)`
+- `+ accept(treatment_id, claim_id, insured_id)`
+- `+ getAvailableDates(treatment_id, insured_id)`
+- `+ changeDate(treatment_id, claim_id, new_date, insured_id)`
 - `+ cancelExpired()`
 - `+ getUpcomingTreatments(insured_id)`
 - `+ getClaimsForTreatment()`
@@ -532,8 +536,10 @@ Attributes: `- table: String = "Treatment"`
 
 Methods:
 
-- `+ updateStatusAccepted(treatment_id, claim_id) {QU4.1}`
-- `+ updateScheduledDate(treatment_id, claim_id, new_date) {QU4.2}`
+- `+ findTreatmentDetail(treatment_id, insured_id) {QU4.4}`
+- `+ updateStatusAccepted(treatment_id, claim_id, insured_id) {QU4.1}`
+- `+ findAvailableDates(treatment_id, insured_id) {QU4.5}`
+- `+ updateScheduledDate(treatment_id, claim_id, new_date, insured_id) {QU4.2}`
 - `+ cancelExpiredAndNotifyUser() {QU4.3}`
 - `+ findUpcomingTreatments(insured_id) {Q6.1}`
 - `+ findClaimsWithFiledReport() {QO5.1}`
@@ -568,3 +574,6 @@ Attributes: `- cronExpression: String`, `- lastRunAt: DateTime`
 Methods:
 
 - `+ onDeadlineReached()`
+
+Runs QU4.3 once when the server starts and then every day at 00:05 Asia/Bangkok (D-043). QU4.3 cancels the
+`Pending` treatments whose date has come, closes their claims (`Covered` to `Withdrawn`) and sends the message.

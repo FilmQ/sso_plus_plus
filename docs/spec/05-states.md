@@ -17,8 +17,9 @@ States: `Awaiting verification`, `Register unavailable`, `Covered`, `Not covered
 | Not covered | Rejected | reason_code chosen | rejectApplication | O3 Reject Injury Application | QO3.2: `UPDATE InjuryClaim SET claim_status = 'Rejected'` |
 | Covered | No treatment required | report says no treatment | closeWithoutTreatment | O5.2 No Treatment Required | QO5.4: `UPDATE InjuryClaim SET claim_status = 'No treatment required'` |
 | Covered | Withdrawn | user selects I cannot attend | cancelAppointment | U3.3 Appointment Confirmation (I cannot attend) | Q3.6: `UPDATE InjuryClaim SET claim_status = 'Withdrawn'` (in the same statement as the appointment's Cancelled, with a ClaimStatusHistory row) |
+| Covered | Withdrawn | treatment not accepted by its date | onDeadlineReached | U4.3 Reject (automatic cancel) | QU4.3: `UPDATE InjuryClaim SET claim_status = 'Withdrawn'` (in the same statement as the treatment's Cancelled, with a ClaimStatusHistory row 'Treatment not accepted in time' and the user's message) |
 
-`No treatment required`, `Rejected` and `Withdrawn` are final. A `Withdrawn` claim is not listed by QO4.1 (it lists `Covered` claims without an open appointment), so the officer does not schedule it again.
+`No treatment required`, `Rejected` and `Withdrawn` are final. A `Withdrawn` claim is not listed by QO4.1 (it lists `Covered` claims without an open appointment) or by QO5.1 (it lists `Covered` claims with a filed report), so the officer does not schedule it again.
 
 ## Appointment
 
@@ -41,9 +42,11 @@ States: `Pending`, `Accepted`, `Cancelled`
 | From | To | Condition | Event | Use case | SQL |
 |---|---|---|---|---|---|
 | (start) | Pending | slot is free | bookTreatment | O5.1 Book Treatment | QO5.3: `INSERT Treatment (treatment_status = 'Pending')` |
-| Pending | Pending | treatment_status = 'Pending' | changeDate | U4.2 Change Date | QU4.2: `UPDATE Treatment SET scheduled_date = :new_date` |
 | Pending | Accepted | treatment_status = 'Pending' | acceptTreatment | U4.1 Accept Case | QU4.1: `UPDATE Treatment SET treatment_status = 'Accepted'` |
+| Pending | Accepted | new date is a free weekday from tomorrow to the booked date + 7, at the same hour | changeDate | U4.2 Change Date | QU4.2: `UPDATE Treatment SET scheduled_date = :new_date, treatment_status = 'Accepted'` |
 | Pending | Cancelled | scheduled_date <= CURRENT_DATE | onDeadlineReached | U4.3 Reject | QU4.3: `UPDATE Treatment SET treatment_status = 'Cancelled'` |
+
+A new date counts as accepting (R-030), so `Pending` has no self-transition any more. QU4.1 and QU4.2 change only a `Pending` treatment of a claim that belongs to `:insured_id`; 0 rows means refused. `AutoCancelJob` runs QU4.3 once when the server starts and every day at 00:05 Asia/Bangkok (D-043); the same statement closes the claim (`Covered` to `Withdrawn`, R-035).
 
 ## ConsultationReport
 

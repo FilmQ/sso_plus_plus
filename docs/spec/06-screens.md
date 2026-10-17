@@ -15,6 +15,25 @@
   - U3-4: Cancel can be pressed at any time; the free times are 09:00, 10:00, 11:00, 13:00, 14:00, 15:00.
   - U3-6: "If you cancel, your claim will be withdrawn and the consultant will be informed."
   - O4-1 to O4-3: each consultant row shows the same six hours (no 12:00 or 16:00).
+- Screen rules from the U4 to U6 decisions (2026-10-17):
+  - U4-1 to U4-4 read one treatment with QU4.4: date, type, duration (`Treatment.duration_minutes`), facility
+    (`Treatment.facility_name` as stored, for example `SSO Rehabilitation Center`, with no address or picture),
+    "Booked by" (the officer) and "Report: Signed <date> by <consultant>". U4-1 is opened from the Schedule Page
+    (Treatments tab), from a "Treatment booked" message and from Home (D-045).
+  - "Accept" and "Request Another Date" show only while the treatment is `Pending`. The note under the claim card
+    says the booking is cancelled automatically and the claim is closed if the user does not answer.
+  - U4-3 "Choose another date" lists the free weekdays from QU4.5: Monday to Friday, from tomorrow to 7 days after
+    the booked date, at the same hour, without the booked date and without days when the facility already has a
+    `Pending` or `Accepted` treatment at that hour. "Save date" runs QU4.2.
+  - U4-4: a new date counts as accepting, so the chip is `Accepted` and the page has no buttons; the snackbar says
+    "Treatment date changed to <day> <month> <year> : <time>".
+  - U4-5: QU4.3's message ends "Your claim <claim_no> is now closed."
+  - U5-1 and U6-1 are the Appointments and Treatments tabs of one Schedule Page (D-044). U5-1 shows the status chip
+    (`Confirmed`, or "Awaiting you" for `Pending`) from QU5.1; a card opens the Appointment Page of its claim.
+  - U6-1 shows no picture or address: each card has an icon, the facility name and "<type> · <duration> minutes"
+    from Q6.1, the date, the status chip and the claim lines; a card opens U4-1.
+  - O5.1-1 to O5.1-3: the duration chosen on the page is saved by QO5.3; the booking summary shows only the facility
+    name (no building or floor, which the schema does not store); only weekdays are offered (QO5.2).
 
 | Code | Screen (use case: page or state) | User | Report figure |
 |---|---|---|---|

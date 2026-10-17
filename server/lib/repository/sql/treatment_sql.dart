@@ -11,15 +11,39 @@ SET treatment_status = 'Accepted'
 WHERE treatment_id = :treatment_id
   AND claim_id = :claim_id
   AND treatment_status = 'Pending'
+  AND EXISTS (
+        SELECT 1
+        FROM InjuryClaim ic
+        WHERE ic.claim_id = Treatment.claim_id
+          AND ic.insured_id = :insured_id)
+RETURNING treatment_id
 ''';
 
   // QU4.2 [U4.2] ยืนยันการรักษา (Change Date)
   static const qU4_2 = r'''
-UPDATE treatment
-SET scheduled_date = :new_date
-WHERE claim_id = :current_claim_id
-  AND treatment_id = :current_treatment_id
+UPDATE Treatment
+SET scheduled_date = :new_date::date,
+    treatment_status = 'Accepted'
+WHERE treatment_id = :treatment_id
+  AND claim_id = :claim_id
   AND treatment_status = 'Pending'
+  AND EXISTS (
+        SELECT 1
+        FROM InjuryClaim ic
+        WHERE ic.claim_id = Treatment.claim_id
+          AND ic.insured_id = :insured_id)
+  AND :new_date::date BETWEEN CURRENT_DATE + 1 AND scheduled_date + 7
+  AND :new_date::date <> scheduled_date
+  AND EXTRACT(ISODOW FROM :new_date::date) < 6
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.facility_name = Treatment.facility_name
+          AND o.scheduled_date = :new_date::date
+          AND o.scheduled_time = Treatment.scheduled_time
+          AND o.treatment_status IN ('Pending', 'Accepted')
+          AND o.treatment_id <> Treatment.treatment_id)
+RETURNING treatment_id, scheduled_date, scheduled_time
 ''';
 
   // QU4.3 [U4.3] ยืนยันการรักษา (Reject)
@@ -30,6 +54,19 @@ WITH cancelled AS (
   WHERE treatment_status = 'Pending'
     AND scheduled_date <= CURRENT_DATE
   RETURNING claim_id, facility_name, scheduled_date
+), withdrawn AS (
+  UPDATE InjuryClaim ic
+  SET claim_status = 'Withdrawn'
+  FROM (SELECT DISTINCT claim_id FROM cancelled) c
+  WHERE ic.claim_id = c.claim_id
+    AND ic.claim_status = 'Covered'
+  RETURNING ic.claim_id
+), history AS (
+  INSERT INTO ClaimStatusHistory
+    (claim_id, from_status, to_status, changed_at, change_reason)
+  SELECT claim_id, 'Covered', 'Withdrawn', NOW(),
+    'Treatment not accepted in time'
+  FROM withdrawn
 )
 INSERT INTO Notification
   (claim_id, insured_id, subject, body, sent_at)
@@ -38,10 +75,61 @@ SELECT ic.claim_id,
   'Treatment cancelled',
   'Your treatment at ' || c.facility_name || ' on '
     || TO_CHAR(c.scheduled_date, 'FMDD FMMonth YYYY')
-    || ' was cancelled because it was not accepted in time.',
+    || ' was cancelled because it was not accepted in time.'
+    || ' Your claim ' || ic.claim_no || ' is now closed.',
   NOW()
 FROM cancelled c
 JOIN InjuryClaim ic ON ic.claim_id = c.claim_id
+''';
+
+  // QU4.4 [U4.1, U4.2] ยืนยันการรักษา (Accept Case) / ยืนยันการรักษา (Change Date)
+  static const qU4_4 = r'''
+SELECT t.treatment_id,
+  t.claim_id,
+  t.treatment_status,
+  TO_CHAR(t.scheduled_date + t.scheduled_time,
+    'FMDD / FMMM / YYYY" : "HH24:MI') AS treatment_date,
+  t.treatment_type,
+  t.duration_minutes,
+  t.facility_name,
+  CONCAT_WS(' ', o.first_name, o.last_name) AS booked_by,
+  ic.claim_no,
+  CONCAT_WS(', ', ic.injury_category, ic.body_part) AS injury,
+  TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS report_signed_date,
+  CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
+    AS report_author
+FROM Treatment t
+JOIN InjuryClaim ic ON ic.claim_id = t.claim_id
+JOIN EvaluationOfficer o ON o.officer_id = t.officer_id
+JOIN ConsultationReport cr ON cr.report_id = t.report_id
+JOIN Consultant c ON c.consultant_id = cr.consultant_id
+WHERE t.treatment_id = :treatment_id
+  AND ic.insured_id = :insured_id
+''';
+
+  // QU4.5 [U4.2] ยืนยันการรักษา (Change Date)
+  static const qU4_5 = r'''
+SELECT s.slot_day::date AS slot_date,
+  TO_CHAR(s.slot_day, 'Dy FMDD FMMonth YYYY') AS date_label
+FROM Treatment t
+JOIN InjuryClaim ic ON ic.claim_id = t.claim_id
+CROSS JOIN LATERAL generate_series(
+       (CURRENT_DATE + 1)::timestamp,
+       (t.scheduled_date + 7)::timestamp,
+       INTERVAL '1 day') AS s(slot_day)
+WHERE t.treatment_id = :treatment_id
+  AND ic.insured_id = :insured_id
+  AND t.treatment_status = 'Pending'
+  AND s.slot_day::date <> t.scheduled_date
+  AND EXTRACT(ISODOW FROM s.slot_day) < 6
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.facility_name = t.facility_name
+          AND o.scheduled_date = s.slot_day::date
+          AND o.scheduled_time = t.scheduled_time
+          AND o.treatment_status IN ('Pending', 'Accepted'))
+ORDER BY s.slot_day
 ''';
 
   // Q6.1 [U6] ดูตารางการรักษา (View Treatment Schedule)
@@ -49,6 +137,7 @@ JOIN InjuryClaim ic ON ic.claim_id = c.claim_id
 SELECT t.treatment_id,
   t.facility_name,
   t.treatment_type,
+  t.duration_minutes,
   TO_CHAR(t.scheduled_date + t.scheduled_time,
     'FMDD FMMonth YYYY" : "HH24:MI') AS treatment_date,
   t.treatment_status,
@@ -110,6 +199,7 @@ LEFT JOIN Treatment t
       AND t.treatment_status IN ('Pending', 'Accepted')
 WHERE s.slot_at::time BETWEEN TIME '09:00' AND TIME '16:00'
   AND s.slot_at > NOW()
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY s.slot_at
 ''';
 
@@ -117,10 +207,10 @@ ORDER BY s.slot_at
   static const qO5_3 = r'''
 INSERT INTO Treatment
   (claim_id, report_id, officer_id, treatment_type,
-   facility_name, scheduled_date, scheduled_time,
+   duration_minutes, facility_name, scheduled_date, scheduled_time,
    treatment_status, created_at)
 VALUES (:claim_id, :report_id, :officer_id, :treatment_type,
-  :facility_name, :scheduled_date, :scheduled_time, 'Pending',
+  :duration_minutes, :facility_name, :scheduled_date, :scheduled_time, 'Pending',
   NOW())
 RETURNING treatment_id
 ''';
@@ -130,6 +220,8 @@ RETURNING treatment_id
     'QU4.1': [qU4_1],
     'QU4.2': [qU4_2],
     'QU4.3': [qU4_3],
+    'QU4.4': [qU4_4],
+    'QU4.5': [qU4_5],
     'Q6.1': [q6_1],
     'QO5.1': [qO5_1],
     'QO5.2': [qO5_2],

@@ -226,8 +226,9 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | report_id | รหัสรายงาน | FK | Y | INT | ต้องมีใน ConsultationReport.report_id ที่ยื่นแล้ว (QO5.1) |
 | officer_id | รหัสเจ้าหน้าที่ประเมินผู้จอง | FK | Y | INT | ต้องมีใน EvaluationOfficer.officer_id |
 | treatment_type | ประเภทการรักษา |  | Y | VARCHAR(80) | เช่น Physiotherapy, Occupational therapy |
+| duration_minutes | ระยะเวลาการรักษา (นาที) |  | Y | INT | ค่ามากกว่า 0 เช่น 45 หรือ 60 นาที (QO5.3) |
 | facility_name | ชื่อสถานพยาบาล |  | Y | VARCHAR(160) | ไม่เกิน 160 ตัวอักษร |
-| scheduled_date | วันรักษา |  | Y | DATE | หลังวันปัจจุบันเมื่อจอง |
+| scheduled_date | วันรักษา |  | Y | DATE | หลังวันปัจจุบันเมื่อจอง เฉพาะวันจันทร์ถึงวันศุกร์ (QO5.2) ผู้ใช้งานเปลี่ยนได้ภายใน 7 วันหลังวันเดิม (QU4.2) |
 | scheduled_time | เวลารักษา |  | Y | TIME | 09:00 ถึง 16:00 (QO5.2) |
 | treatment_status | สถานะการรักษา |  | Y | VARCHAR(30) | Pending, Accepted หรือ Cancelled |
 | created_at | วันและเวลาที่จอง |  | Y | TIMESTAMP | ระบบใส่ NOW() (QO5.3) |

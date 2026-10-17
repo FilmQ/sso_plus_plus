@@ -39,6 +39,8 @@ void main() {
       }));
 
   test('Q3.5 rescheduleAppointment: old row Rescheduled, new row Confirmed', () => inRollback(db, () async {
+        await expectLater(repo.rescheduleAppointment(504, day(12), '12:30'), throwsA(isA<NoRowChangedException>()),
+            reason: 'only the six hours of Q3.4');
         final newId = await repo.rescheduleAppointment(504, day(12), '14:00');
         expect((await appt(504))['appointment_status'], 'Rescheduled');
         final row = await appt(newId);
@@ -59,6 +61,8 @@ void main() {
         await insertTestAppointment(repo, date: day(5));
         final rows = await repo.findUpcomingAppointments(105);
         expect(rows.single['claim_no'], 'SST-2026-000155');
+        expect(rows.single['claim_id'], 155);
+        expect(rows.single['appointment_status'], 'Pending');
         expect(rows.single['consultant_name'], 'นพ. วีระ ทองดี');
       }));
 

@@ -105,10 +105,10 @@ INSERT INTO ConsultationReport (report_id, session_id, consultant_id, version_no
   (86, 302, 1, 1, 'Crush injury of the left foot with soft tissue swelling. Occupational therapy twice a week for 4 weeks.', '2026-10-16 15:05', '2026-10-16 15:10', '2026-10-17 09:00', FALSE),
   (87, 303, 1, 1, 'Closed fracture of the distal radius, right wrist. Physiotherapy twice a week for 6 weeks.', '2026-10-16 11:20', '2026-10-16 11:25', NULL, FALSE);
 
-INSERT INTO Treatment (treatment_id, claim_id, report_id, officer_id, treatment_type, facility_name, scheduled_date, scheduled_time, treatment_status, created_at) OVERRIDING SYSTEM VALUE VALUES
-  (401, 143, 87, 1, 'Physiotherapy', 'SSO Rehabilitation Center', '2026-10-23', '13:00', 'Accepted', '2026-10-17 09:30'),
-  (402, 149, 86, 2, 'Occupational therapy', 'SSO Rehabilitation Center', '2026-10-19', '10:00', 'Cancelled', '2026-10-17 10:15'),
-  (403, 149, 86, 2, 'Occupational therapy', 'SSO Rehabilitation Center', '2026-10-26', '10:00', 'Pending', '2026-10-19 11:00');
+INSERT INTO Treatment (treatment_id, claim_id, report_id, officer_id, treatment_type, duration_minutes, facility_name, scheduled_date, scheduled_time, treatment_status, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (401, 143, 87, 1, 'Physiotherapy', 60, 'SSO Rehabilitation Center', '2026-10-23', '13:00', 'Accepted', '2026-10-17 09:30'),
+  (402, 149, 86, 2, 'Occupational therapy', 45, 'SSO Rehabilitation Center', '2026-10-19', '10:00', 'Cancelled', '2026-10-17 10:15'),
+  (403, 149, 86, 2, 'Occupational therapy', 45, 'SSO Rehabilitation Center', '2026-10-26', '10:00', 'Pending', '2026-10-19 11:00');
 
 INSERT INTO Notification (notification_id, claim_id, insured_id, consultant_id, subject, body, sent_at, read_at) OVERRIDING SYSTEM VALUE VALUES
   (901, 143, 101, NULL, 'Claim confirmed', 'Your claim SST-2026-000143 is covered under Section 33.', '2026-10-05 09:15', '2026-10-05 12:02'),
@@ -179,13 +179,35 @@ INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, t
   (1011, 160, NULL, NULL, 'Awaiting verification', '2026-10-08 09:10', 'Submitted by the user'),
   (1012, 160, 1, 'Awaiting verification', 'Covered', '2026-10-12 10:30', NULL);
 
-INSERT INTO Appointment (appointment_id, claim_id, officer_id, consultant_id, supersedes_appt_id, appointment_type, schedule_date, schedule_time, location, appointment_status, confirm_deadline, created_at) OVERRIDING SYSTEM VALUE VALUES
-  (510, 160, 1, 2, NULL, 'Onsite', '2026-10-22', '09:00', 'Building A, Floor 2, Room 210', 'Pending', '2026-10-21 09:00', '2026-10-14 11:00');
+-- Appointment 510 and its messages are dated from the day the seed is loaded (5 days ahead, 09:00), so the U3
+-- demo always shows a future appointment.
+INSERT INTO Appointment (appointment_id, claim_id, officer_id, consultant_id, supersedes_appt_id, appointment_type, schedule_date, schedule_time, location, appointment_status, confirm_deadline, created_at) OVERRIDING SYSTEM VALUE
+SELECT 510, 160, 1, 2, NULL, 'Onsite', CURRENT_DATE + 5, TIME '09:00', 'Building A, Floor 2, Room 210', 'Pending',
+  CURRENT_DATE + 4 + TIME '09:00', NOW() - INTERVAL '1 day';
 
 INSERT INTO Notification (notification_id, claim_id, insured_id, consultant_id, subject, body, sent_at, read_at) OVERRIDING SYSTEM VALUE VALUES
-  (906, 160, 106, NULL, 'Claim confirmed', 'Your claim SST-2026-000160 is covered under Section 33.', '2026-10-12 10:30', NULL),
-  (907, 160, 106, NULL, 'Appointment scheduled', 'Your appointment with พญ. มาลี ใจดี is on 22 October 2026 : 09:00 at Building A, Floor 2, Room 210. Please confirm it in the application by 21 October 2026 : 09:00.', '2026-10-14 11:00', NULL),
-  (908, 160, NULL, 2, 'New appointment', 'นางสาว อรทัย มั่นคง (claim SST-2026-000160) is booked with you on 22 October 2026 : 09:00 at Building A, Floor 2, Room 210. Waiting for the patient to confirm.', '2026-10-14 11:00', NULL);
+  (906, 160, 106, NULL, 'Claim confirmed', 'Your claim SST-2026-000160 is covered under Section 33.', '2026-10-12 10:30', NULL);
+
+INSERT INTO Notification (notification_id, claim_id, insured_id, consultant_id, subject, body, sent_at, read_at) OVERRIDING SYSTEM VALUE
+SELECT 907, 160, 106, NULL, 'Appointment scheduled',
+  'Your appointment with พญ. มาลี ใจดี is on ' || TO_CHAR(CURRENT_DATE + 5 + TIME '09:00', 'FMDD FMMonth YYYY" : "HH24:MI')
+    || ' at Building A, Floor 2, Room 210. Please confirm it in the application by '
+    || TO_CHAR(CURRENT_DATE + 4 + TIME '09:00', 'FMDD FMMonth YYYY" : "HH24:MI') || '.',
+  NOW() - INTERVAL '1 day', NULL::timestamp
+UNION ALL
+SELECT 908, 160, NULL, 2, 'New appointment',
+  'นางสาว อรทัย มั่นคง (claim SST-2026-000160) is booked with you on '
+    || TO_CHAR(CURRENT_DATE + 5 + TIME '09:00', 'FMDD FMMonth YYYY" : "HH24:MI')
+    || ' at Building A, Floor 2, Room 210. Waiting for the patient to confirm.',
+  NOW() - INTERVAL '1 day', NULL::timestamp;
+
+-- Treatment 403 is the only Pending treatment (report sample date 26 October 2026). It is moved to the first
+-- weekday at least 7 days after the load day, so the job (QU4.3) does not cancel it on start and U4.1 and U4.2
+-- can be shown with the seed.
+UPDATE Treatment
+SET scheduled_date = (CURRENT_DATE + 7)
+  + CASE EXTRACT(ISODOW FROM CURRENT_DATE + 7) WHEN 6 THEN 2 WHEN 7 THEN 1 ELSE 0 END
+WHERE treatment_id = 403;
 
 SELECT setval(pg_get_serial_sequence('insuredperson', 'insured_id'), (SELECT MAX(insured_id) FROM InsuredPerson));
 SELECT setval(pg_get_serial_sequence('employer', 'employer_id'), (SELECT MAX(employer_id) FROM Employer));

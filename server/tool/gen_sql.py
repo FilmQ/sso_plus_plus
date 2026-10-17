@@ -17,8 +17,8 @@ REPOS = {
                                                                    "QN.1", "QN.2", "QN.3", "QN.4", "QN.5"]),
     "appointment": ("AppointmentSql", "AppointmentRepository", ["Q3.2", "Q3.3", "Q3.4", "Q3.5", "Q3.6", "QU5.1",
                                                                 "QO4.1", "QO4.2", "QO4.3", "QC1.1"]),
-    "treatment": ("TreatmentSql", "TreatmentRepository", ["QU4.1", "QU4.2", "QU4.3", "Q6.1", "QO5.1", "QO5.2",
-                                                          "QO5.3"]),
+    "treatment": ("TreatmentSql", "TreatmentRepository", ["QU4.1", "QU4.2", "QU4.3", "QU4.4", "QU4.5", "Q6.1",
+                                                          "QO5.1", "QO5.2", "QO5.3"]),
     "report": ("ReportSql", "ReportRepository", ["QO6.1", "QO6.2", "QO6.3", "QC2.1", "QC2.2", "QC2.3", "QC2.4",
                                                  "QC2.5", "QC2.6", "QC2.7"]),
 }
@@ -55,7 +55,7 @@ def statements(lines):
 def ident(qid):
     return "q" + qid[1:].replace(".", "_")
 
-assert len(order) == 58, len(order)
+assert len(order) == 60, len(order)
 used = [q for _, _, qs in REPOS.values() for q in qs]
 assert sorted(used) == sorted(order), set(order) ^ set(used)
 

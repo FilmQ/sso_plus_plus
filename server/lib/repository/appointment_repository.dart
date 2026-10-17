@@ -21,7 +21,7 @@ class AppointmentRepository extends Repository {
       (await query(AppointmentSql.q3_4, {'consultant_id': consultantId, 'slot_date': slotDate}))
           .rows;
 
-  // Q3.5 [U3.2] Gives the new appointment_id. Only a Pending or Confirmed appointment.
+  // Q3.5 [U3.2] Gives the new appointment_id. Only a Pending or Confirmed appointment and an hour of Q3.4.
   Future<int> rescheduleAppointment(int appointmentId, String newDate, String newTime) async {
     final rs = await guarded('Q3.5', AppointmentSql.q3_5, {
       'appointment_id': appointmentId,
