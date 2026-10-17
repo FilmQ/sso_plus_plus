@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../theme/status_colors.dart';
 
 /// U4-2 Treatment accepted (SA report figure 2-39, U4.1 step 3), from the
-/// Q6.1 row after QU4.1.
+/// QU4.4 row after QU4.1.
 Future<void> showAcceptedDialog(BuildContext context, Map<String, Object?> treatment) {
   final String type = (treatment['treatment_type']! as String).toLowerCase();
   return showDialog<void>(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../widgets/person_avatar.dart';
 import '../../../widgets/side_key_value.dart';
 import '../../../widgets/status_chip.dart';
+import '../treatment/treatment_text.dart';
 
 /// A card of the Schedule Page: the header, the date line and the claim lines.
 class _ScheduleCard extends StatelessWidget {
@@ -56,12 +57,13 @@ class _ScheduleCard extends StatelessWidget {
   }
 }
 
-/// U5-1: one QU5.1 row. QU5.1 has no status and no claim_id, so the card has
-/// no chip and does not open the Appointment Page (R-032).
+/// U5-1: one QU5.1 row, with the status chip. The card opens the
+/// Appointment Page of its claim.
 class AppointmentScheduleCard extends StatelessWidget {
-  const AppointmentScheduleCard({super.key, required this.row});
+  const AppointmentScheduleCard({super.key, required this.row, this.onTap});
 
   final Map<String, Object?> row;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +71,9 @@ class AppointmentScheduleCard extends StatelessWidget {
     final String name = (row['consultant_name'] as String?) ?? '';
     return _ScheduleCard(
       row: row,
+      onTap: onTap,
       date: (row['appointment_date'] as String?) ?? '',
+      chip: AppointmentStatusChip((row['appointment_status'] as String?) ?? '', short: true),
       header: Row(spacing: 12, children: <Widget>[
         PersonAvatar(name),
         Expanded(
@@ -85,7 +89,7 @@ class AppointmentScheduleCard extends StatelessWidget {
 }
 
 /// U6-1: one Q6.1 row. The schema has no picture or address of the facility,
-/// so the card shows an icon and the treatment type (R-033).
+/// so the card shows an icon, the facility name, the type and the duration.
 class TreatmentScheduleCard extends StatelessWidget {
   const TreatmentScheduleCard({super.key, required this.row, this.onTap});
 
@@ -108,7 +112,8 @@ class TreatmentScheduleCard extends StatelessWidget {
       ),
       header: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
         Text((row['facility_name'] as String?) ?? '', style: text.titleSmall),
-        Text((row['treatment_type'] as String?) ?? '', style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+        Text('${(row['treatment_type'] as String?) ?? ''} · ${TreatmentText.duration(row['duration_minutes'])}',
+            style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
       ]),
     );
   }

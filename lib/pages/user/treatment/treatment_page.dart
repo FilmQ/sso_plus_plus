@@ -11,9 +11,11 @@ import '../schedule/schedule_providers.dart';
 import 'accepted_dialog.dart';
 import 'available_dates_dialog.dart';
 import 'treatment_cards.dart';
+import 'treatment_text.dart';
 
 /// U4-1 Confirm Treatment page (SA report figure 2-38), with the results U4-2
 /// (Treatment accepted) and U4-4 (New treatment date saved). U4.1 and U4.2.
+/// A new date counts as accepting, so after U4.2 the page has no buttons.
 class TreatmentPage extends ConsumerStatefulWidget {
   const TreatmentPage({super.key, required this.treatmentId});
 
@@ -36,7 +38,7 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
     open();
   }
 
-  /// The page data: one Q6.1 row (D-041).
+  /// U4.1 steps 1 to 2: the page data (QU4.4).
   Future<void> open() async {
     try {
       final Map<String, Object?> t = await _api.getTreatment(widget.treatmentId);
@@ -74,18 +76,23 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
     await showAcceptedDialog(context, _treatment!);
   }
 
-  /// U4.2: showAvailableDates() (U4-3), selectDate(new_date), QU4.2, then the
-  /// new date (U4-4). "Cancel" goes back without a change.
+  /// U4.2: getAvailableDates (QU4.5, U4-3), select a date, saveDate (QU4.2),
+  /// then the new date (U4-4). "Cancel" goes back without a change.
   Future<void> clickRequestAnotherDate() async {
-    final String date = _treatment!['treatment_date']! as String;
-    final String? newDate = await showAvailableDates(
+    final String time = TreatmentText.time(_treatment!['treatment_date']! as String);
+    final Map<String, Object?>? chosen = await showAvailableDates(
       context,
-      time: date.substring(date.length - 5),
+      time: time,
       loadDates: () => _api.getAvailableDates(widget.treatmentId),
     );
-    if (newDate == null) return;
-    if (await _change(() => _api.changeDate(widget.treatmentId, newDate))) {
-      _snack('Treatment date changed to ${_treatment!['treatment_date']}'); // U4-4
+    if (chosen == null) return;
+    await saveDate(chosen, time);
+  }
+
+  /// U4.2 step 4 (QU4.2), then the U4-4 snackbar.
+  Future<void> saveDate(Map<String, Object?> chosen, String time) async {
+    if (await _change(() => _api.changeDate(widget.treatmentId, chosen['slot_date']! as String))) {
+      _snack(TreatmentText.dateChanged(chosen['date_label']! as String, time));
     }
   }
 

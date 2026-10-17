@@ -56,18 +56,21 @@ class ClaimStatusChip extends StatelessWidget {
 }
 
 /// The chip of an Appointment.appointment_status (05-states.md), as in U3-2,
-/// U3-5 and U3-7. 'Pending' shows as "Awaiting your confirmation" (U3.1 step 3).
+/// U3-5, U3-7 and U5-1. 'Pending' shows as "Awaiting your confirmation"
+/// (U3.1 step 3), or as "Awaiting you" when [short] (U5-1).
 class AppointmentStatusChip extends StatelessWidget {
-  const AppointmentStatusChip(this.status, {super.key});
+  const AppointmentStatusChip(this.status, {super.key, this.short = false});
 
   final String status;
+  final bool short;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final StatusColors s = StatusColors.of(context);
     final (IconData icon, String label, Color bg, Color fg) = switch (status) {
-      'Pending' => (Icons.schedule, 'Awaiting your confirmation', s.warningContainer, s.warning),
+      'Pending' =>
+        (Icons.schedule, short ? 'Awaiting you' : 'Awaiting your confirmation', s.warningContainer, s.warning),
       'Confirmed' => (Icons.event_available, 'Confirmed', s.successContainer, s.success),
       'Cancelled' => (Icons.event_busy, 'Cancelled', colors.errorContainer, colors.onErrorContainer),
       _ => (Icons.update, status, colors.secondaryContainer, colors.onSecondaryContainer),

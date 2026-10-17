@@ -27,16 +27,61 @@ void main() {
             'consultant_name': 'นพ. ธนา ศรีสุข',
             'office_location': 'Building A, Floor 3, Room 305',
             'appointment_date': '16 October 2026 : 10:00',
+            'appointment_status': 'Pending',
+            'claim_id': 143,
+            ..._claim,
+          },
+          <String, Object?>{
+            'consultant_name': 'พญ. มาลี ใจดี',
+            'office_location': 'Building A, Floor 2, Room 210',
+            'appointment_date': '22 October 2026 : 09:00',
+            'appointment_status': 'Confirmed',
+            'claim_id': 160,
             ..._claim,
           },
         ]));
     await tapText(tester, 'Schedule');
     expect(find.text('Upcoming'), findsOneWidget);
+    expect(find.text('Awaiting you'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Confirmed'), 200);
+    expect(find.text('Confirmed'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('นพ. ธนา ศรีสุข'), -200);
     expect(find.text('นพ. ธนา ศรีสุข'), findsOneWidget);
     expect(find.text('ธศ'), findsOneWidget);
     expect(find.text('Building A, Floor 3, Room 305'), findsOneWidget);
     expect(find.text('16 October 2026 : 10:00'), findsOneWidget);
-    expect(find.text('SST-2026-000143'), findsOneWidget);
+    expect(find.text('SST-2026-000143'), findsWidgets);
+  });
+
+  testWidgets('U5: an appointment card opens the Appointment Page of its claim', (WidgetTester tester) async {
+    final FakeServer server = _server(appointments: <Object>[
+      <String, Object?>{
+        'consultant_name': 'นพ. ธนา ศรีสุข',
+        'office_location': 'Building A, Floor 3, Room 305',
+        'appointment_date': '16 October 2026 : 10:00',
+        'appointment_status': 'Confirmed',
+        'claim_id': 143,
+        ..._claim,
+      },
+    ])
+      ..json('GET /u3/claims/143/appointment', <String, Object?>{
+        'appointment': <String, Object?>{
+          'appointment_id': 504,
+          'consultant_id': 1,
+          'appointment_status': 'Confirmed',
+          'appointment_date': '16 / 10 / 2026 : 10:00',
+          'scheduled_by': 'กัญญา วงศ์ศิริ',
+          'appointment_type': 'Onsite',
+          'consultant_name': 'นพ. ธนา ศรีสุข',
+          'office_location': 'Building A, Floor 3, Room 305',
+          ..._claim,
+        },
+      });
+    await signInToUserApp(tester, server);
+    await tapText(tester, 'Schedule');
+    await tapText(tester, 'นพ. ธนา ศรีสุข');
+    expect(find.text('Appointment'), findsOneWidget);
+    expect(find.text('16 / 10 / 2026 : 10:00'), findsOneWidget);
   });
 
   testWidgets('U6 Normal Case: the Treatments tab shows the upcoming treatments', (WidgetTester tester) async {
@@ -47,6 +92,7 @@ void main() {
             'treatment_id': 401,
             'facility_name': 'SSO Rehabilitation Center',
             'treatment_type': 'Physiotherapy',
+            'duration_minutes': 60,
             'treatment_date': '23 October 2026 : 13:00',
             'treatment_status': 'Accepted',
             'claim_id': 143,
@@ -56,6 +102,7 @@ void main() {
             'treatment_id': 406,
             'facility_name': 'SSO Rehabilitation Center',
             'treatment_type': 'Physiotherapy',
+            'duration_minutes': 45,
             'treatment_date': '10 November 2026 : 13:00',
             'treatment_status': 'Pending',
             'claim_id': 143,
@@ -67,6 +114,7 @@ void main() {
     await tapText(tester, 'Treatments');
     expect(find.text('23 October 2026 : 13:00'), findsOneWidget);
     expect(find.text('Accepted'), findsOneWidget);
+    expect(find.text('Physiotherapy · 60 minutes'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Awaiting you'), 200);
     expect(find.text('Awaiting you'), findsOneWidget);
   });

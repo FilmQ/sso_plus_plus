@@ -1,6 +1,6 @@
 import 'api_client.dart';
 
-/// The page side of server TreatmentController (U4.1, U4.2, U6; D-041).
+/// The page side of server TreatmentController (U4.1, U4.2, U6).
 class TreatmentApi {
   const TreatmentApi(this.api);
 
@@ -14,18 +14,20 @@ class TreatmentApi {
   Future<List<Map<String, Object?>>> getTreatmentSchedule() async =>
       ((await api.get('/u6/treatments'))['treatments']! as List<Object?>).cast<Map<String, Object?>>();
 
-  /// One Q6.1 row: the Confirm Treatment page.
+  /// QU4.4: the Confirm Treatment page.
   Future<Map<String, Object?>> getTreatment(int treatmentId) async => _row(await api.get(_base(treatmentId)));
 
   /// QU4.1
   Future<Map<String, Object?>> acceptTreatment(int treatmentId) async =>
       _row(await api.post('${_base(treatmentId)}/accept', const <String, Object?>{}));
 
-  /// QO5.2 (D-042): the dates ('yyyy-MM-dd') the user can choose.
-  Future<List<String>> getAvailableDates(int treatmentId) async =>
-      ((await api.get('${_base(treatmentId)}/available-dates'))['dates']! as List<Object?>).cast<String>();
+  /// QU4.5: the free weekdays, each with slot_date ('yyyy-MM-dd') and
+  /// date_label (for example 'Tue 27 October 2026').
+  Future<List<Map<String, Object?>>> getAvailableDates(int treatmentId) async =>
+      ((await api.get('${_base(treatmentId)}/available-dates'))['dates']! as List<Object?>)
+          .cast<Map<String, Object?>>();
 
-  /// QU4.2
+  /// QU4.2: the new date counts as accepting, so the treatment comes back Accepted.
   Future<Map<String, Object?>> changeDate(int treatmentId, String newDate) async =>
       _row(await api.post('${_base(treatmentId)}/change-date', <String, Object?>{'new_date': newDate}));
 }

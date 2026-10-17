@@ -19,9 +19,10 @@ class SchedulePage extends ConsumerStatefulWidget {
 class _SchedulePageState extends ConsumerState<SchedulePage> {
   String activeTab = 'Appointments';
 
-  /// U4: a treatment card opens the Confirm Treatment page.
-  Future<void> _openTreatment(Map<String, Object?> row) async {
-    await context.push('/treatment/${row['treatment_id']}');
+  /// U5: an appointment card opens the Appointment Page of its claim. U6: a
+  /// treatment card opens the Confirm Treatment page (U4-1).
+  Future<void> _open(String location) async {
+    await context.push(location);
     refreshUserData(ref);
   }
 
@@ -61,8 +62,8 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                     Text(appointments ? 'You have no upcoming appointments.' : 'You have no upcoming treatments.'),
                   for (final Map<String, Object?> row in items)
                     appointments
-                        ? AppointmentScheduleCard(row: row)
-                        : TreatmentScheduleCard(row: row, onTap: () => _openTreatment(row)),
+                        ? AppointmentScheduleCard(row: row, onTap: () => _open('/appointment/${row['claim_id']}'))
+                        : TreatmentScheduleCard(row: row, onTap: () => _open('/treatment/${row['treatment_id']}')),
                 ],
               ),
             ),
