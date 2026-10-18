@@ -65,18 +65,18 @@ void main() {
         expect(rs.rows.single['change_reason'], 'Submitted by the user');
       }));
 
-  test('QO1.1 findPendingClaims: the seed has none; a new claim is listed', () => inRollback(db, () async {
-        expect(await repo.findPendingClaims(), isEmpty);
+  test('QO1.1 findPendingClaims: the seed demo claim 161; a new claim is listed after it', () => inRollback(db, () async {
+        expect([for (final r in await repo.findPendingClaims()) r['claim_id']], [161]);
         final id = await insertTestClaim(repo);
         final rows = await repo.findPendingClaims();
-        expect(rows.single['claim_id'], id);
-        expect(rows.single['claimant_name'], 'นาย ชัยวัฒน์ สุขเจริญ');
+        expect(rows.last['claim_id'], id);
+        expect(rows.last['claimant_name'], 'นาย ชัยวัฒน์ สุขเจริญ');
       }));
 
   test('QO1.2 countByStatus counts the three waiting statuses', () => inRollback(db, () async {
         await insertTestClaim(repo, result: 'Register unavailable');
         final counts = await repo.countByStatus();
-        expect(counts, {'awaiting_verification': 0, 'reviews_needed': 0, 'register_unavailable': 1});
+        expect(counts, {'awaiting_verification': 1, 'reviews_needed': 0, 'register_unavailable': 1});
       }));
 
   test('QO1.3 findClaimSummary of SST-2026-000143', () async {
@@ -90,6 +90,8 @@ void main() {
     final rows = await repo.findDocuments(143);
     expect(rows.map((r) => r['file_name']), ['id_card_front.jpg', 'medical_record_rama.pdf', 'injury_form_kt16.pdf']);
     expect(rows.first['file_size'], '1229 kB');
+    expect(rows.first['document_type'], isNotEmpty);
+    expect(rows.first['uploaded_at'], '2 October 2026 : 14:30');
   });
 
   test('QO1.5 findAutoEligibility of claim 143', () async {
@@ -121,9 +123,24 @@ void main() {
         expect(checks.rows.single['is_override'], true);
       }));
 
+  test('QO2.1/QO3.1 saveResult: a result that differs from the automatic check needs an override reason (R-037)', () =>
+      inRollback(db, () async {
+        final id = await insertTestClaim(repo); // automatic result Covered
+        for (final reason in [null, '', '   ']) {
+          await expectLater(repo.saveResult(claimId: id, result: 'Not covered', officerId: 1, overrideReason: reason),
+              throwsA(isA<NoRowChangedException>()));
+        }
+        final unavailable = await insertTestClaim(repo, result: 'Register unavailable');
+        await expectLater(repo.saveResult(claimId: unavailable, result: 'Covered', officerId: 1),
+            throwsA(isA<NoRowChangedException>()));
+        await repo.saveResult(claimId: unavailable, result: 'Covered', officerId: 1, overrideReason: 'Checked by phone');
+        expect((await claimRow(unavailable))['claim_status'], 'Covered');
+        expect((await claimRow(id))['claim_status'], 'Awaiting verification');
+      }));
+
   test('QO3.2 insertRejection: status Rejected; a Rejected claim cannot be rejected again', () => inRollback(db, () async {
         final id = await insertTestClaim(repo);
-        await repo.saveResult(claimId: id, result: 'Not covered', officerId: 1);
+        await repo.saveResult(claimId: id, result: 'Not covered', officerId: 1, overrideReason: 'Not at work');
         await repo.insertRejection(claimId: id, reasonCode: 'R02', officerId: 1, officerMessage: 'Test');
         expect((await claimRow(id))['claim_status'], 'Rejected');
         await expectLater(

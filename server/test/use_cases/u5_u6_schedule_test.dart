@@ -50,16 +50,7 @@ void main() {
   test('U6 Normal Case: the upcoming Pending and Accepted treatments, the nearest first', () =>
       inRollback(db, () async {
         final repo = TreatmentRepository(db);
-        Future<int> book(String date) => repo.insertTreatment(
-              claimId: 149,
-              reportId: 86,
-              officerId: 2,
-              treatmentType: 'Occupational therapy',
-              durationMinutes: 45,
-              facilityName: 'SSO Rehabilitation Center',
-              scheduledDate: date,
-              scheduledTime: '14:00',
-            );
+        Future<int> book(String date) => insertTestTreatment(db, date: date, time: '14:00');
         final accepted = await book(day(50));
         await repo.updateStatusAccepted(accepted, 149, 103);
         final pending = await book(day(45));

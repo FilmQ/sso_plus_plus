@@ -338,7 +338,7 @@ WHERE insured_id = :insured_id
 - สถานะนัดหมาย: Awaiting your confirmation หรือ Confirmed
 - วันที่นัดหมาย: [วัน] / [เดือน] / [ปี] : [เวลา]
 - ชื่อเจ้าหน้าที่ประเมินผู้สร้างนัดหมาย
-- ประเภทนัดหมาย: Onsite (ที่ศูนย์ฟื้นฟูสมรรถภาพ ห้องของที่ปรึกษา) หรือ Online
+- ประเภทนัดหมาย: Onsite (ที่ศูนย์ฟื้นฟูสมรรถภาพ ห้องของที่ปรึกษา)
 - ข้อมูลที่ปรึกษา: คำนำหน้า ชื่อ นามสกุล และสถานที่ทำงาน (Office Location)
 - รายละเอียดคำร้อง: Claim ID การบาดเจ็บ และวันที่บาดเจ็บ
 - ปุ่ม 3 ปุ่ม: "Confirm Appointment", "Request Another Date" และ "I cannot attend" (ปฏิเสธนัดหมายนี้และไม่เข้าร่วมอีก)
@@ -486,6 +486,7 @@ FROM generate_series(:slot_date::date + TIME '09:00',
                      INTERVAL '1 hour') AS s(slot_at)
 WHERE s.slot_at > NOW()
   AND s.slot_at::time <> TIME '12:00'
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
   AND NOT EXISTS (
         SELECT 1
         FROM Appointment a
@@ -516,6 +517,7 @@ WITH old AS (
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
     AND :new_date::date + :new_time::time > NOW()
+    AND EXTRACT(ISODOW FROM :new_date::date) < 6
     AND :new_time::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
                             TIME '13:00', TIME '14:00', TIME '15:00')
     AND NOT EXISTS (
@@ -836,9 +838,14 @@ WHERE t.treatment_id = :treatment_id
         SELECT 1
         FROM Treatment o
         WHERE o.facility_name = t.facility_name
-          AND o.scheduled_date = s.slot_day::date
-          AND o.scheduled_time = t.scheduled_time
-          AND o.treatment_status IN ('Pending', 'Accepted'))
+          AND o.treatment_status IN ('Pending', 'Accepted')
+          AND o.treatment_id <> t.treatment_id
+          AND o.scheduled_date + o.scheduled_time
+                < s.slot_day::date + t.scheduled_time
+                  + make_interval(mins => t.duration_minutes)
+          AND s.slot_day::date + t.scheduled_time
+                < o.scheduled_date + o.scheduled_time
+                  + make_interval(mins => o.duration_minutes))
 ORDER BY s.slot_day;
 ```
 
@@ -869,10 +876,14 @@ WHERE treatment_id = :treatment_id
         SELECT 1
         FROM Treatment o
         WHERE o.facility_name = Treatment.facility_name
-          AND o.scheduled_date = :new_date::date
-          AND o.scheduled_time = Treatment.scheduled_time
           AND o.treatment_status IN ('Pending', 'Accepted')
-          AND o.treatment_id <> Treatment.treatment_id)
+          AND o.treatment_id <> Treatment.treatment_id
+          AND o.scheduled_date + o.scheduled_time
+                < :new_date::date + Treatment.scheduled_time
+                  + make_interval(mins => Treatment.duration_minutes)
+          AND :new_date::date + Treatment.scheduled_time
+                < o.scheduled_date + o.scheduled_time
+                  + make_interval(mins => o.duration_minutes))
 RETURNING treatment_id, scheduled_date, scheduled_time;
 ```
 
@@ -1082,7 +1093,7 @@ FROM InjuryClaim;
 4. ระบบแสดงหน้า Eligibility Decision Page ประกอบด้วย
 - ส่วนหัว (Header): Claim ID ชื่อและนามสกุลผู้ใช้งาน วันที่ยื่นคำร้อง และปุ่ม Back สำหรับกลับไปหน้า Verification Page
 - การ์ดสรุปคำร้อง (Claim Summary Card): เลขประจำตัวประชาชน นายจ้างตามคำร้อง วันที่บาดเจ็บ สถานที่ สาเหตุการบาดเจ็บ และอวัยวะที่บาดเจ็บ
-- การ์ดเอกสารประกอบคำร้อง (Documents lodged with the claim): รายการเอกสารที่ส่งมา แต่ละรายการแสดงชื่อไฟล์ ขนาดไฟล์ และปุ่ม "View" ที่ด้านขวา
+- การ์ดเอกสารประกอบคำร้อง (Documents lodged with the claim): รายการเอกสารที่ส่งมา แต่ละรายการแสดงประเภทเอกสาร ชื่อไฟล์ ขนาดไฟล์ วันและเวลาที่อัปโหลด และปุ่ม "View" ที่ด้านขวา
 ระบบดึงส่วนหัวและสรุปข้อมูลคำร้อง ตาม QO1.3
 ```sql
 -- QO1.3
@@ -1107,12 +1118,17 @@ WHERE ic.claim_id = :claim_id;
 4.1 ระบบดึงรายการเอกสารประกอบคำร้อง ตาม QO1.4
 ```sql
 -- QO1.4
-SELECT file_name,
-  pg_size_pretty(file_size_bytes::bigint) AS file_size,
-  file_uri
-FROM ClaimDocument
-WHERE claim_id = :claim_id
-ORDER BY uploaded_at;
+SELECT cd.document_id,
+  dt.name_en AS document_type,
+  cd.file_name,
+  pg_size_pretty(cd.file_size_bytes::bigint) AS file_size,
+  TO_CHAR(cd.uploaded_at, 'FMDD FMMonth YYYY" : "HH24:MI')
+    AS uploaded_at,
+  cd.file_uri
+FROM ClaimDocument cd
+JOIN DocumentType dt ON dt.doc_type_id = cd.doc_type_id
+WHERE cd.claim_id = :claim_id
+ORDER BY cd.uploaded_at;
 ```
 
 4.2 ระบบดึงผลการตรวจสอบสิทธิ์อัตโนมัติและหลักฐาน แสดงที่แถบด้านขวา ตาม QO1.5
@@ -1163,12 +1179,12 @@ LIMIT 1;
 แถบด้านขวา (Right Side Bar) ประกอบด้วย
 - ส่วนที่ 1: หัวข้อ "Section 33 eligibility" สถานะ "Is covered" และข้อความ "Automatic result from the SSO insured register"
 - ส่วนที่ 2: ระยะเวลาส่งเงินสมทบ (Contribution period) นายจ้างในทะเบียน (Employer in register) และวันที่ตรวจสอบทะเบียน (Register queried)
-- ส่วนที่ 3: ตัวเลือก (เลือกได้ 1 ข้อ) Confirm, Not Covered และ Needs review พร้อมช่องกรอกเหตุผลการแก้ไขผล (Override reason) ซึ่งไม่บังคับกรอก
+- ส่วนที่ 3: ตัวเลือก (เลือกได้ 1 ข้อ) Confirm และ Not Covered พร้อมช่องกรอกเหตุผลการแก้ไขผล (Override reason) ซึ่งต้องกรอกเมื่อผลที่เลือกต่างจากผลอัตโนมัติ
 - ส่วนที่ 4: ปุ่ม "Confirm Result"
 
 **Actor:**
 
-3. เจ้าหน้าที่ประเมินเลือก "Confirm" แล้วคลิก "Confirm Result"
+3. เจ้าหน้าที่ประเมินเลือก "Confirm" (และกรอกเหตุผลเมื่อผลอัตโนมัติไม่ใช่ Covered) แล้วคลิก "Confirm Result"
 
 **System:**
 
@@ -1180,15 +1196,27 @@ LIMIT 1;
 
 **System:**
 
-6.1 คลิก "Confirm" ระบบบันทึกผลการตรวจสอบสิทธิ์และเปลี่ยนสถานะคำร้อง ตาม QO2.1
+6.1 คลิก "Confirm" ระบบบันทึกผลการตรวจสอบสิทธิ์และเปลี่ยนสถานะคำร้อง ตาม QO2.1 หากผลที่เลือกต่างจากผลอัตโนมัติแต่ไม่ได้กรอกเหตุผล ระบบไม่บันทึก (ไม่มีแถวที่ถูกบันทึก) และแจ้งให้กรอกเหตุผล
 ```sql
 -- QO2.1
 WITH prev AS (
-  SELECT claim_id, claim_status
-  FROM InjuryClaim
-  WHERE claim_id = :claim_id
-    AND claim_status IN ('Awaiting verification', 'Needs review',
+  SELECT ic.claim_id, ic.claim_status, ec.coverage_id,
+    ec.result AS auto_result, ec.evidence_ref
+  FROM InjuryClaim ic
+  LEFT JOIN LATERAL (
+    SELECT e.coverage_id, e.result, e.evidence_ref
+    FROM EligibilityCheck e
+    WHERE e.claim_id = ic.claim_id
+      AND e.officer_id IS NULL
+    ORDER BY e.checked_at DESC
+    LIMIT 1
+  ) ec ON TRUE
+  WHERE ic.claim_id = :claim_id
+    AND ic.claim_status IN ('Awaiting verification', 'Needs review',
       'Register unavailable')
+    AND (ec.result IS NULL
+      OR ec.result = :result::varchar
+      OR NULLIF(BTRIM(:override_reason::varchar), '') IS NOT NULL)
 ), decided AS (
   UPDATE InjuryClaim ic
   SET claim_status = :result::varchar
@@ -1200,30 +1228,25 @@ WITH prev AS (
     (claim_id, officer_id, from_status, to_status,
      changed_at, change_reason)
   SELECT prev.claim_id, :officer_id, prev.claim_status,
-    :result::varchar, NOW(), :override_reason::varchar
+    :result::varchar, NOW(),
+    NULLIF(BTRIM(:override_reason::varchar), '')
   FROM prev
   JOIN decided ON decided.claim_id = prev.claim_id
 )
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
-  :override_reason::varchar, ec.evidence_ref
-FROM decided
-LEFT JOIN LATERAL (
-  SELECT e.coverage_id, e.result, e.evidence_ref
-  FROM EligibilityCheck e
-  WHERE e.claim_id = decided.claim_id
-    AND e.officer_id IS NULL
-  ORDER BY e.checked_at DESC
-  LIMIT 1
-) ec ON TRUE;
+SELECT prev.claim_id, prev.coverage_id, :officer_id, NOW(),
+  :result::varchar,
+  COALESCE(:result::varchar <> prev.auto_result, FALSE),
+  NULLIF(BTRIM(:override_reason::varchar), ''), prev.evidence_ref
+FROM prev
+JOIN decided ON decided.claim_id = prev.claim_id;
 ```
 
 **System:**
 
-จากนั้นระบบส่งข้อความแจ้งเตือนผู้ใช้งาน ตาม QN.1 (ทำงานต่อจาก QO2.1 ทันที)
+จากนั้นระบบส่งข้อความแจ้งเตือนผู้ใช้งาน ตาม QN.1 (ทำงานต่อจาก QO2.1 ทันที) หัวข้อ "Claim confirmed" ข้อความ "Your claim [Claim ID] is covered under Section 33."
 ```sql
 -- QN.1
 INSERT INTO Notification
@@ -1257,7 +1280,7 @@ WHERE claim_id = :claim_id;
 แถบด้านขวา (Right Side Bar) ประกอบด้วย
 - ส่วนที่ 1: หัวข้อ "Section 33 eligibility" สถานะ "Is covered" และข้อความ "Automatic result from the SSO insured register"
 - ส่วนที่ 2: ระยะเวลาส่งเงินสมทบ (Contribution period) นายจ้างในทะเบียน (Employer in register) และวันที่ตรวจสอบทะเบียน (Register queried)
-- ส่วนที่ 3: ตัวเลือก (เลือกได้ 1 ข้อ) Confirm และ Not Covered พร้อมช่องกรอกเหตุผลการแก้ไขผล (Override reason) ซึ่งไม่บังคับกรอก
+- ส่วนที่ 3: ตัวเลือก (เลือกได้ 1 ข้อ) Confirm และ Not Covered พร้อมช่องกรอกเหตุผลการแก้ไขผล (Override reason) ซึ่งต้องกรอกเมื่อผลที่เลือกต่างจากผลอัตโนมัติ
 - ส่วนที่ 4: ปุ่ม "Confirm Result"
 ระบบดึงรายการเหตุผลการปฏิเสธมาแสดงในรายการตัวเลือก (Dropdown) ตาม QO1.6
 ```sql
@@ -1282,15 +1305,27 @@ ORDER BY reason_code;
 **System:**
 
 6.1 คลิก "Confirm" ระบบบันทึกผลการตรวจสอบสิทธิ์และเปลี่ยนสถานะคำร้อง
-- กรณีเลือก "Not Covered" ตาม QO3.1
+- กรณีเลือก "Not Covered" ตาม QO3.1 หากผลอัตโนมัติเป็น Covered แต่ไม่ได้กรอกเหตุผล ระบบไม่บันทึก (ไม่มีแถวที่ถูกบันทึก) และแจ้งให้กรอกเหตุผล
 ```sql
 -- QO3.1
 WITH prev AS (
-  SELECT claim_id, claim_status
-  FROM InjuryClaim
-  WHERE claim_id = :claim_id
-    AND claim_status IN ('Awaiting verification', 'Needs review',
+  SELECT ic.claim_id, ic.claim_status, ec.coverage_id,
+    ec.result AS auto_result, ec.evidence_ref
+  FROM InjuryClaim ic
+  LEFT JOIN LATERAL (
+    SELECT e.coverage_id, e.result, e.evidence_ref
+    FROM EligibilityCheck e
+    WHERE e.claim_id = ic.claim_id
+      AND e.officer_id IS NULL
+    ORDER BY e.checked_at DESC
+    LIMIT 1
+  ) ec ON TRUE
+  WHERE ic.claim_id = :claim_id
+    AND ic.claim_status IN ('Awaiting verification', 'Needs review',
       'Register unavailable')
+    AND (ec.result IS NULL
+      OR ec.result = :result::varchar
+      OR NULLIF(BTRIM(:override_reason::varchar), '') IS NOT NULL)
 ), decided AS (
   UPDATE InjuryClaim ic
   SET claim_status = :result::varchar
@@ -1302,25 +1337,20 @@ WITH prev AS (
     (claim_id, officer_id, from_status, to_status,
      changed_at, change_reason)
   SELECT prev.claim_id, :officer_id, prev.claim_status,
-    :result::varchar, NOW(), :override_reason::varchar
+    :result::varchar, NOW(),
+    NULLIF(BTRIM(:override_reason::varchar), '')
   FROM prev
   JOIN decided ON decided.claim_id = prev.claim_id
 )
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
-  :override_reason::varchar, ec.evidence_ref
-FROM decided
-LEFT JOIN LATERAL (
-  SELECT e.coverage_id, e.result, e.evidence_ref
-  FROM EligibilityCheck e
-  WHERE e.claim_id = decided.claim_id
-    AND e.officer_id IS NULL
-  ORDER BY e.checked_at DESC
-  LIMIT 1
-) ec ON TRUE;
+SELECT prev.claim_id, prev.coverage_id, :officer_id, NOW(),
+  :result::varchar,
+  COALESCE(:result::varchar <> prev.auto_result, FALSE),
+  NULLIF(BTRIM(:override_reason::varchar), ''), prev.evidence_ref
+FROM prev
+JOIN decided ON decided.claim_id = prev.claim_id;
 ```
 
 **System:**
@@ -1398,7 +1428,7 @@ WHERE cr.claim_id = :claim_id
 
 2. ระบบแสดงหน้า Schedule Appointment Page ประกอบด้วย
 - ส่วนหัว: ข้อความ "Scheduling" และข้อความรอง Claim ID ชื่อและนามสกุลผู้ใช้งาน และวันที่ตรวจสอบสิทธิ์ (Verified date)
-- ช่องเลือกวันที่สำหรับนัดหมายกับที่ปรึกษา
+- ช่องเลือกวันที่สำหรับนัดหมายกับที่ปรึกษา (เลือกได้เฉพาะวันจันทร์ถึงวันศุกร์)
 ระบบดึงคำร้องที่พร้อมนัดหมาย พร้อมข้อมูลส่วนหัว ตาม QO4.1
 ```sql
 -- QO4.1
@@ -1423,7 +1453,7 @@ ORDER BY ic.submitted_at;
 
 **System:**
 
-2.1 ตารางเวลาว่างของที่ปรึกษา (Consultant Availability) แสดงรายชื่อที่ปรึกษา และปุ่มช่วงเวลา เช่น [Mon 09:00] [Tue 11:00] [Thu 14:30] โดยแบ่งสถานะด้วยสี 3 สี
+2.1 ตารางเวลาว่างของที่ปรึกษา (Consultant Availability) แสดงรายชื่อที่ปรึกษา และปุ่มช่วงเวลา เช่น [Mon 09:00] [Tue 11:00] [Thu 14:00] (09:00 ถึง 15:00 ยกเว้น 12:00) โดยแบ่งสถานะด้วยสี 3 สี
 - สีขาว: ว่าง นัดหมายได้
 - สีเทา: ไม่ว่าง หรือถูกนัดหมายโดยผู้อื่นแล้ว (คลิกไม่ได้)
 - สีม่วง: นัดหมายโดยตนเองแล้วและรอการยืนยัน
@@ -1455,6 +1485,7 @@ LEFT JOIN Appointment a
       AND a.schedule_date + a.schedule_time = s.slot_at
       AND a.appointment_status IN ('Pending', 'Confirmed')
 WHERE s.slot_at::time <> TIME '12:00'
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY consultant_name, s.slot_at;
 ```
 
@@ -1463,8 +1494,8 @@ ORDER BY consultant_name, s.slot_at;
 2.2 แถบด้านขวา แสดงเมื่อคลิกปุ่มช่วงเวลา หัวข้อ "Appointment to offer" ประกอบด้วย
 - ข้อมูลที่ปรึกษา: ชื่อ นามสกุล และสถานที่ทำงาน
 - วันนัดหมาย: [ชื่อวัน] [วันที่] [เดือน] [ปี] และเวลา: [เวลาเริ่ม] - [เวลาสิ้นสุด]
-- สถานที่: อาคาร ชั้น และห้อง
-- ปุ่ม "Offer to the Consultant" และ "Add to waiting list"
+- สถานที่: Onsite ที่ห้องทำงานของที่ปรึกษา (อาคาร ชั้น และห้อง)
+- ปุ่ม "Offer to the Consultant"
 
 **Actor:**
 
@@ -1480,19 +1511,38 @@ ORDER BY consultant_name, s.slot_at;
 
 **System:**
 
-6.1 คลิก "Confirm" ระบบบันทึกนัดหมาย ตาม QO4.3 และแสดงการ์ด "Appointment Scheduled" เพื่อแจ้งว่าจองนัดหมายสำเร็จ
+6.1 คลิก "Confirm" ระบบบันทึกนัดหมาย ตาม QO4.3 และแสดงการ์ด "Appointment Scheduled" เพื่อแจ้งว่าจองนัดหมายสำเร็จ พร้อมเวลาที่ผู้ใช้งานต้องยืนยันภายใน (24 ชั่วโมงก่อนนัดหมาย) ระบบบันทึกเฉพาะวันทำการในอนาคต ในชั่วโมงที่กำหนด สำหรับคำร้องที่ยังรอนัดหมาย และเมื่อที่ปรึกษายังว่าง โดยบันทึกประเภท Onsite และสถานที่เป็นห้องทำงานของที่ปรึกษา หากไม่ผ่าน ไม่มีแถวที่ถูกบันทึกและระบบให้เลือกช่วงเวลาใหม่
 ```sql
 -- QO4.3
 INSERT INTO Appointment
   (claim_id, officer_id, consultant_id, appointment_type,
    schedule_date, schedule_time, location, appointment_status,
    confirm_deadline, created_at)
-VALUES (:claim_id, :officer_id, :consultant_id,
-  :appointment_type, :schedule_date, :schedule_time, :location,
+SELECT ic.claim_id, :officer_id, c.consultant_id, 'Onsite',
+  :schedule_date::date, :schedule_time::time, c.office_location,
   'Pending',
-  :schedule_date::date + :schedule_time::time
-    - INTERVAL '24 hours',
-  NOW())
+  :schedule_date::date + :schedule_time::time - INTERVAL '24 hours',
+  NOW()
+FROM InjuryClaim ic
+JOIN Consultant c ON c.consultant_id = :consultant_id
+WHERE ic.claim_id = :claim_id
+  AND ic.claim_status = 'Covered'
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Appointment a
+        WHERE a.claim_id = ic.claim_id
+          AND a.appointment_status IN ('Pending', 'Confirmed'))
+  AND :schedule_date::date > CURRENT_DATE
+  AND EXTRACT(ISODOW FROM :schedule_date::date) < 6
+  AND :schedule_time::time IN (TIME '09:00', TIME '10:00',
+        TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00')
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Appointment b
+        WHERE b.consultant_id = c.consultant_id
+          AND b.schedule_date = :schedule_date::date
+          AND b.schedule_time = :schedule_time::time
+          AND b.appointment_status IN ('Pending', 'Confirmed'))
 RETURNING appointment_id;
 ```
 
@@ -1558,18 +1608,20 @@ FROM appt;
 
 2. ระบบแสดงหน้า Schedule Treatment Page ประกอบด้วย
 - ส่วนหัว: ข้อความ "Treatment" และ Claim ID ข้อความรอง ชื่อและนามสกุลผู้ใช้งาน และวันที่ลงนามรายงาน
-- การ์ดทางลัดไปยังรายงานการให้คำปรึกษา: หัวข้อรายงาน สถานะการลงนาม (Signed หรือ Not Signed) โดยหากรายงานยังไม่ลงนาม เจ้าหน้าที่ประเมินไม่สามารถจองการรักษาได้ และปุ่มไปยังหน้า View Consultant Report
+- การ์ดทางลัดไปยังรายงานการให้คำปรึกษา: หัวข้อรายงาน สถานะการลงนาม (Signed หรือ Not Signed) การรักษาที่ที่ปรึกษาแนะนำ โดยหากรายงานยังไม่ลงนาม เจ้าหน้าที่ประเมินไม่สามารถจองการรักษาได้ และปุ่มไปยังหน้า View Consultant Report
 ระบบดึงคำร้องที่มีรายงานแล้วและยังไม่มีการรักษา ตาม QO5.1
 ```sql
 -- QO5.1
 SELECT ic.claim_id,
   ic.claim_no,
+  ip.title_name,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   cr.report_id,
   cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
-    AS report_author
+    AS report_author,
+  cs.recommended_treatment
 FROM ConsultationReport cr
 JOIN ConsultationSession cs ON cs.session_id = cr.session_id
 JOIN Appointment a ON a.appointment_id = cs.appointment_id
@@ -1589,7 +1641,7 @@ ORDER BY cr.delivered_at;
 
 **System:**
 
-2.1 การ์ด "Treatment to book" ประกอบด้วยช่องกรอกประเภทการรักษา ระยะเวลา (นาทีถึงชั่วโมง) และสถานพยาบาล หัวข้อย่อย "Available Times" แสดงปุ่มวันและเวลา [ชื่อวัน] [วันที่] [เดือน] - [เวลา] โดยแบ่งสถานะด้วยสี 3 สี
+2.1 การ์ด "Treatment to book" ประกอบด้วยช่องเลือกประเภทการรักษา (Physiotherapy หรือ Occupational therapy) ระยะเวลา (30, 45, 60, 90 หรือ 120 นาที) และสถานพยาบาล (SSO Rehabilitation Center) หัวข้อย่อย "Available Times" แสดงปุ่มวันและเวลา [ชื่อวัน] [วันที่] [เดือน] - [เวลา] ของวันจันทร์ถึงวันศุกร์ใน 14 วันนับจากวันพรุ่งนี้ เวลาเริ่ม 09:00, 10:00, 11:00, 13:00, 14:00, 15:00 และ 16:00 การรักษาช่วงเช้าต้องเสร็จภายใน 12:00 และช่วงบ่ายภายใน 17:00 การรักษาครอบคลุมทุกชั่วโมงที่ใช้ ช่วงเวลาที่ไม่พอสำหรับระยะเวลาที่เลือกหรือทับการรักษาอื่นแสดงเป็นสีเทา โดยแบ่งสถานะด้วยสี 3 สี
 - สีขาว: ว่าง นัดหมายได้
 - สีเทา: ไม่ว่าง หรือถูกนัดหมายโดยผู้อื่นแล้ว (คลิกไม่ได้)
 - สีม่วง: นัดหมายโดยตนเองแล้ว
@@ -1599,19 +1651,35 @@ ORDER BY cr.delivered_at;
 SELECT s.slot_at,
   TO_CHAR(s.slot_at, 'Dy FMDD Mon - HH24:MI') AS slot_button,
   CASE
-    WHEN t.treatment_id IS NULL THEN 'free' -- white
-    WHEN t.officer_id = :officer_id
-     AND t.treatment_status = 'Pending' THEN 'mine' -- purple
-    ELSE 'busy' -- grey
+    WHEN EXISTS (
+           SELECT 1
+           FROM Treatment m
+           WHERE m.facility_name = :facility_name
+             AND m.scheduled_date + m.scheduled_time = s.slot_at
+             AND m.officer_id = :officer_id
+             AND m.treatment_status = 'Pending') THEN 'mine' -- purple
+    WHEN e.end_at > s.slot_at::date
+           + CASE WHEN s.slot_at::time < TIME '12:00'
+                  THEN TIME '12:00' ELSE TIME '17:00' END
+      OR EXISTS (
+           SELECT 1
+           FROM Treatment t
+           WHERE t.facility_name = :facility_name
+             AND t.treatment_status IN ('Pending', 'Accepted')
+             AND t.scheduled_date + t.scheduled_time < e.end_at
+             AND s.slot_at < t.scheduled_date + t.scheduled_time
+                   + make_interval(mins => t.duration_minutes))
+      THEN 'busy' -- grey
+    ELSE 'free' -- white
   END AS slot_state
 FROM generate_series(:date_from::date + TIME '09:00',
                      :date_to::date + TIME '16:00',
                      INTERVAL '1 hour') AS s(slot_at)
-LEFT JOIN Treatment t
-       ON t.facility_name = :facility_name
-      AND t.scheduled_date + t.scheduled_time = s.slot_at
-      AND t.treatment_status IN ('Pending', 'Accepted')
-WHERE s.slot_at::time BETWEEN TIME '09:00' AND TIME '16:00'
+CROSS JOIN LATERAL (
+  SELECT s.slot_at + make_interval(mins => :duration_minutes::int)
+    AS end_at) e
+WHERE s.slot_at::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
+        TIME '13:00', TIME '14:00', TIME '15:00', TIME '16:00')
   AND s.slot_at > NOW()
   AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY s.slot_at;
@@ -1621,8 +1689,8 @@ ORDER BY s.slot_at;
 
 2.2 แถบด้านขวา หัวข้อ "Booking Summary" แสดงเมื่อคลิกปุ่มวันและเวลา ประกอบด้วย
 - รายละเอียดการรักษา: ประเภทและระยะเวลา
-- วันรักษา: [ชื่อวัน] [วันที่] [เดือน] [ปี] และเวลา: [เวลาเริ่ม] - [เวลาสิ้นสุด]
-- สถานที่: อาคาร ชั้น และห้อง (ไม่บังคับ)
+- วันรักษา: [ชื่อวัน] [วันที่] [เดือน] [ปี] และเวลา: [เวลาเริ่ม] - [เวลาสิ้นสุด] (เวลาเริ่มบวกระยะเวลา)
+- สถานที่: ชื่อสถานพยาบาล
 - รายละเอียดรายงาน: ลิงก์ไปยังรายงาน [Report ID] วันที่ลงนาม และที่ปรึกษาผู้เขียนรายงาน
 - ปุ่ม "Book treatment" และ "No treatment require"
 
@@ -1640,22 +1708,60 @@ ORDER BY s.slot_at;
 
 **System:**
 
-6.1 คลิก "Confirm" ระบบบันทึกการรักษา ตาม QO5.3 และแสดงการ์ด "Treatment Booked" เพื่อแจ้งว่าจองการรักษาสำเร็จ
+6.1 คลิก "Confirm" ระบบบันทึกการรักษา ตาม QO5.3 (ระบบบันทึกเฉพาะเมื่อรายงานเป็นของคำร้องนั้น ค่าที่เลือกอยู่ในรายการ อยู่ในเวลาทำการ และช่วงเวลายังว่าง หากไม่ผ่าน ไม่มีแถวที่ถูกบันทึกและระบบให้เลือกช่วงเวลาใหม่) และแสดงการ์ด "Treatment Booked" เพื่อแจ้งว่าจองการรักษาสำเร็จ
 ```sql
 -- QO5.3
 INSERT INTO Treatment
   (claim_id, report_id, officer_id, treatment_type,
    duration_minutes, facility_name, scheduled_date, scheduled_time,
    treatment_status, created_at)
-VALUES (:claim_id, :report_id, :officer_id, :treatment_type,
-  :duration_minutes, :facility_name, :scheduled_date, :scheduled_time, 'Pending',
-  NOW())
+SELECT ic.claim_id, cr.report_id, :officer_id, :treatment_type,
+  :duration_minutes::int, :facility_name, :scheduled_date::date,
+  :scheduled_time::time, 'Pending', NOW()
+FROM ConsultationReport cr
+JOIN ConsultationSession cs ON cs.session_id = cr.session_id
+JOIN Appointment a ON a.appointment_id = cs.appointment_id
+JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+CROSS JOIN LATERAL (
+  SELECT :scheduled_date::date + :scheduled_time::time AS start_at,
+    :scheduled_date::date + :scheduled_time::time
+      + make_interval(mins => :duration_minutes::int) AS end_at) v
+WHERE cr.report_id = :report_id
+  AND ic.claim_id = :claim_id
+  AND cr.delivered_at IS NOT NULL
+  AND cr.is_superseded = FALSE
+  AND ic.claim_status = 'Covered'
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.claim_id = ic.claim_id
+          AND o.treatment_status IN ('Pending', 'Accepted'))
+  AND :treatment_type::varchar IN ('Physiotherapy',
+        'Occupational therapy')
+  AND :duration_minutes::int IN (30, 45, 60, 90, 120)
+  AND :facility_name::varchar = 'SSO Rehabilitation Center'
+  AND v.start_at > NOW()
+  AND EXTRACT(ISODOW FROM v.start_at) < 6
+  AND :scheduled_time::time IN (TIME '09:00', TIME '10:00',
+        TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00',
+        TIME '16:00')
+  AND v.end_at <= :scheduled_date::date
+        + CASE WHEN :scheduled_time::time < TIME '12:00'
+               THEN TIME '12:00' ELSE TIME '17:00' END
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment t
+        WHERE t.facility_name = :facility_name
+          AND t.treatment_status IN ('Pending', 'Accepted')
+          AND t.scheduled_date + t.scheduled_time < v.end_at
+          AND v.start_at < t.scheduled_date + t.scheduled_time
+                + make_interval(mins => t.duration_minutes))
 RETURNING treatment_id;
 ```
 
 **System:**
 
-จากนั้นระบบส่งข้อความแจ้งเตือนผู้ใช้งาน ตาม QN.1
+จากนั้นระบบส่งข้อความแจ้งเตือนผู้ใช้งาน ตาม QN.1 หัวข้อ "Treatment booked" ข้อความ "[ประเภทการรักษา] on [วัน] [เดือน] [ปี] : [เวลา]. Please accept or choose another date."
 ```sql
 -- QN.1
 INSERT INTO Notification
@@ -1689,7 +1795,7 @@ WHERE claim_id = :claim_id;
 
 **System:**
 
-4. ระบบแสดงการ์ดยืนยัน ข้อความ "Do you confirm that no treatment require for user [คำนำหน้าชื่อ ชื่อ และนามสกุลผู้ใช้งาน]" พร้อมปุ่ม "Confirm" และ "Cancel"
+4. ระบบแสดงการ์ดยืนยัน ข้อความ "Do you confirm that no treatment require for user [คำนำหน้าชื่อ ชื่อ และนามสกุลผู้ใช้งาน]" (คำนำหน้าชื่อจาก QO5.1) และแสดงการรักษาที่ที่ปรึกษาแนะนำในรายงาน พร้อมปุ่ม "Confirm" และ "Cancel"
 
 **Actor:**
 
@@ -1782,11 +1888,11 @@ ORDER BY cr.read_at IS NOT NULL, cr.delivered_at DESC;
 
 2.1 เมื่อเลือกรายงาน ระบบแสดงหน้ารายงานการให้คำปรึกษา (Consultation Report Page) ประกอบด้วย
 - ส่วนหัว: Claim ID ชื่อและนามสกุลผู้ใช้งาน วันที่ลงนามรายงาน และหมายเลขฉบับ (Version)
-- ส่วนที่ 1 ข้อมูลผู้ป่วย: ชื่อ นามสกุล อายุ วันและเวลาให้คำปรึกษา วันที่ยื่นรายงาน และคำนำหน้าชื่อ ชื่อ นามสกุล และความเชี่ยวชาญของที่ปรึกษา
+- ส่วนที่ 1 ข้อมูลผู้ป่วย: ชื่อ นามสกุล อายุ วันและเวลาให้คำปรึกษา วันที่ยื่นรายงาน และคำนำหน้าชื่อ ชื่อ และนามสกุลของที่ปรึกษา
 - ส่วนที่ 2 รายงาน 2 รูปแบบ: ข้อความ (Text field) หรือไฟล์ (Files) พร้อมปุ่ม "View"
 - ส่วนที่ 3 สถานะการลงนาม: Signature pending หรือ Signature signed
-- ส่วนที่ 4 สถานะการเปิดดู: Pending หรือ Viewed
-ระบบดึงข้อมูลหน้ารายงาน ตาม QO6.2
+- ส่วนที่ 4 สถานะการเปิดดู: Pending หรือ Viewed (Viewed แสดงวันและเวลาที่เปิดดู)
+ระบบดึงข้อมูลหน้ารายงาน ตาม QO6.2 (เฉพาะรายงานที่ยื่นแล้ว)
 ```sql
 -- QO6.2
 SELECT ic.claim_no,
@@ -1800,17 +1906,20 @@ SELECT ic.claim_no,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS consultant_name,
   cr.report_content,
+  cr.report_file_uri,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
-    AS view_status
+    AS view_status,
+  TO_CHAR(cr.read_at, 'FMDD FMMonth YYYY" : "HH24:MI') AS viewed_at
 FROM ConsultationReport cr
 JOIN ConsultationSession cs ON cs.session_id = cr.session_id
 JOIN Appointment a ON a.appointment_id = cs.appointment_id
 JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
 JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
 JOIN Consultant c ON c.consultant_id = cr.consultant_id
-WHERE cr.report_id = :report_id;
+WHERE cr.report_id = :report_id
+  AND cr.delivered_at IS NOT NULL;
 ```
 
 **Actor:**
@@ -1821,7 +1930,7 @@ WHERE cr.report_id = :report_id;
 
 4. ระบบบันทึกว่ารายงานถูกเปิดดูแล้ว ตาม QO6.3 และแสดงรายงานตามรูปแบบ
 4.1 ข้อความ (Text field): แสดงหัวเรื่องและเนื้อหารายงาน
-4.2 ไฟล์ (File): แสดงไฟล์ที่ส่งมา (Alternate Case 1 [File])
+4.2 ไฟล์ (File): แสดงไฟล์ที่ส่งมา จาก report_file_uri ที่ได้จาก QO6.2 (Alternate Case 1 [File])
 ```sql
 -- QO6.3
 UPDATE ConsultationReport
@@ -1929,7 +2038,7 @@ WHERE a.appointment_id = :appointment_id
 
 2.2 ระบบแสดงหน้ารายงาน ประกอบด้วย
 - ส่วนหัว: Claim ID ชื่อและนามสกุลผู้ใช้งาน วันที่ลงนามรายงาน และหมายเลขฉบับ (Version)
-- ส่วนที่ 1 ข้อมูลผู้ป่วย: ชื่อ นามสกุล อายุ วันและเวลาให้คำปรึกษา และคำนำหน้าชื่อ ชื่อ นามสกุล และความเชี่ยวชาญของที่ปรึกษา
+- ส่วนที่ 1 ข้อมูลผู้ป่วย: ชื่อ นามสกุล อายุ วันและเวลาให้คำปรึกษา และคำนำหน้าชื่อ ชื่อ และนามสกุลของที่ปรึกษา
 - ส่วนที่ 2 รายงาน 2 รูปแบบ: ช่องพิมพ์ข้อความ และไฟล์รายงานแนบ
 - ส่วนที่ 3 สถานะการลงนาม: Signature pending หรือ Signature signed
 - ส่วนที่ 4 ปุ่ม 3 ปุ่ม: "Amend the draft", "Sign the signature" และ "File the report"
@@ -1947,6 +2056,7 @@ SELECT cs.session_id,
   cr.report_id,
   COALESCE(cr.version_no, 1) AS version_no,
   cr.report_content,
+  cr.report_file_uri,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status
@@ -1983,8 +2093,10 @@ WHERE cs.appointment_id = :appointment_id;
 -- QC2.4
 INSERT INTO ConsultationReport
   (session_id, consultant_id, version_no, report_content,
-   is_superseded)
-VALUES (:session_id, :consultant_id, 1, :report_content, FALSE)
+   report_file_uri, is_superseded)
+VALUES (:session_id, :consultant_id, 1,
+  NULLIF(:report_content::text, ''),
+  NULLIF(:report_file_uri::varchar, ''), FALSE)
 RETURNING report_id;
 ```
 
@@ -1992,7 +2104,8 @@ RETURNING report_id;
 ```sql
 -- QC2.5
 UPDATE ConsultationReport
-SET report_content = :report_content,
+SET report_content = NULLIF(:report_content::text, ''),
+    report_file_uri = NULLIF(:report_file_uri::varchar, ''),
     signed_at = NULL
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
@@ -2005,7 +2118,7 @@ WHERE report_id = :report_id
 
 **System:**
 
-8. ระบบเปลี่ยนข้อความในช่องเป็น "File Attached" และบันทึกข้อมูล
+8. ระบบเปลี่ยนข้อความในช่องเป็น "File Attached" และบันทึกข้อมูล ตาม QC2.4 หรือ QC2.5 โดยบันทึกที่อยู่ไฟล์ (report_file_uri) แทนเนื้อหารายงาน รายงานมีได้อย่างใดอย่างหนึ่ง ระหว่างข้อความหรือไฟล์ และลงลายมือชื่อ (C2.2) และยื่นรายงาน (C2.3) ได้ทั้งสองแบบ
 
 
 ## C2.2: สร้างรายงานการให้คำปรึกษา (Sign the Signature)
@@ -2042,7 +2155,7 @@ UPDATE ConsultationReport
 SET signed_at = NOW()
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
-  AND report_content IS NOT NULL
+  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
   AND signed_at IS NULL;
 ```
 
@@ -2076,7 +2189,7 @@ UPDATE ConsultationReport
 SET delivered_at = NOW()
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
-  AND report_content IS NOT NULL
+  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
   AND signed_at IS NOT NULL
   AND delivered_at IS NULL
 RETURNING report_id;

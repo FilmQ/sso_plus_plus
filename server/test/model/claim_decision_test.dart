@@ -28,8 +28,24 @@ void main() {
 
   test('QO2.1/QO3.1 guard: a Register unavailable claim can be rejected (Not covered, then Rejected)', () => inRollback(db, () async {
         final id = await insertTestClaim(claims, result: 'Register unavailable');
-        await model.rejectApplication(id, officerId: 1, reasonCode: 'R01', officerMessage: 'Not in the register');
+        await model.rejectApplication(id,
+            officerId: 1, reasonCode: 'R01', officerMessage: 'Not in the register', overrideReason: 'Register checked');
         expect(await status(id), 'Rejected');
+      }));
+
+  test('R-037: a decision that differs from the automatic result needs an override reason (422)', () =>
+      inRollback(db, () async {
+        final covered = await insertTestClaim(claims);
+        await expectLater(model.rejectApplication(covered, officerId: 1, reasonCode: 'R05'),
+            throwsA(isA<ValidationFailedException>()
+                .having((e) => e.fieldErrors.keys, 'fields', ['override_reason'])));
+        final unavailable = await insertTestClaim(claims, result: 'Register unavailable');
+        await expectLater(model.confirmResult(unavailable, officerId: 1, overrideReason: ' '),
+            throwsA(isA<ValidationFailedException>()));
+        expect(await status(covered), 'Awaiting verification');
+        expect(await status(unavailable), 'Register unavailable');
+        await model.confirmResult(covered, officerId: 1);
+        expect(await status(covered), 'Covered', reason: 'the same result as the automatic check needs no reason');
       }));
 
   test('QO2.1/QO3.1 guard: decided claims are refused and do not change', () => inRollback(db, () async {

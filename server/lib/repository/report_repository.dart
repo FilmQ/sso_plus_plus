@@ -29,25 +29,27 @@ class ReportRepository extends Repository {
   Future<Row?> findReportPage(int appointmentId) async =>
       (await query(ReportSql.qC2_3, {'appointment_id': appointmentId})).firstOrNull;
 
-  // QC2.4 [C2.1] Gives the new report_id.
-  Future<int> insertDraft(int sessionId, int consultantId, String reportContent) async {
+  // QC2.4 [C2.1] Gives the new report_id. A report is text or one file.
+  Future<int> insertDraft(int sessionId, int consultantId, {String? reportContent, String? reportFileUri}) async {
     final rs = await query(ReportSql.qC2_4, {
       'session_id': sessionId,
       'consultant_id': consultantId,
       'report_content': reportContent,
+      'report_file_uri': reportFileUri,
     });
     return rs.rows.single['report_id'] as int;
   }
 
   // QC2.5 [C2.1] Gives 0 when the report is filed or belongs to another consultant.
-  Future<int> updateDraft(int reportId, int consultantId, String reportContent) =>
+  Future<int> updateDraft(int reportId, int consultantId, {String? reportContent, String? reportFileUri}) =>
       execute(ReportSql.qC2_5, {
         'report_id': reportId,
         'consultant_id': consultantId,
         'report_content': reportContent,
+        'report_file_uri': reportFileUri,
       });
 
-  // QC2.6 [C2.2] Gives 0 when there is no content or the report is signed.
+  // QC2.6 [C2.2] Gives 0 when there is no content or file, or the report is signed.
   Future<int> updateSignedAt(int reportId, int consultantId) =>
       execute(ReportSql.qC2_6, {'report_id': reportId, 'consultant_id': consultantId});
 

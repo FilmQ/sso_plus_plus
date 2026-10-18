@@ -70,14 +70,14 @@ class TreatmentController extends Controller {
     return treatmentModel.getClaimsForTreatment();
   }
 
-  /// O5.1 step 2.1 (QO5.2): the hours of [facility] from [dateFrom] to
-  /// [dateTo].
-  Future<List<Map<String, Object?>>> getAvailableTimes(String facility, String dateFrom, String dateTo) {
+  /// O5.1 step 2.1 (QO5.2): the start hours of [facility] from [dateFrom] to
+  /// [dateTo] for a treatment of [duration] minutes.
+  Future<List<Map<String, Object?>>> getAvailableTimes(String facility, int? duration, String dateFrom, String dateTo) {
     final officerId = _officerId;
-    if (!_date.hasMatch(dateFrom) || !_date.hasMatch(dateTo) || facility.trim().isEmpty) {
-      throw const FormatException('facility, from and to (yyyy-MM-dd) are necessary');
+    if (!_date.hasMatch(dateFrom) || !_date.hasMatch(dateTo) || facility.trim().isEmpty || duration == null) {
+      throw const FormatException('facility, duration and from and to (yyyy-MM-dd) are necessary');
     }
-    return treatmentModel.getFacilitySlots(facility, dateFrom, dateTo, officerId);
+    return treatmentModel.getFacilitySlots(facility, duration, dateFrom, dateTo, officerId);
   }
 
   /// O5.1 step 6.1: QO5.3, then QN.1 "Treatment booked" to the user, in one

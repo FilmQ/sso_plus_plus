@@ -16,7 +16,8 @@ void addOfficerTreatmentRoutes(
     ..get('/o5/available-times', (Request r) async {
       final q = r.url.queryParameters;
       return jsonOk({
-        'slots': await treatments(r).getAvailableTimes(q['facility'] ?? '', q['from'] ?? '', q['to'] ?? ''),
+        'slots': await treatments(r)
+            .getAvailableTimes(q['facility'] ?? '', int.tryParse(q['duration'] ?? ''), q['from'] ?? '', q['to'] ?? ''),
       });
     })
     // QO5.3, QN.1

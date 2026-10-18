@@ -46,24 +46,22 @@ class AppointmentRepository extends Repository {
   Future<List<Row>> findConsultantSlots(String slotDate, int officerId) async =>
       (await query(AppointmentSql.qO4_2, {'slot_date': slotDate, 'officer_id': officerId})).rows;
 
-  // QO4.3 [O4] Gives the new appointment_id.
+  // QO4.3 [O4] An Onsite appointment at the consultant's office. Gives the new
+  // appointment_id. Only a Covered claim without an open appointment, a later
+  // weekday, a bookable hour and a free consultant; else NoRowChangedException.
   Future<int> insertAppointment({
     required int claimId,
     required int officerId,
     required int consultantId,
-    required String appointmentType,
     required String scheduleDate,
     required String scheduleTime,
-    required String location,
   }) async {
-    final rs = await query(AppointmentSql.qO4_3, {
+    final rs = await guarded('QO4.3', AppointmentSql.qO4_3, {
       'claim_id': claimId,
       'officer_id': officerId,
       'consultant_id': consultantId,
-      'appointment_type': appointmentType,
       'schedule_date': scheduleDate,
       'schedule_time': scheduleTime,
-      'location': location,
     });
     return rs.rows.single['appointment_id'] as int;
   }

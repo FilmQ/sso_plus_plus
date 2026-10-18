@@ -147,12 +147,17 @@ WHERE ic.claim_id = :claim_id
 
   // QO1.4 [O1] ดูคำร้องกรณีประสบอันตราย (View Injury Application)
   static const qO1_4 = r'''
-SELECT file_name,
-  pg_size_pretty(file_size_bytes::bigint) AS file_size,
-  file_uri
-FROM ClaimDocument
-WHERE claim_id = :claim_id
-ORDER BY uploaded_at
+SELECT cd.document_id,
+  dt.name_en AS document_type,
+  cd.file_name,
+  pg_size_pretty(cd.file_size_bytes::bigint) AS file_size,
+  TO_CHAR(cd.uploaded_at, 'FMDD FMMonth YYYY" : "HH24:MI')
+    AS uploaded_at,
+  cd.file_uri
+FROM ClaimDocument cd
+JOIN DocumentType dt ON dt.doc_type_id = cd.doc_type_id
+WHERE cd.claim_id = :claim_id
+ORDER BY cd.uploaded_at
 ''';
 
   // QO1.5 [O1] ดูคำร้องกรณีประสบอันตราย (View Injury Application)
@@ -184,11 +189,23 @@ ORDER BY reason_code
   // QO2.1 [O2] อนุมัติคำร้อง (Approve Injury Application)
   static const qO2_1 = r'''
 WITH prev AS (
-  SELECT claim_id, claim_status
-  FROM InjuryClaim
-  WHERE claim_id = :claim_id
-    AND claim_status IN ('Awaiting verification', 'Needs review',
+  SELECT ic.claim_id, ic.claim_status, ec.coverage_id,
+    ec.result AS auto_result, ec.evidence_ref
+  FROM InjuryClaim ic
+  LEFT JOIN LATERAL (
+    SELECT e.coverage_id, e.result, e.evidence_ref
+    FROM EligibilityCheck e
+    WHERE e.claim_id = ic.claim_id
+      AND e.officer_id IS NULL
+    ORDER BY e.checked_at DESC
+    LIMIT 1
+  ) ec ON TRUE
+  WHERE ic.claim_id = :claim_id
+    AND ic.claim_status IN ('Awaiting verification', 'Needs review',
       'Register unavailable')
+    AND (ec.result IS NULL
+      OR ec.result = :result::varchar
+      OR NULLIF(BTRIM(:override_reason::varchar), '') IS NOT NULL)
 ), decided AS (
   UPDATE InjuryClaim ic
   SET claim_status = :result::varchar
@@ -200,35 +217,42 @@ WITH prev AS (
     (claim_id, officer_id, from_status, to_status,
      changed_at, change_reason)
   SELECT prev.claim_id, :officer_id, prev.claim_status,
-    :result::varchar, NOW(), :override_reason::varchar
+    :result::varchar, NOW(),
+    NULLIF(BTRIM(:override_reason::varchar), '')
   FROM prev
   JOIN decided ON decided.claim_id = prev.claim_id
 )
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
-  :override_reason::varchar, ec.evidence_ref
-FROM decided
-LEFT JOIN LATERAL (
-  SELECT e.coverage_id, e.result, e.evidence_ref
-  FROM EligibilityCheck e
-  WHERE e.claim_id = decided.claim_id
-    AND e.officer_id IS NULL
-  ORDER BY e.checked_at DESC
-  LIMIT 1
-) ec ON TRUE
+SELECT prev.claim_id, prev.coverage_id, :officer_id, NOW(),
+  :result::varchar,
+  COALESCE(:result::varchar <> prev.auto_result, FALSE),
+  NULLIF(BTRIM(:override_reason::varchar), ''), prev.evidence_ref
+FROM prev
+JOIN decided ON decided.claim_id = prev.claim_id
 ''';
 
   // QO3.1 [O3] ปฏิเสธคำร้อง (Reject Injury Application)
   static const qO3_1 = r'''
 WITH prev AS (
-  SELECT claim_id, claim_status
-  FROM InjuryClaim
-  WHERE claim_id = :claim_id
-    AND claim_status IN ('Awaiting verification', 'Needs review',
+  SELECT ic.claim_id, ic.claim_status, ec.coverage_id,
+    ec.result AS auto_result, ec.evidence_ref
+  FROM InjuryClaim ic
+  LEFT JOIN LATERAL (
+    SELECT e.coverage_id, e.result, e.evidence_ref
+    FROM EligibilityCheck e
+    WHERE e.claim_id = ic.claim_id
+      AND e.officer_id IS NULL
+    ORDER BY e.checked_at DESC
+    LIMIT 1
+  ) ec ON TRUE
+  WHERE ic.claim_id = :claim_id
+    AND ic.claim_status IN ('Awaiting verification', 'Needs review',
       'Register unavailable')
+    AND (ec.result IS NULL
+      OR ec.result = :result::varchar
+      OR NULLIF(BTRIM(:override_reason::varchar), '') IS NOT NULL)
 ), decided AS (
   UPDATE InjuryClaim ic
   SET claim_status = :result::varchar
@@ -240,25 +264,20 @@ WITH prev AS (
     (claim_id, officer_id, from_status, to_status,
      changed_at, change_reason)
   SELECT prev.claim_id, :officer_id, prev.claim_status,
-    :result::varchar, NOW(), :override_reason::varchar
+    :result::varchar, NOW(),
+    NULLIF(BTRIM(:override_reason::varchar), '')
   FROM prev
   JOIN decided ON decided.claim_id = prev.claim_id
 )
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
-  :override_reason::varchar, ec.evidence_ref
-FROM decided
-LEFT JOIN LATERAL (
-  SELECT e.coverage_id, e.result, e.evidence_ref
-  FROM EligibilityCheck e
-  WHERE e.claim_id = decided.claim_id
-    AND e.officer_id IS NULL
-  ORDER BY e.checked_at DESC
-  LIMIT 1
-) ec ON TRUE
+SELECT prev.claim_id, prev.coverage_id, :officer_id, NOW(),
+  :result::varchar,
+  COALESCE(:result::varchar <> prev.auto_result, FALSE),
+  NULLIF(BTRIM(:override_reason::varchar), ''), prev.evidence_ref
+FROM prev
+JOIN decided ON decided.claim_id = prev.claim_id
 ''';
 
   // QO3.2 [O3] ปฏิเสธคำร้อง (Reject Injury Application)

@@ -40,22 +40,27 @@ class TreatmentRepository extends Repository {
   // QO5.1 [O5.1]
   Future<List<Row>> findClaimsWithFiledReport() async => (await query(TreatmentSql.qO5_1)).rows;
 
-  // QO5.2 [O5.1] Hours 09:00 to 16:00 of the weekdays from [dateFrom] to [dateTo], with slot_state.
+  // QO5.2 [O5.1] The start hours of the weekdays from [dateFrom] to [dateTo],
+  // with slot_state for a treatment of [durationMinutes].
   Future<List<Row>> findFacilitySlots({
     required String facilityName,
+    required int durationMinutes,
     required String dateFrom,
     required String dateTo,
     required int officerId,
   }) async =>
       (await query(TreatmentSql.qO5_2, {
         'facility_name': facilityName,
+        'duration_minutes': durationMinutes,
         'date_from': dateFrom,
         'date_to': dateTo,
         'officer_id': officerId,
       }))
           .rows;
 
-  // QO5.3 [O5.1] Gives the new treatment_id.
+  // QO5.3 [O5.1] Gives the new treatment_id. Only a claim with its filed
+  // report and no open treatment, a type, duration and facility of the lists,
+  // a later weekday hour and no overlap; else NoRowChangedException.
   Future<int> insertTreatment({
     required int claimId,
     required int reportId,
@@ -66,7 +71,7 @@ class TreatmentRepository extends Repository {
     required String scheduledDate,
     required String scheduledTime,
   }) async {
-    final rs = await query(TreatmentSql.qO5_3, {
+    final rs = await guarded('QO5.3', TreatmentSql.qO5_3, {
       'claim_id': claimId,
       'report_id': reportId,
       'officer_id': officerId,

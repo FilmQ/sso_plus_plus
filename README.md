@@ -70,18 +70,17 @@ The server runs `AutoCancelJob` (U4.3) when it starts and every day at 00:05: on
 treatment that is still Pending, sets the claim to `Withdrawn` and sends the message "Treatment cancelled".
 `make db-reset` loads the seed again with new dates.
 
-### O1 to O3 demo data
+### O1 to O6 demo data (officer console)
 
-The seed has no claim to verify. First submit a claim in the user app (U1). Then sign in to the console as
-`kanya.w@sso.go.th`: the claim is on the Verification Page (O1), and the officer can approve it (O2) or reject it
-(O3). The seed documents have no files, but the files of a U1 claim open with "View".
-An approved claim is then on the Scheduling page (O4): choose a date and a free hour, then "Offer to the Consultant".
+Sign in to the console as `kanya.w@sso.go.th`.
 
-### O5 and O6 demo data
-
-Consultation Reports (O6) shows the 3 filed seed reports; CR-0087 is not viewed yet, and "View" marks it as viewed.
-The Treatment page (O5.1, O5.2) lists a Covered claim with a filed report and no open treatment. The seed has none
-(claim 149 has the Pending treatment 403), so this page is empty until a consultant files a report (C2, later).
+- Verification (O1 to O3): seed claim SST-2026-000161 waits for verification. `make db-reset` copies small made-up
+  files for its three documents into `server/storage/`, so "View" opens them. The automatic result is Covered:
+  "Confirm" needs no override reason, "Not Covered" needs one (and a rejection reason).
+- Scheduling (O4): an approved claim is listed. Choose a weekday and a free hour, then "Offer to the Consultant".
+- Treatment (O5.1, O5.2): seed claim SST-2026-000162 has the filed report CR-0090 and no treatment. Choose the type,
+  duration and facility, then a free time; a treatment must end by 12:00 or 17:00.
+- Consultation Reports (O6): the 4 filed seed reports; CR-0087 and CR-0090 are not viewed yet.
 
 ## Lint and test
 

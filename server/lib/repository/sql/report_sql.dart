@@ -36,10 +36,12 @@ SELECT ic.claim_no,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS consultant_name,
   cr.report_content,
+  cr.report_file_uri,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
-    AS view_status
+    AS view_status,
+  TO_CHAR(cr.read_at, 'FMDD FMMonth YYYY" : "HH24:MI') AS viewed_at
 FROM ConsultationReport cr
 JOIN ConsultationSession cs ON cs.session_id = cr.session_id
 JOIN Appointment a ON a.appointment_id = cs.appointment_id
@@ -47,6 +49,7 @@ JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
 JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
 JOIN Consultant c ON c.consultant_id = cr.consultant_id
 WHERE cr.report_id = :report_id
+  AND cr.delivered_at IS NOT NULL
 ''';
 
   // QO6.3 [O6] ดูรายงานการให้คำปรึกษา (View Consultation Report)
@@ -107,6 +110,7 @@ SELECT cs.session_id,
   cr.report_id,
   COALESCE(cr.version_no, 1) AS version_no,
   cr.report_content,
+  cr.report_file_uri,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status
@@ -125,15 +129,18 @@ WHERE cs.appointment_id = :appointment_id
   static const qC2_4 = r'''
 INSERT INTO ConsultationReport
   (session_id, consultant_id, version_no, report_content,
-   is_superseded)
-VALUES (:session_id, :consultant_id, 1, :report_content, FALSE)
+   report_file_uri, is_superseded)
+VALUES (:session_id, :consultant_id, 1,
+  NULLIF(:report_content::text, ''),
+  NULLIF(:report_file_uri::varchar, ''), FALSE)
 RETURNING report_id
 ''';
 
   // QC2.5 [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
   static const qC2_5 = r'''
 UPDATE ConsultationReport
-SET report_content = :report_content,
+SET report_content = NULLIF(:report_content::text, ''),
+    report_file_uri = NULLIF(:report_file_uri::varchar, ''),
     signed_at = NULL
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
@@ -146,7 +153,7 @@ UPDATE ConsultationReport
 SET signed_at = NOW()
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
-  AND report_content IS NOT NULL
+  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
   AND signed_at IS NULL
 ''';
 
@@ -156,7 +163,7 @@ UPDATE ConsultationReport
 SET delivered_at = NOW()
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
-  AND report_content IS NOT NULL
+  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
   AND signed_at IS NOT NULL
   AND delivered_at IS NULL
 RETURNING report_id

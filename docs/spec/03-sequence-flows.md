@@ -357,11 +357,11 @@ Participants: Evaluation Officer (actor), EligibilityDecisionPage (ui), Verifica
   3. Evaluation Officer -> EligibilityDecisionPage: click "Cancel"
   4. EligibilityDecisionPage -> EligibilityDecisionPage: closeConfirmationCard()
 5. [Confirm] Evaluation Officer -> EligibilityDecisionPage: click "Confirm"
-6. EligibilityDecisionPage -> VerificationController: confirmResult(claim_id, 'Covered')
-7. VerificationController -> ClaimModel: confirmResult(claim_id, 'Covered')
-8. ClaimModel -> ClaimRepository: saveResult(claim_id, 'Covered') {QO2.1}
+6. EligibilityDecisionPage -> VerificationController: confirmResult(claim_id, 'Covered', override_reason)
+7. VerificationController -> ClaimModel: confirmResult(claim_id, 'Covered', override_reason)
+8. ClaimModel -> ClaimRepository: saveResult(claim_id, 'Covered', override_reason) {QO2.1}
 9. ClaimRepository -> DB connector: performs query {QO2.1}
-10. DB connector --> ClaimRepository: ok (committed)
+10. DB connector --> ClaimRepository: ok (committed; 0 rows when the result differs from the automatic check and override_reason is empty)
 11. ClaimRepository --> ClaimModel: ok
 12. ClaimModel --> VerificationController: ok
 13. VerificationController -> NotificationModel: notifyUser(claim_id, subject, body)
@@ -383,11 +383,11 @@ Participants: Evaluation Officer (actor), EligibilityDecisionPage (ui), Verifica
   3. Evaluation Officer -> EligibilityDecisionPage: click "Cancel"
   4. EligibilityDecisionPage -> EligibilityDecisionPage: closeConfirmationCard()
 5. [Confirm] Evaluation Officer -> EligibilityDecisionPage: click "Confirm"
-6. EligibilityDecisionPage -> VerificationController: rejectApplication(claim_id, result)
-7. VerificationController -> ClaimModel: rejectApplication(claim_id, result)
-8. ClaimModel -> ClaimRepository: saveResult(claim_id, 'Not covered') {QO3.1}
+6. EligibilityDecisionPage -> VerificationController: rejectApplication(claim_id, reason_code, override_reason)
+7. VerificationController -> ClaimModel: rejectApplication(claim_id, reason_code, override_reason)
+8. ClaimModel -> ClaimRepository: saveResult(claim_id, 'Not covered', override_reason) {QO3.1}
 9. ClaimRepository -> DB connector: performs query {QO3.1}
-10. DB connector --> ClaimRepository: ok (committed)
+10. DB connector --> ClaimRepository: ok (committed; 0 rows when the result differs from the automatic check and override_reason is empty)
 11. ClaimRepository --> ClaimModel: ok
 12. ClaimModel -> ClaimRepository: insertRejection(claim_id, reason_code, message) {QO3.2}
 13. ClaimRepository -> DB connector: performs query {QO3.2}
@@ -434,7 +434,7 @@ Participants: Evaluation Officer (actor), ScheduleAppointmentPage (ui), Appointm
 25. AppointmentController -> AppointmentModel: createAppointment(claim_id, consultant_id, slot)
 26. AppointmentModel -> AppointmentRepository: insertAppointment(appointment) {QO4.3}
 27. AppointmentRepository -> DB connector: performs query {QO4.3}
-28. DB connector --> AppointmentRepository: appointment_id
+28. DB connector --> AppointmentRepository: appointment_id (0 rows when the date is not a future weekday, the hour is not one of the six, the claim is not a QO4.1 row or the consultant is busy; type Onsite at the consultant office)
 29. AppointmentRepository --> AppointmentModel: appointment_id
 30. AppointmentModel --> AppointmentController: appointment_id
 31. AppointmentController -> NotificationModel: notifyUserAndConsultant(appointment_id)
@@ -459,9 +459,9 @@ Participants: Evaluation Officer (actor), ScheduleTreatmentPage (ui), TreatmentC
 8. TreatmentModel --> TreatmentController: claims, report
 9. TreatmentController --> ScheduleTreatmentPage: show header + report card
 10. Evaluation Officer -> ScheduleTreatmentPage: enter type, duration, facility
-11. ScheduleTreatmentPage -> TreatmentController: getAvailableTimes(facility, date_from, date_to)
-12. TreatmentController -> TreatmentModel: getFacilitySlots(facility, date_from, date_to)
-13. TreatmentModel -> TreatmentRepository: findFacilitySlots(facility, date_from, date_to, officer_id) {QO5.2}
+11. ScheduleTreatmentPage -> TreatmentController: getAvailableTimes(facility, duration, date_from, date_to)
+12. TreatmentController -> TreatmentModel: getFacilitySlots(facility, duration, date_from, date_to)
+13. TreatmentModel -> TreatmentRepository: findFacilitySlots(facility, duration, date_from, date_to, officer_id) {QO5.2}
 14. TreatmentRepository -> DB connector: performs query {QO5.2}
 15. DB connector --> TreatmentRepository: result rows
 16. TreatmentRepository --> TreatmentModel: slots
@@ -477,7 +477,7 @@ Participants: Evaluation Officer (actor), ScheduleTreatmentPage (ui), TreatmentC
 25. TreatmentController -> TreatmentModel: bookTreatment(claim_id, report_id, details)
 26. TreatmentModel -> TreatmentRepository: insertTreatment(treatment) {QO5.3}
 27. TreatmentRepository -> DB connector: performs query {QO5.3}
-28. DB connector --> TreatmentRepository: treatment_id
+28. DB connector --> TreatmentRepository: treatment_id (0 rows when the hour is taken, does not fit before 12:00 or 17:00, or the claim or report is not a QO5.1 row)
 29. TreatmentRepository --> TreatmentModel: treatment_id
 30. TreatmentModel --> TreatmentController: treatment_id
 31. TreatmentController -> NotificationModel: notifyUser(claim_id, subject, body)
@@ -597,17 +597,17 @@ Participants: Consultant (actor), CreateReportPage (ui), ReportController (contr
   26. CreateReportPage -> CreateReportPage: openFileExplorer()
   27. Consultant -> CreateReportPage: choose file, click "Open"
   28. CreateReportPage -> CreateReportPage: showFileAttached()
-29. Consultant -> CreateReportPage: type report, click "Finish the draft"
-30. CreateReportPage -> ReportController: saveDraft(session_id, report_content)
-31. ReportController -> ReportModel: saveDraft(session_id, report_content)
+29. Consultant -> CreateReportPage: type report or attach a file, click "Finish the draft"
+30. CreateReportPage -> ReportController: saveDraft(session_id, report_content, report_file_uri)
+31. ReportController -> ReportModel: saveDraft(session_id, report_content, report_file_uri)
 - alt [Draft already saved]
-  32. ReportModel -> ReportRepository: updateDraft(report_id, report_content) {QC2.5}
+  32. ReportModel -> ReportRepository: updateDraft(report_id, report_content, report_file_uri) {QC2.5}
   33. ReportRepository -> DB connector: performs query {QC2.5}
   34. DB connector --> ReportRepository: rows affected
   35. ReportRepository --> ReportModel: ok
   36. ReportModel --> ReportController: ok
   37. ReportController --> CreateReportPage: update text field
-38. ReportModel -> ReportRepository: insertDraft(session_id, report_content) {QC2.4}
+38. ReportModel -> ReportRepository: insertDraft(session_id, report_content, report_file_uri) {QC2.4}
 39. ReportRepository -> DB connector: performs query {QC2.4}
 40. DB connector --> ReportRepository: report_id
 41. ReportRepository --> ReportModel: report_id

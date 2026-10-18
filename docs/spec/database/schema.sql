@@ -120,7 +120,8 @@ CREATE TABLE EligibilityCheck (
   result varchar(20) NOT NULL,
   is_override boolean NOT NULL,
   override_reason varchar(255),
-  evidence_ref varchar(120)
+  evidence_ref varchar(120),
+  CHECK (NOT is_override OR override_reason IS NOT NULL)
 );
 
 CREATE TABLE RejectionReason (
@@ -148,7 +149,7 @@ CREATE TABLE Appointment (
   officer_id integer NOT NULL,
   consultant_id integer NOT NULL,
   supersedes_appt_id integer,
-  appointment_type varchar(20) NOT NULL,
+  appointment_type varchar(20) NOT NULL CHECK (appointment_type = 'Onsite'),
   schedule_date date NOT NULL,
   schedule_time time NOT NULL,
   location varchar(160) NOT NULL,
@@ -198,10 +199,12 @@ CREATE TABLE ConsultationReport (
   consultant_id integer NOT NULL,
   version_no integer NOT NULL,
   report_content text,
+  report_file_uri varchar(255),
   signed_at timestamp,
   delivered_at timestamp,
   read_at timestamp,
-  is_superseded boolean NOT NULL
+  is_superseded boolean NOT NULL,
+  CHECK (num_nonnulls(report_content, report_file_uri) <= 1)
 );
 
 CREATE TABLE Treatment (
@@ -210,7 +213,7 @@ CREATE TABLE Treatment (
   report_id integer NOT NULL,
   officer_id integer NOT NULL,
   treatment_type varchar(80) NOT NULL,
-  duration_minutes integer NOT NULL CHECK (duration_minutes > 0),
+  duration_minutes integer NOT NULL CHECK (duration_minutes IN (30, 45, 60, 90, 120)),
   facility_name varchar(160) NOT NULL,
   scheduled_date date NOT NULL,
   scheduled_time time NOT NULL,
@@ -366,8 +369,8 @@ COMMENT ON COLUMN Appointment.claim_id IS 'รหัสคำร้อง | ต�
 COMMENT ON COLUMN Appointment.officer_id IS 'รหัสเจ้าหน้าที่ประเมินผู้สร้างนัดหมาย | ต้องมีใน EvaluationOfficer.officer_id';
 COMMENT ON COLUMN Appointment.consultant_id IS 'รหัสที่ปรึกษา | ต้องมีใน Consultant.consultant_id';
 COMMENT ON COLUMN Appointment.supersedes_appt_id IS 'รหัสนัดหมายเดิมที่ถูกแทนที่ | ต้องมีใน Appointment.appointment_id';
-COMMENT ON COLUMN Appointment.appointment_type IS 'ประเภทนัดหมาย | Onsite หรือ Online';
-COMMENT ON COLUMN Appointment.schedule_date IS 'วันนัดหมาย | หลังวันปัจจุบัน';
+COMMENT ON COLUMN Appointment.appointment_type IS 'ประเภทนัดหมาย | Onsite เท่านั้น (ที่ห้องทำงานของที่ปรึกษา)';
+COMMENT ON COLUMN Appointment.schedule_date IS 'วันนัดหมาย | หลังวันปัจจุบัน เฉพาะวันจันทร์ถึงวันศุกร์ (QO4.2, QO4.3)';
 COMMENT ON COLUMN Appointment.schedule_time IS 'เวลานัดหมาย | 09:00 ถึง 15:00 ทุก 1 ชั่วโมง ยกเว้น 12:00';
 COMMENT ON COLUMN Appointment.location IS 'สถานที่นัดหมาย | ไม่เกิน 160 ตัวอักษร';
 COMMENT ON COLUMN Appointment.appointment_status IS 'สถานะนัดหมาย | Pending, Confirmed, Rescheduled หรือ Cancelled';
@@ -403,7 +406,8 @@ COMMENT ON COLUMN ConsultationReport.report_id IS 'รหัสรายงา�
 COMMENT ON COLUMN ConsultationReport.session_id IS 'รหัสการให้คำปรึกษา | ต้องมีใน ConsultationSession.session_id';
 COMMENT ON COLUMN ConsultationReport.consultant_id IS 'รหัสที่ปรึกษา | ต้องมีใน Consultant.consultant_id และเป็นผู้แก้ไขรายงานได้';
 COMMENT ON COLUMN ConsultationReport.version_no IS 'หมายเลขฉบับ | 1 ขึ้นไป';
-COMMENT ON COLUMN ConsultationReport.report_content IS 'เนื้อหารายงาน | ต้องมีก่อนลงลายมือชื่อ (QC2.6)';
+COMMENT ON COLUMN ConsultationReport.report_content IS 'เนื้อหารายงาน | ต้องมีเนื้อหาหรือไฟล์รายงานอย่างใดอย่างหนึ่งก่อนลงลายมือชื่อ (QC2.6)';
+COMMENT ON COLUMN ConsultationReport.report_file_uri IS 'ไฟล์รายงานที่แนบ | ไม่เกิน 255 ตัวอักษร ใช้แทนเนื้อหารายงานได้ (C2.1 Attach)';
 COMMENT ON COLUMN ConsultationReport.signed_at IS 'วันและเวลาที่ลงลายมือชื่อ | ค่าว่างคือยังไม่ลงลายมือชื่อ';
 COMMENT ON COLUMN ConsultationReport.delivered_at IS 'วันและเวลาที่ยื่นรายงาน | ยื่นได้เมื่อ signed_at ไม่ว่าง (QC2.7)';
 COMMENT ON COLUMN ConsultationReport.read_at IS 'วันและเวลาที่เจ้าหน้าที่ประเมินเปิดดู | หลัง delivered_at';
@@ -413,10 +417,10 @@ COMMENT ON COLUMN Treatment.claim_id IS 'รหัสคำร้อง | ต้
 COMMENT ON COLUMN Treatment.report_id IS 'รหัสรายงาน | ต้องมีใน ConsultationReport.report_id ที่ยื่นแล้ว (QO5.1)';
 COMMENT ON COLUMN Treatment.officer_id IS 'รหัสเจ้าหน้าที่ประเมินผู้จอง | ต้องมีใน EvaluationOfficer.officer_id';
 COMMENT ON COLUMN Treatment.treatment_type IS 'ประเภทการรักษา | เช่น Physiotherapy, Occupational therapy';
-COMMENT ON COLUMN Treatment.duration_minutes IS 'ระยะเวลาการรักษา (นาที) | ค่ามากกว่า 0 เช่น 45 หรือ 60 นาที (QO5.3)';
+COMMENT ON COLUMN Treatment.duration_minutes IS 'ระยะเวลาการรักษา (นาที) | 30, 45, 60, 90 หรือ 120 นาที (QO5.3) ครอบคลุมทุกชั่วโมงที่ใช้';
 COMMENT ON COLUMN Treatment.facility_name IS 'ชื่อสถานพยาบาล | ไม่เกิน 160 ตัวอักษร';
 COMMENT ON COLUMN Treatment.scheduled_date IS 'วันรักษา | หลังวันปัจจุบันเมื่อจอง เฉพาะวันจันทร์ถึงวันศุกร์ (QO5.2) ผู้ใช้งานเปลี่ยนได้ภายใน 7 วันหลังวันเดิม (QU4.2)';
-COMMENT ON COLUMN Treatment.scheduled_time IS 'เวลารักษา | 09:00 ถึง 16:00 (QO5.2)';
+COMMENT ON COLUMN Treatment.scheduled_time IS 'เวลารักษา | เริ่ม 09:00, 10:00, 11:00, 13:00, 14:00, 15:00 หรือ 16:00 ช่วงเช้าเสร็จภายใน 12:00 ช่วงบ่ายเสร็จภายใน 17:00 (QO5.2, QO5.3)';
 COMMENT ON COLUMN Treatment.treatment_status IS 'สถานะการรักษา | Pending, Accepted หรือ Cancelled';
 COMMENT ON COLUMN Treatment.created_at IS 'วันและเวลาที่จอง | ระบบใส่ NOW() (QO5.3)';
 COMMENT ON COLUMN Notification.notification_id IS 'รหัสข้อความแจ้งเตือน | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0';

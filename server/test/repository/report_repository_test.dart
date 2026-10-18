@@ -20,12 +20,18 @@ void main() {
   Future<int> draftFor(int appointmentId, [String text = 'Draft text']) async {
     await repo.insertSessionIfMissing(appointmentId);
     final page = await repo.findReportPage(appointmentId);
-    return repo.insertDraft(page!['session_id'] as int, 3, text);
+    return repo.insertDraft(page!['session_id'] as int, 3, reportContent: text);
   }
 
-  test('QO6.1 findFiledReports: 3 filed reports, the unread report first', () async {
+  /// The signature column of a report (QO6.2 reads only a filed report).
+  Future<Object?> signedAt(int reportId) async => (await db.performQuery(
+          'SELECT signed_at FROM ConsultationReport WHERE report_id = :id', {'id': reportId}))
+      .rows
+      .single['signed_at'];
+
+  test('QO6.1 findFiledReports: 4 filed reports, the unread reports first', () async {
     final rows = await repo.findFiledReports();
-    expect(rows.map((r) => r['report_id']), [87, 86, 85]);
+    expect(rows.map((r) => r['report_id']), [87, 90, 86, 85]);
     expect(rows.first['view_status'], 'Pending');
   });
 
@@ -62,18 +68,27 @@ void main() {
     expect(row, containsPair('session_id', 303));
   });
 
-  test('QC2.4 insertDraft: a new report, not signed', () => inRollback(db, () async {
+  test('QC2.4 insertDraft: a new report, not signed; text or one file', () => inRollback(db, () async {
         final reportId = await draftFor(await pastConfirmed());
-        final page = await repo.findReport(reportId);
-        expect(page, containsPair('signature_status', 'Signature pending'));
+        expect(await signedAt(reportId), isNull);
+        expect(await repo.findReport(reportId), isNull, reason: 'QO6.2 reads only a filed report');
+        final appointmentId = await pastConfirmed();
+        await repo.insertSessionIfMissing(appointmentId);
+        final session = (await repo.findReportPage(appointmentId))!['session_id'] as int;
+        final fileReport = await repo.insertDraft(session, 3, reportFileUri: '/claims/155/report.pdf');
+        final row = (await db.performQuery(
+                'SELECT report_content, report_file_uri FROM ConsultationReport WHERE report_id = :id', {'id': fileReport}))
+            .rows
+            .single;
+        expect(row, {'report_content': null, 'report_file_uri': '/claims/155/report.pdf'});
       }));
 
   test('QC2.5 updateDraft: changes a draft, removes the signature, not a filed report', () => inRollback(db, () async {
         final reportId = await draftFor(await pastConfirmed());
         expect(await repo.updateSignedAt(reportId, 3), 1);
-        expect(await repo.updateDraft(reportId, 3, 'New text'), 1);
-        expect((await repo.findReport(reportId))!['signature_status'], 'Signature pending');
-        expect(await repo.updateDraft(87, 1, 'New text'), 0);
+        expect(await repo.updateDraft(reportId, 3, reportContent: 'New text'), 1);
+        expect(await signedAt(reportId), isNull);
+        expect(await repo.updateDraft(87, 1, reportContent: 'New text'), 0);
       }));
 
   test('QC2.6 updateSignedAt: only once, and only by the author', () => inRollback(db, () async {

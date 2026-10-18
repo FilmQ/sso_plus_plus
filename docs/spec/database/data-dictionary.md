@@ -120,7 +120,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | checked_at | วันและเวลาที่ตรวจสอบ |  | Y | TIMESTAMP | ระบบใส่ NOW() (Q1.9, QO2.1, QO3.1) |
 | result | ผลการตรวจสอบ |  | Y | VARCHAR(20) | Covered, Not covered, Needs review หรือ Register unavailable |
 | is_override | เจ้าหน้าที่ประเมินแก้ไขผลอัตโนมัติหรือไม่ |  | Y | BOOLEAN | TRUE เมื่อผลต่างจากผลอัตโนมัติ |
-| override_reason | เหตุผลการแก้ไขผล |  | N | VARCHAR(255) | ต้องมีเมื่อ is_override เป็น TRUE |
+| override_reason | เหตุผลการแก้ไขผล |  | N | VARCHAR(255) | ต้องมีเมื่อ is_override เป็น TRUE คือเมื่อผลที่เจ้าหน้าที่ประเมินเลือกต่างจากผลอัตโนมัติ (QO2.1, QO3.1) |
 | evidence_ref | อ้างอิงหลักฐานจากทะเบียน |  | N | VARCHAR(120) | ไม่เกิน 120 ตัวอักษร |
 
 ## RejectionReason
@@ -154,8 +154,8 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | officer_id | รหัสเจ้าหน้าที่ประเมินผู้สร้างนัดหมาย | FK | Y | INT | ต้องมีใน EvaluationOfficer.officer_id |
 | consultant_id | รหัสที่ปรึกษา | FK | Y | INT | ต้องมีใน Consultant.consultant_id |
 | supersedes_appt_id | รหัสนัดหมายเดิมที่ถูกแทนที่ | FK | N | INT | ต้องมีใน Appointment.appointment_id |
-| appointment_type | ประเภทนัดหมาย |  | Y | VARCHAR(20) | Onsite หรือ Online |
-| schedule_date | วันนัดหมาย |  | Y | DATE | หลังวันปัจจุบัน |
+| appointment_type | ประเภทนัดหมาย |  | Y | VARCHAR(20) | Onsite เท่านั้น (ที่ห้องทำงานของที่ปรึกษา) |
+| schedule_date | วันนัดหมาย |  | Y | DATE | หลังวันปัจจุบัน เฉพาะวันจันทร์ถึงวันศุกร์ (QO4.2, QO4.3) |
 | schedule_time | เวลานัดหมาย |  | Y | TIME | 09:00 ถึง 15:00 ทุก 1 ชั่วโมง ยกเว้น 12:00 |
 | location | สถานที่นัดหมาย |  | Y | VARCHAR(160) | ไม่เกิน 160 ตัวอักษร |
 | appointment_status | สถานะนัดหมาย |  | Y | VARCHAR(30) | Pending, Confirmed, Rescheduled หรือ Cancelled |
@@ -211,7 +211,8 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | session_id | รหัสการให้คำปรึกษา | FK | Y | INT | ต้องมีใน ConsultationSession.session_id |
 | consultant_id | รหัสที่ปรึกษา | FK | Y | INT | ต้องมีใน Consultant.consultant_id และเป็นผู้แก้ไขรายงานได้ |
 | version_no | หมายเลขฉบับ |  | Y | INT | 1 ขึ้นไป |
-| report_content | เนื้อหารายงาน |  | N | TEXT | ต้องมีก่อนลงลายมือชื่อ (QC2.6) |
+| report_content | เนื้อหารายงาน |  | N | TEXT | มีเนื้อหาหรือไฟล์รายงานอย่างใดอย่างหนึ่ง ต้องมีก่อนลงลายมือชื่อ (QC2.6) |
+| report_file_uri | ไฟล์รายงานที่แนบ |  | N | VARCHAR(255) | ไม่เกิน 255 ตัวอักษร ใช้แทนเนื้อหารายงานได้ (C2.1 Attach, QC2.4, QC2.5) |
 | signed_at | วันและเวลาที่ลงลายมือชื่อ |  | N | TIMESTAMP | ค่าว่างคือยังไม่ลงลายมือชื่อ |
 | delivered_at | วันและเวลาที่ยื่นรายงาน |  | N | TIMESTAMP | ยื่นได้เมื่อ signed_at ไม่ว่าง (QC2.7) |
 | read_at | วันและเวลาที่เจ้าหน้าที่ประเมินเปิดดู |  | N | TIMESTAMP | หลัง delivered_at |
@@ -226,10 +227,10 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | report_id | รหัสรายงาน | FK | Y | INT | ต้องมีใน ConsultationReport.report_id ที่ยื่นแล้ว (QO5.1) |
 | officer_id | รหัสเจ้าหน้าที่ประเมินผู้จอง | FK | Y | INT | ต้องมีใน EvaluationOfficer.officer_id |
 | treatment_type | ประเภทการรักษา |  | Y | VARCHAR(80) | เช่น Physiotherapy, Occupational therapy |
-| duration_minutes | ระยะเวลาการรักษา (นาที) |  | Y | INT | ค่ามากกว่า 0 เช่น 45 หรือ 60 นาที (QO5.3) |
+| duration_minutes | ระยะเวลาการรักษา (นาที) |  | Y | INT | 30, 45, 60, 90 หรือ 120 นาที (QO5.3) การรักษาครอบคลุมทุกชั่วโมงที่ใช้ |
 | facility_name | ชื่อสถานพยาบาล |  | Y | VARCHAR(160) | ไม่เกิน 160 ตัวอักษร |
 | scheduled_date | วันรักษา |  | Y | DATE | หลังวันปัจจุบันเมื่อจอง เฉพาะวันจันทร์ถึงวันศุกร์ (QO5.2) ผู้ใช้งานเปลี่ยนได้ภายใน 7 วันหลังวันเดิม (QU4.2) |
-| scheduled_time | เวลารักษา |  | Y | TIME | 09:00 ถึง 16:00 (QO5.2) |
+| scheduled_time | เวลารักษา |  | Y | TIME | เริ่ม 09:00, 10:00, 11:00, 13:00, 14:00, 15:00 หรือ 16:00 ช่วงเช้าเสร็จภายใน 12:00 ช่วงบ่ายเสร็จภายใน 17:00 (QO5.2, QO5.3) |
 | treatment_status | สถานะการรักษา |  | Y | VARCHAR(30) | Pending, Accepted หรือ Cancelled |
 | created_at | วันและเวลาที่จอง |  | Y | TIMESTAMP | ระบบใส่ NOW() (QO5.3) |
 

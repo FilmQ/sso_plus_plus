@@ -52,13 +52,18 @@ class AppointmentModel extends Model {
       appointments.findConsultantSlots(slotDate, officerId);
 
   /// QO4.3 (O4 step 6.1): an Onsite appointment at the consultant's office.
-  /// QO4.3 checks nothing, so the Model first checks (D-051): the date is after
-  /// [today] (422), the claim is in QO4.1 (409), and the hour is 'free' for the
-  /// consultant in QO4.2 (409). Gives the appointment_id and the slot.
+  /// QO4.3 refuses (409) what does not agree with its conditions. So that the
+  /// page can show a clear message, the Model first checks (D-051): the date
+  /// is a weekday after [today] (422), the claim is in QO4.1 (409), and the
+  /// hour is 'free' for the consultant in QO4.2 (409). Gives the
+  /// appointment_id and the slot.
   Future<({int appointmentId, DateTime slotAt})> createAppointment(int claimId, int consultantId, String date,
       String time, {required int officerId, required String today}) async {
     if (date.compareTo(today) <= 0) {
       throw const ValidationFailedException({'date': 'Choose a date after today.'});
+    }
+    if (DateTime.parse(date).weekday > DateTime.friday) {
+      throw const ValidationFailedException({'date': 'Choose a weekday (Monday to Friday).'});
     }
     if (!(await getClaimsToSchedule()).any((c) => c['claim_id'] == claimId)) {
       throw const StateConflictException('The claim cannot be scheduled. Open the page again.');
@@ -74,10 +79,8 @@ class AppointmentModel extends Model {
       claimId: claimId,
       officerId: officerId,
       consultantId: consultantId,
-      appointmentType: 'Onsite',
       scheduleDate: date,
       scheduleTime: time,
-      location: slot['office_location']! as String,
     );
     return (appointmentId: id, slotAt: slot['slot_at']! as DateTime);
   }

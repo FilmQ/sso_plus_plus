@@ -59,7 +59,8 @@ void main() {
         final row = rows.firstWhere((r) => r['claim_id'] == covered);
         expect(row['verification_status'], 'Awaiting verification');
         expect(row['documents_sent'], 1);
-        expect(page['counts'], {'awaiting_verification': 1, 'reviews_needed': 0, 'register_unavailable': 1});
+        expect(page['counts'], {'awaiting_verification': 2, 'reviews_needed': 0, 'register_unavailable': 1},
+            reason: 'the seed demo claim 161 and the new claim');
 
         final detail = (await c.get('/o1/claims/$covered')).json; // QO1.3 to QO1.5
         expect((detail['summary']! as Map)['injury_cause'], 'Slipped on ice');
@@ -120,7 +121,11 @@ void main() {
         expect([for (final r in reasons) r['reason_code']], ['R01', 'R02', 'R03', 'R04', 'R05']);
 
         final r = await c.post('/o3/claims/$id/reject',
-            {'reason_code': 'R05', 'officer_message': 'The injury happened at home, not at work.'});
+            {
+              'reason_code': 'R05',
+              'officer_message': 'The injury happened at home, not at work.',
+              'override_reason': 'The register is right, but the injury is not from work.',
+            });
         expect(r.json['claim_status'], 'Rejected');
         expect(await status(id), 'Rejected');
         final msg = await lastMessage(id);
@@ -140,6 +145,10 @@ void main() {
         expect((bad.json['fields']! as Map).keys, ['reason_code']);
         final long = await c.post('/o3/claims/$id/reject', {'reason_code': 'R01', 'officer_message': 'x' * 1001});
         expect((long.json['fields']! as Map).keys, ['officer_message']);
+        expect(await status(id), 'Awaiting verification');
+        final noReason = await c.post('/o3/claims/$id/reject', {'reason_code': 'R05'});
+        expect(noReason.status, 422, reason: 'Not covered differs from the automatic result Covered (R-037)');
+        expect((noReason.json['fields']! as Map).keys, ['override_reason']);
         expect(await status(id), 'Awaiting verification');
         expect((await c.post('/o3/claims/151/reject', {'reason_code': 'R01'})).status, 409);
       }));

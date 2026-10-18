@@ -1,3 +1,4 @@
+import 'package:sst_server/db/db_connector.dart';
 import 'package:sst_server/repository/appointment_repository.dart';
 import 'package:sst_server/repository/claim_repository.dart';
 
@@ -51,20 +52,53 @@ Future<int> insertTestClaim(ClaimRepository claims, {String result = 'Covered'})
   return claimId;
 }
 
-/// Inserts a Pending appointment (QO4.3) for claim 155 with consultant 3.
+/// Inserts a Pending Onsite appointment of officer 1 at the consultant's
+/// office, for claim 155 with consultant 3 by default. A plain INSERT, not
+/// QO4.3: QO4.3 refuses most test rows (a claim that is not Covered, a past
+/// date, a weekend). The test of QO4.3 itself uses the repository.
 Future<int> insertTestAppointment(
   AppointmentRepository appointments, {
   required String date,
   String time = '11:00',
   int claimId = 155,
   int consultantId = 3,
-}) =>
-    appointments.insertAppointment(
-      claimId: claimId,
-      officerId: 1,
-      consultantId: consultantId,
-      appointmentType: 'Onsite',
-      scheduleDate: date,
-      scheduleTime: time,
-      location: 'Building C, Floor 1, Room 104',
-    );
+}) async =>
+    (await appointments.db.performQuery('''
+INSERT INTO Appointment (claim_id, officer_id, consultant_id, appointment_type, schedule_date, schedule_time,
+  location, appointment_status, confirm_deadline, created_at)
+SELECT :claim_id, 1, c.consultant_id, 'Onsite', :date::date, :time::time, c.office_location, 'Pending',
+  :date::date + :time::time - INTERVAL '24 hours', NOW()
+FROM Consultant c WHERE c.consultant_id = :consultant_id
+RETURNING appointment_id''', {'claim_id': claimId, 'consultant_id': consultantId, 'date': date, 'time': time}))
+        .rows
+        .single['appointment_id']! as int;
+
+/// Inserts a treatment at SSO Rehabilitation Center (officer 2, report 86 of
+/// claim 149 by default). A plain INSERT, not QO5.3, for the same reason as
+/// [insertTestAppointment].
+Future<int> insertTestTreatment(
+  DBConnector db, {
+  required String date,
+  String time = '15:00',
+  int claimId = 149,
+  int reportId = 86,
+  int duration = 45,
+  String type = 'Occupational therapy',
+  String status = 'Pending',
+}) async =>
+    (await db.performQuery('''
+INSERT INTO Treatment (claim_id, report_id, officer_id, treatment_type, duration_minutes, facility_name,
+  scheduled_date, scheduled_time, treatment_status, created_at)
+VALUES (:claim_id, :report_id, 2, :type, :duration, 'SSO Rehabilitation Center', :date::date, :time::time,
+  :status, NOW())
+RETURNING treatment_id''', {
+      'claim_id': claimId,
+      'report_id': reportId,
+      'type': type,
+      'duration': duration,
+      'date': date,
+      'time': time,
+      'status': status,
+    }))
+        .rows
+        .single['treatment_id']! as int;

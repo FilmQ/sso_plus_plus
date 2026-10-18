@@ -53,6 +53,7 @@ FROM generate_series(:slot_date::date + TIME '09:00',
                      INTERVAL '1 hour') AS s(slot_at)
 WHERE s.slot_at > NOW()
   AND s.slot_at::time <> TIME '12:00'
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
   AND NOT EXISTS (
         SELECT 1
         FROM Appointment a
@@ -70,6 +71,7 @@ WITH old AS (
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
     AND :new_date::date + :new_time::time > NOW()
+    AND EXTRACT(ISODOW FROM :new_date::date) < 6
     AND :new_time::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
                             TIME '13:00', TIME '14:00', TIME '15:00')
     AND NOT EXISTS (
@@ -198,6 +200,7 @@ LEFT JOIN Appointment a
       AND a.schedule_date + a.schedule_time = s.slot_at
       AND a.appointment_status IN ('Pending', 'Confirmed')
 WHERE s.slot_at::time <> TIME '12:00'
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY consultant_name, s.slot_at
 ''';
 
@@ -207,12 +210,31 @@ INSERT INTO Appointment
   (claim_id, officer_id, consultant_id, appointment_type,
    schedule_date, schedule_time, location, appointment_status,
    confirm_deadline, created_at)
-VALUES (:claim_id, :officer_id, :consultant_id,
-  :appointment_type, :schedule_date, :schedule_time, :location,
+SELECT ic.claim_id, :officer_id, c.consultant_id, 'Onsite',
+  :schedule_date::date, :schedule_time::time, c.office_location,
   'Pending',
-  :schedule_date::date + :schedule_time::time
-    - INTERVAL '24 hours',
-  NOW())
+  :schedule_date::date + :schedule_time::time - INTERVAL '24 hours',
+  NOW()
+FROM InjuryClaim ic
+JOIN Consultant c ON c.consultant_id = :consultant_id
+WHERE ic.claim_id = :claim_id
+  AND ic.claim_status = 'Covered'
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Appointment a
+        WHERE a.claim_id = ic.claim_id
+          AND a.appointment_status IN ('Pending', 'Confirmed'))
+  AND :schedule_date::date > CURRENT_DATE
+  AND EXTRACT(ISODOW FROM :schedule_date::date) < 6
+  AND :schedule_time::time IN (TIME '09:00', TIME '10:00',
+        TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00')
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Appointment b
+        WHERE b.consultant_id = c.consultant_id
+          AND b.schedule_date = :schedule_date::date
+          AND b.schedule_time = :schedule_time::time
+          AND b.appointment_status IN ('Pending', 'Confirmed'))
 RETURNING appointment_id
 ''';
 

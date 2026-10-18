@@ -1,4 +1,5 @@
 import 'package:sst_server/repository/appointment_repository.dart';
+import 'package:sst_server/repository/claim_repository.dart';
 import 'package:sst_server/repository/repository.dart';
 import 'package:test/test.dart';
 
@@ -84,12 +85,32 @@ void main() {
             hasLength(1));
       }));
 
-  test('QO4.3 insertAppointment: Pending, deadline 24 hours before', () => inRollback(db, () async {
-        final id = await insertTestAppointment(repo, date: day(10), time: '11:00');
+  test('QO4.3 insertAppointment: Onsite at the office, Pending, deadline 24 hours before; refusals', () =>
+      inRollback(db, () async {
+        final claims = ClaimRepository(db);
+        final claimId = await insertTestClaim(claims);
+        await claims.saveResult(claimId: claimId, result: 'Covered', officerId: 1);
+        Future<int> offer({String? date, String time = '11:00', int consultant = 3}) => repo.insertAppointment(
+            claimId: claimId, officerId: 1, consultantId: consultant, scheduleDate: date ?? weekday(10), scheduleTime: time);
+        final saturday = [for (var i = 10; i < 17; i++) day(i)].firstWhere((d) => !isWeekday(d));
+        await insertTestAppointment(repo, claimId: 149, consultantId: 4, date: weekday(10), time: '13:00');
+        for (final refused in [
+          () => offer(date: saturday),
+          () => offer(date: day(0)),
+          () => offer(time: '12:00'),
+          () => offer(consultant: 4, time: '13:00'), // consultant 4 has 13:00
+        ]) {
+          await expectLater(refused(), throwsA(isA<NoRowChangedException>()));
+        }
+        final id = await offer();
         final row = await appt(id);
         expect(row['appointment_status'], 'Pending');
+        expect(row['appointment_type'], 'Onsite');
+        expect(row['location'], 'Building C, Floor 1, Room 104');
         final deadline = row['confirm_deadline'] as DateTime;
         expect('${deadline.hour}:${deadline.minute}', '11:0');
+        await expectLater(offer(time: '14:00'), throwsA(isA<NoRowChangedException>()),
+            reason: 'the claim has a Pending appointment now');
       }));
 
   test('QC1.1 findConfirmedAppointments: only Confirmed and not in the past', () => inRollback(db, () async {

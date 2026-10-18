@@ -82,7 +82,7 @@ Methods:
 - `+ openFileExplorer()`
 - `+ chooseFile(file)`
 - `+ showFileAttached()`
-- `+ finishDraft(report_content)`
+- `+ finishDraft(report_content, report_file_uri)`
 - `+ clickSign()`
 - `+ showSignatureCard()`
 - `+ clickDelete()`
@@ -101,7 +101,7 @@ Methods:
 - `+ open(claim_id)`
 - `+ clickView(document)`
 - `+ openFile(file_uri)`
-- `+ confirmResult(result)`
+- `+ confirmResult(result, override_reason)`
 - `+ showConfirmationCard()`
 - `+ clickCancel()`
 - `+ closeConfirmationCard()`
@@ -297,7 +297,7 @@ Methods:
 - `+ viewReport(report_id)`
 - `+ getPendingConsultations(consultant_id)`
 - `+ openReport(appointment_id)`
-- `+ saveDraft(session_id, report_content)`
+- `+ saveDraft(session_id, report_content, report_file_uri)`
 - `+ signReport(report_id)`
 - `+ fileReport(report_id)`
 
@@ -316,7 +316,7 @@ Methods:
 - `+ cancelUnacceptedTreatments()`
 - `+ getTreatmentSchedule(insured_id)`
 - `+ getClaimsForTreatment()`
-- `+ getAvailableTimes(facility, date_from, date_to)`
+- `+ getAvailableTimes(facility, duration, date_from, date_to)`
 - `+ bookTreatment(claim_id, report_id, details)`
 - `+ closeWithoutTreatment(claim_id)`
 
@@ -330,8 +330,8 @@ Methods:
 
 - `+ getVerificationList()`
 - `+ getClaimDetail(claim_id)`
-- `+ confirmResult(claim_id, result)`
-- `+ rejectApplication(claim_id, result)`
+- `+ confirmResult(claim_id, 'Covered', override_reason)`
+- `+ rejectApplication(claim_id, reason_code, override_reason)`
 
 ## Model (entity)
 
@@ -365,8 +365,8 @@ Methods:
 - `+ createClaim(insured_id, form, files)`
 - `+ getPendingApplications()`
 - `+ getClaimDetail(claim_id)`
-- `+ confirmResult(claim_id, result)`
-- `+ rejectApplication(claim_id, result)`
+- `+ confirmResult(claim_id, 'Covered', override_reason)`
+- `+ rejectApplication(claim_id, reason_code, override_reason)`
 - `+ closeWithoutTreatment(claim_id)`
 
 ### InsuredPersonModel
@@ -401,7 +401,7 @@ Methods:
 
 Used in: O6, C2.1, C2.2, C2.3
 
-Attributes: `- reportId: int`, `- sessionId: int`, `- versionNo: int`, `- reportContent: String`, `- signedAt: DateTime`, `- deliveredAt: DateTime`
+Attributes: `- reportId: int`, `- sessionId: int`, `- versionNo: int`, `- reportContent: String`, `- reportFileUri: String`, `- signedAt: DateTime`, `- deliveredAt: DateTime`
 
 Methods:
 
@@ -410,7 +410,7 @@ Methods:
 - `+ markViewed(report_id)`
 - `+ getPendingConsultations(consultant_id)`
 - `+ openReport(appointment_id)`
-- `+ saveDraft(session_id, report_content)`
+- `+ saveDraft(session_id, report_content, report_file_uri)`
 - `+ signReport(report_id)`
 - `+ fileReport(report_id)`
 
@@ -429,7 +429,7 @@ Methods:
 - `+ cancelExpired()`
 - `+ getUpcomingTreatments(insured_id)`
 - `+ getClaimsForTreatment()`
-- `+ getFacilitySlots(facility, date_from, date_to)`
+- `+ getFacilitySlots(facility, duration, date_from, date_to)`
 - `+ bookTreatment(claim_id, report_id, details)`
 
 ## Repository
@@ -471,7 +471,7 @@ Methods:
 - `+ findClaimSummary(claim_id) {QO1.3}`
 - `+ findDocuments(claim_id) {QO1.4}`
 - `+ findAutoEligibility(claim_id) {QO1.5}`
-- `+ saveResult(claim_id, result) {QO2.1, QO3.1}`
+- `+ saveResult(claim_id, result, override_reason) {QO2.1, QO3.1}`
 - `+ insertRejection(claim_id, reason_code, message) {QO3.2}`
 - `+ updateNoTreatment(claim_id) {QO5.4}`
 - `+ findRejectionReasons() {QO1.6}`
@@ -523,8 +523,8 @@ Methods:
 - `+ findConsultationsAwaitingReport(consultant_id) {QC2.1}`
 - `+ insertSessionIfMissing(appointment_id) {QC2.2}`
 - `+ findReportPage(appointment_id) {QC2.3}`
-- `+ updateDraft(report_id, report_content) {QC2.5}`
-- `+ insertDraft(session_id, report_content) {QC2.4}`
+- `+ updateDraft(report_id, report_content, report_file_uri) {QC2.5}`
+- `+ insertDraft(session_id, report_content, report_file_uri) {QC2.4}`
 - `+ updateSignedAt(report_id) {QC2.6}`
 - `+ updateDeliveredAt(report_id) {QC2.7}`
 
@@ -543,7 +543,7 @@ Methods:
 - `+ cancelExpiredAndNotifyUser() {QU4.3}`
 - `+ findUpcomingTreatments(insured_id) {Q6.1}`
 - `+ findClaimsWithFiledReport() {QO5.1}`
-- `+ findFacilitySlots(facility, date_from, date_to, officer_id) {QO5.2}`
+- `+ findFacilitySlots(facility, duration, date_from, date_to, officer_id) {QO5.2}`
 - `+ insertTreatment(treatment) {QO5.3}`
 
 ## DB connector

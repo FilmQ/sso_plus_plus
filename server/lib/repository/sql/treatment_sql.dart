@@ -39,10 +39,14 @@ WHERE treatment_id = :treatment_id
         SELECT 1
         FROM Treatment o
         WHERE o.facility_name = Treatment.facility_name
-          AND o.scheduled_date = :new_date::date
-          AND o.scheduled_time = Treatment.scheduled_time
           AND o.treatment_status IN ('Pending', 'Accepted')
-          AND o.treatment_id <> Treatment.treatment_id)
+          AND o.treatment_id <> Treatment.treatment_id
+          AND o.scheduled_date + o.scheduled_time
+                < :new_date::date + Treatment.scheduled_time
+                  + make_interval(mins => Treatment.duration_minutes)
+          AND :new_date::date + Treatment.scheduled_time
+                < o.scheduled_date + o.scheduled_time
+                  + make_interval(mins => o.duration_minutes))
 RETURNING treatment_id, scheduled_date, scheduled_time
 ''';
 
@@ -126,9 +130,14 @@ WHERE t.treatment_id = :treatment_id
         SELECT 1
         FROM Treatment o
         WHERE o.facility_name = t.facility_name
-          AND o.scheduled_date = s.slot_day::date
-          AND o.scheduled_time = t.scheduled_time
-          AND o.treatment_status IN ('Pending', 'Accepted'))
+          AND o.treatment_status IN ('Pending', 'Accepted')
+          AND o.treatment_id <> t.treatment_id
+          AND o.scheduled_date + o.scheduled_time
+                < s.slot_day::date + t.scheduled_time
+                  + make_interval(mins => t.duration_minutes)
+          AND s.slot_day::date + t.scheduled_time
+                < o.scheduled_date + o.scheduled_time
+                  + make_interval(mins => o.duration_minutes))
 ORDER BY s.slot_day
 ''';
 
@@ -157,12 +166,14 @@ ORDER BY t.scheduled_date, t.scheduled_time
   static const qO5_1 = r'''
 SELECT ic.claim_id,
   ic.claim_no,
+  ip.title_name,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   cr.report_id,
   cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
-    AS report_author
+    AS report_author,
+  cs.recommended_treatment
 FROM ConsultationReport cr
 JOIN ConsultationSession cs ON cs.session_id = cr.session_id
 JOIN Appointment a ON a.appointment_id = cs.appointment_id
@@ -185,19 +196,35 @@ ORDER BY cr.delivered_at
 SELECT s.slot_at,
   TO_CHAR(s.slot_at, 'Dy FMDD Mon - HH24:MI') AS slot_button,
   CASE
-    WHEN t.treatment_id IS NULL THEN 'free' -- white
-    WHEN t.officer_id = :officer_id
-     AND t.treatment_status = 'Pending' THEN 'mine' -- purple
-    ELSE 'busy' -- grey
+    WHEN EXISTS (
+           SELECT 1
+           FROM Treatment m
+           WHERE m.facility_name = :facility_name
+             AND m.scheduled_date + m.scheduled_time = s.slot_at
+             AND m.officer_id = :officer_id
+             AND m.treatment_status = 'Pending') THEN 'mine' -- purple
+    WHEN e.end_at > s.slot_at::date
+           + CASE WHEN s.slot_at::time < TIME '12:00'
+                  THEN TIME '12:00' ELSE TIME '17:00' END
+      OR EXISTS (
+           SELECT 1
+           FROM Treatment t
+           WHERE t.facility_name = :facility_name
+             AND t.treatment_status IN ('Pending', 'Accepted')
+             AND t.scheduled_date + t.scheduled_time < e.end_at
+             AND s.slot_at < t.scheduled_date + t.scheduled_time
+                   + make_interval(mins => t.duration_minutes))
+      THEN 'busy' -- grey
+    ELSE 'free' -- white
   END AS slot_state
 FROM generate_series(:date_from::date + TIME '09:00',
                      :date_to::date + TIME '16:00',
                      INTERVAL '1 hour') AS s(slot_at)
-LEFT JOIN Treatment t
-       ON t.facility_name = :facility_name
-      AND t.scheduled_date + t.scheduled_time = s.slot_at
-      AND t.treatment_status IN ('Pending', 'Accepted')
-WHERE s.slot_at::time BETWEEN TIME '09:00' AND TIME '16:00'
+CROSS JOIN LATERAL (
+  SELECT s.slot_at + make_interval(mins => :duration_minutes::int)
+    AS end_at) e
+WHERE s.slot_at::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
+        TIME '13:00', TIME '14:00', TIME '15:00', TIME '16:00')
   AND s.slot_at > NOW()
   AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY s.slot_at
@@ -209,9 +236,47 @@ INSERT INTO Treatment
   (claim_id, report_id, officer_id, treatment_type,
    duration_minutes, facility_name, scheduled_date, scheduled_time,
    treatment_status, created_at)
-VALUES (:claim_id, :report_id, :officer_id, :treatment_type,
-  :duration_minutes, :facility_name, :scheduled_date, :scheduled_time, 'Pending',
-  NOW())
+SELECT ic.claim_id, cr.report_id, :officer_id, :treatment_type,
+  :duration_minutes::int, :facility_name, :scheduled_date::date,
+  :scheduled_time::time, 'Pending', NOW()
+FROM ConsultationReport cr
+JOIN ConsultationSession cs ON cs.session_id = cr.session_id
+JOIN Appointment a ON a.appointment_id = cs.appointment_id
+JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+CROSS JOIN LATERAL (
+  SELECT :scheduled_date::date + :scheduled_time::time AS start_at,
+    :scheduled_date::date + :scheduled_time::time
+      + make_interval(mins => :duration_minutes::int) AS end_at) v
+WHERE cr.report_id = :report_id
+  AND ic.claim_id = :claim_id
+  AND cr.delivered_at IS NOT NULL
+  AND cr.is_superseded = FALSE
+  AND ic.claim_status = 'Covered'
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.claim_id = ic.claim_id
+          AND o.treatment_status IN ('Pending', 'Accepted'))
+  AND :treatment_type::varchar IN ('Physiotherapy',
+        'Occupational therapy')
+  AND :duration_minutes::int IN (30, 45, 60, 90, 120)
+  AND :facility_name::varchar = 'SSO Rehabilitation Center'
+  AND v.start_at > NOW()
+  AND EXTRACT(ISODOW FROM v.start_at) < 6
+  AND :scheduled_time::time IN (TIME '09:00', TIME '10:00',
+        TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00',
+        TIME '16:00')
+  AND v.end_at <= :scheduled_date::date
+        + CASE WHEN :scheduled_time::time < TIME '12:00'
+               THEN TIME '12:00' ELSE TIME '17:00' END
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment t
+        WHERE t.facility_name = :facility_name
+          AND t.treatment_status IN ('Pending', 'Accepted')
+          AND t.scheduled_date + t.scheduled_time < v.end_at
+          AND v.start_at < t.scheduled_date + t.scheduled_time
+                + make_interval(mins => t.duration_minutes))
 RETURNING treatment_id
 ''';
 

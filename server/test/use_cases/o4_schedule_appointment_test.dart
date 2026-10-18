@@ -81,6 +81,11 @@ void main() {
             409, reason: 'not a bookable hour');
         final again = await c.post('/o4/claims/$other/appointment', {'consultant_id': 2, 'date': date, 'time': '13:00'});
         expect(again.status, 409, reason: 'the claim already has a Pending appointment');
+        final saturday = [for (var i = 30; i < 37; i++) day(i)].firstWhere((d) => !isWeekday(d));
+        final weekend = await c.post('/o4/claims/$id/appointment', {'consultant_id': 1, 'date': saturday, 'time': '09:00'});
+        expect(weekend.status, 422, reason: 'weekdays only (R-043)');
+        expect((weekend.json['fields']! as Map).keys, ['date']);
+        expect(((await c.get('/o4/availability?date=$saturday')).json['slots']! as List), isEmpty);
         final past = await c.post('/o4/claims/$id/appointment', {'consultant_id': 1, 'date': day(0), 'time': '15:00'});
         expect(past.status, 422);
         expect((past.json['fields']! as Map).keys, ['date']);

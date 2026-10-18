@@ -7,7 +7,7 @@
 - Site map: `diagrams/sitemap-user.png`, `diagrams/sitemap-officer.png`, `diagrams/sitemap-consultant.png`. Login is the root; solid boxes are pages, dashed boxes are pop-ups, confirmation cards and result messages.
 - Sample data used on the screens: claim SST-2026-000143, นาย สมชาย ประเสริฐ, officer กัญญา วงศ์ศิริ, consultant นพ. ธนา ศรีสุข.
 - Screen rules from the U3 decisions (2026-10-15):
-  - U3-2 to U3-7: type `Onsite (at the rehabilitation center)` or `Online`; the consultant line shows the title,
+  - U3-2 to U3-7: type `Onsite (at the rehabilitation center)` (Online is removed, R-043); the consultant line shows the title,
     name and `Office: <Consultant.office_location as stored>` (for example `Office: Building A, Floor 3, Room 305`).
     O4-1 to O4-3 and U5-1 show stored locations the same way.
   - A `Confirmed` appointment (U3-3 behind the dialog, U3-5) keeps "Request Another Date" and "I cannot attend";
@@ -34,6 +34,26 @@
     from Q6.1, the date, the status chip and the claim lines; a card opens U4-1.
   - O5.1-1 to O5.1-3: the duration chosen on the page is saved by QO5.3; the booking summary shows only the facility
     name (no building or floor, which the schema does not store); only weekdays are offered (QO5.2).
+
+- Screen rules from the O1 to O6 decisions (2026-10-18):
+  - Every console frame: no office branch line ("Bangkok 3") and no bell or help icon in the top bar (R-040); the
+    claim status chips use the user app colours, so `Register unavailable` is purple like `Awaiting verification`
+    (D-050); no consultant specialty anywhere, because Consultant has no specialty column (R-041).
+  - O1-2 to O3-2: the field is "Override reason (required if your decision differs)". QO2.1 and QO3.1 refuse (0 rows)
+    a result that differs from the automatic check when the reason is empty (R-037). The documents list shows the
+    document type, file name and size; the viewer shows `uploaded_at` (QO1.4, R-039).
+  - O4-1 to O4-3: weekdays only (QO4.2); no "Add to waiting list" button (R-042); "Location details" shows
+    Type `Onsite` and Place "Consultant's office, <office_location>" (D-051). The result card shows the confirm-by
+    time, 24 hours before the appointment.
+  - O5.1-1 to O5.1-3: durations 30, 45, 60, 90 or 120 minutes. The frames show a 90-minute booking: an hour is
+    `busy` (grey, not clickable) when the treatment would overlap a `Pending` or `Accepted` treatment at the facility
+    or would end after 12:00 (morning) or 17:00 (afternoon) (R-044). The summary shows the end time and a
+    "Recommended" row with the session's `recommended_treatment` (QO5.1, R-045).
+  - O5.2-1 and O5.2-2: "Recommended treatment in the report from <consultant>: None. No treatment is required for this claim."
+  - O6-2 and O6-3: no page count; the view status says "Viewed on <time>" (`read_at` has no officer, R-046). A report
+    is typed text or an attached file, never both (`num_nonnulls(report_content, report_file_uri) <= 1`): the frames
+    show the text case; O6 Alternate Case 1 [File] opens the file instead.
+  - C2.1-4 shows the file case (the draft holds only the file); C2.2-1 to C2.3-2 show the text case.
 
 | Code | Screen (use case: page or state) | User | Report figure |
 |---|---|---|---|

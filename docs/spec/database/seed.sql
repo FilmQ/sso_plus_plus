@@ -209,6 +209,49 @@ SET scheduled_date = (CURRENT_DATE + 7)
   + CASE EXTRACT(ISODOW FROM CURRENT_DATE + 7) WHEN 6 THEN 2 WHEN 7 THEN 1 ELSE 0 END
 WHERE treatment_id = 403;
 
+-- O1 to O3 demo (R-038): claim 161 waits for verification, with its automatic check and three documents.
+-- The document files are not part of the seed: put any small files at the file_uri paths in the server's storage.
+-- O5 demo (R-045): claim 162 has a filed consultation report and no treatment, so O5.1 and O5.2 can be shown.
+INSERT INTO master_table (national_id, title_name, first_name, last_name, coverage_status, employer_account_no,  employer_name, registration_date, contribution_start, contribution_end, contribution_months) VALUES
+  ('1460300112237', 'นาย', 'กิตติ', 'รุ่งเรือง', 'ACTIVE', '1000123456', 'Siam Precision Parts Co., Ltd.', '2020-03-02', '2020-04-01', NULL, 79),
+  ('2100700334459', 'นาง', 'ศิริพร', 'ทองดี', 'ACTIVE', '1000456789', 'Bangna Logistics Co., Ltd.', '2018-08-20', '2018-09-01', NULL, 98);
+
+INSERT INTO InsuredPerson (insured_id, national_id, title_name, first_name, last_name, date_of_birth, gender, phone_no, email, address, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (107, '1460300112237', 'นาย', 'กิตติ', 'รุ่งเรือง', '1990-07-08', 'M', '0873334455', NULL, '21/4 ถ.เทพารักษ์ ต.บางพลีใหญ่ อ.บางพลี สมุทรปราการ 10540', '2026-10-14 08:20'),
+  (108, '2100700334459', 'นาง', 'ศิริพร', 'ทองดี', '1982-12-01', 'F', '0815556677', NULL, '9 ซ.บางนา-ตราด 14 แขวงบางนา เขตบางนา กรุงเทพมหานคร 10260', '2026-10-01 10:05');
+
+INSERT INTO Section33Coverage (coverage_id, insured_id, employer_id, registration_date, contribution_start, contribution_end, contribution_months, coverage_status) OVERRIDING SYSTEM VALUE VALUES
+  (207, 107, 11, '2020-03-02', '2020-04-01', NULL, 79, 'ACTIVE'),
+  (208, 108, 14, '2018-08-20', '2018-09-01', NULL, 98, 'ACTIVE');
+
+INSERT INTO InjuryClaim (claim_id, claim_no, insured_id, employer_id, injury_datetime, injury_place, injury_cause, body_part, injury_category, claim_status, submitted_at, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (161, 'SST-2026-000161', 107, 11, '2026-10-12 10:15', 'Machining line 1, Bang Phli, Samut Prakan', 'Struck by a falling steel bar', 'right shoulder', 'Contusion', 'Awaiting verification', '2026-10-14 08:20', '2026-10-14 08:20'),
+  (162, 'SST-2026-000162', 108, 14, '2026-09-30 14:00', 'Warehouse 1, Bang Na, Bangkok', 'Fell from a loading step', 'left knee', 'Sprain', 'Covered', '2026-10-01 10:05', '2026-10-01 10:05');
+
+INSERT INTO ClaimDocument (document_id, claim_id, doc_type_id, file_name, file_uri, mime_type, file_size_bytes, uploaded_at, check_status, checked_at, remark) OVERRIDING SYSTEM VALUE VALUES
+  (2006, 161, 1, 'id_card.jpg', '/claims/161/id_card.jpg', 'image/jpeg', 982016, '2026-10-14 08:17', 'Pending', NULL, NULL),
+  (2007, 161, 2, 'medical_record_bangphli.pdf', '/claims/161/medical_record_bangphli.pdf', 'application/pdf', 704512, '2026-10-14 08:18', 'Pending', NULL, NULL),
+  (2008, 161, 3, 'injury_form_kt16.pdf', '/claims/161/injury_form_kt16.pdf', 'application/pdf', 296960, '2026-10-14 08:19', 'Pending', NULL, NULL);
+
+INSERT INTO EligibilityCheck (check_id, claim_id, coverage_id, officer_id, checked_at, result, is_override, override_reason, evidence_ref) OVERRIDING SYSTEM VALUE VALUES
+  (811, 161, 207, NULL, '2026-10-14 08:20', 'Covered', FALSE, NULL, 'REG-20261014-0161'),
+  (812, 162, 208, NULL, '2026-10-01 10:05', 'Covered', FALSE, NULL, 'REG-20261001-0162'),
+  (813, 162, 208, 2, '2026-10-02 09:40', 'Covered', FALSE, NULL, 'REG-20261001-0162');
+
+INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, to_status, changed_at, change_reason) OVERRIDING SYSTEM VALUE VALUES
+  (1013, 161, NULL, NULL, 'Awaiting verification', '2026-10-14 08:20', 'Submitted by the user'),
+  (1014, 162, NULL, NULL, 'Awaiting verification', '2026-10-01 10:05', 'Submitted by the user'),
+  (1015, 162, 2, 'Awaiting verification', 'Covered', '2026-10-02 09:40', NULL);
+
+INSERT INTO Appointment (appointment_id, claim_id, officer_id, consultant_id, supersedes_appt_id, appointment_type, schedule_date, schedule_time, location, appointment_status, confirm_deadline, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (511, 162, 2, 2, NULL, 'Onsite', '2026-10-15', '11:00', 'Building A, Floor 2, Room 210', 'Confirmed', '2026-10-14 11:00', '2026-10-06 15:00');
+
+INSERT INTO ConsultationSession (session_id, appointment_id, consultant_id, officer_id, started_at, ended_at, attendance, findings, diagnosis, recommended_treatment, session_status) OVERRIDING SYSTEM VALUE VALUES
+  (306, 511, 2, 2, '2026-10-15 11:00', '2026-10-15 11:40', 'Attended', 'Swelling and pain of the left knee', 'Sprain of the left knee', 'Physiotherapy', 'Completed');
+
+INSERT INTO ConsultationReport (report_id, session_id, consultant_id, version_no, report_content, signed_at, delivered_at, read_at, is_superseded) OVERRIDING SYSTEM VALUE VALUES
+  (90, 306, 2, 1, 'Sprain of the left knee with mild swelling. Physiotherapy once a week for 4 weeks.', '2026-10-15 15:00', '2026-10-15 15:05', NULL, FALSE);
+
 SELECT setval(pg_get_serial_sequence('insuredperson', 'insured_id'), (SELECT MAX(insured_id) FROM InsuredPerson));
 SELECT setval(pg_get_serial_sequence('employer', 'employer_id'), (SELECT MAX(employer_id) FROM Employer));
 SELECT setval(pg_get_serial_sequence('section33coverage', 'coverage_id'), (SELECT MAX(coverage_id) FROM Section33Coverage));

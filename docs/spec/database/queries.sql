@@ -190,6 +190,7 @@ FROM generate_series(:slot_date::date + TIME '09:00',
                      INTERVAL '1 hour') AS s(slot_at)
 WHERE s.slot_at > NOW()
   AND s.slot_at::time <> TIME '12:00'
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
   AND NOT EXISTS (
         SELECT 1
         FROM Appointment a
@@ -205,6 +206,7 @@ WITH old AS (
   WHERE appointment_id = :appointment_id
     AND appointment_status IN ('Pending', 'Confirmed')
     AND :new_date::date + :new_time::time > NOW()
+    AND EXTRACT(ISODOW FROM :new_date::date) < 6
     AND :new_time::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
                             TIME '13:00', TIME '14:00', TIME '15:00')
     AND NOT EXISTS (
@@ -300,10 +302,14 @@ WHERE treatment_id = :treatment_id
         SELECT 1
         FROM Treatment o
         WHERE o.facility_name = Treatment.facility_name
-          AND o.scheduled_date = :new_date::date
-          AND o.scheduled_time = Treatment.scheduled_time
           AND o.treatment_status IN ('Pending', 'Accepted')
-          AND o.treatment_id <> Treatment.treatment_id)
+          AND o.treatment_id <> Treatment.treatment_id
+          AND o.scheduled_date + o.scheduled_time
+                < :new_date::date + Treatment.scheduled_time
+                  + make_interval(mins => Treatment.duration_minutes)
+          AND :new_date::date + Treatment.scheduled_time
+                < o.scheduled_date + o.scheduled_time
+                  + make_interval(mins => o.duration_minutes))
 RETURNING treatment_id, scheduled_date, scheduled_time;
 
 -- QU4.3  [U4.3] ยืนยันการรักษา (Reject)
@@ -381,9 +387,14 @@ WHERE t.treatment_id = :treatment_id
         SELECT 1
         FROM Treatment o
         WHERE o.facility_name = t.facility_name
-          AND o.scheduled_date = s.slot_day::date
-          AND o.scheduled_time = t.scheduled_time
-          AND o.treatment_status IN ('Pending', 'Accepted'))
+          AND o.treatment_status IN ('Pending', 'Accepted')
+          AND o.treatment_id <> t.treatment_id
+          AND o.scheduled_date + o.scheduled_time
+                < s.slot_day::date + t.scheduled_time
+                  + make_interval(mins => t.duration_minutes)
+          AND s.slot_day::date + t.scheduled_time
+                < o.scheduled_date + o.scheduled_time
+                  + make_interval(mins => o.duration_minutes))
 ORDER BY s.slot_day;
 
 -- QU5.1  [U5] ดูตารางนัดหมาย (View Appointment Schedule)
@@ -469,12 +480,17 @@ LEFT JOIN Employer e ON e.employer_id = ic.employer_id
 WHERE ic.claim_id = :claim_id;
 
 -- QO1.4  [O1] ดูคำร้องกรณีประสบอันตราย (View Injury Application)
-SELECT file_name,
-  pg_size_pretty(file_size_bytes::bigint) AS file_size,
-  file_uri
-FROM ClaimDocument
-WHERE claim_id = :claim_id
-ORDER BY uploaded_at;
+SELECT cd.document_id,
+  dt.name_en AS document_type,
+  cd.file_name,
+  pg_size_pretty(cd.file_size_bytes::bigint) AS file_size,
+  TO_CHAR(cd.uploaded_at, 'FMDD FMMonth YYYY" : "HH24:MI')
+    AS uploaded_at,
+  cd.file_uri
+FROM ClaimDocument cd
+JOIN DocumentType dt ON dt.doc_type_id = cd.doc_type_id
+WHERE cd.claim_id = :claim_id
+ORDER BY cd.uploaded_at;
 
 -- QO1.5  [O1] ดูคำร้องกรณีประสบอันตราย (View Injury Application)
 SELECT ec.result AS eligibility_status,
@@ -500,11 +516,23 @@ ORDER BY reason_code;
 
 -- QO2.1  [O2] อนุมัติคำร้อง (Approve Injury Application)
 WITH prev AS (
-  SELECT claim_id, claim_status
-  FROM InjuryClaim
-  WHERE claim_id = :claim_id
-    AND claim_status IN ('Awaiting verification', 'Needs review',
+  SELECT ic.claim_id, ic.claim_status, ec.coverage_id,
+    ec.result AS auto_result, ec.evidence_ref
+  FROM InjuryClaim ic
+  LEFT JOIN LATERAL (
+    SELECT e.coverage_id, e.result, e.evidence_ref
+    FROM EligibilityCheck e
+    WHERE e.claim_id = ic.claim_id
+      AND e.officer_id IS NULL
+    ORDER BY e.checked_at DESC
+    LIMIT 1
+  ) ec ON TRUE
+  WHERE ic.claim_id = :claim_id
+    AND ic.claim_status IN ('Awaiting verification', 'Needs review',
       'Register unavailable')
+    AND (ec.result IS NULL
+      OR ec.result = :result::varchar
+      OR NULLIF(BTRIM(:override_reason::varchar), '') IS NOT NULL)
 ), decided AS (
   UPDATE InjuryClaim ic
   SET claim_status = :result::varchar
@@ -516,33 +544,40 @@ WITH prev AS (
     (claim_id, officer_id, from_status, to_status,
      changed_at, change_reason)
   SELECT prev.claim_id, :officer_id, prev.claim_status,
-    :result::varchar, NOW(), :override_reason::varchar
+    :result::varchar, NOW(),
+    NULLIF(BTRIM(:override_reason::varchar), '')
   FROM prev
   JOIN decided ON decided.claim_id = prev.claim_id
 )
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
-  :override_reason::varchar, ec.evidence_ref
-FROM decided
-LEFT JOIN LATERAL (
-  SELECT e.coverage_id, e.result, e.evidence_ref
-  FROM EligibilityCheck e
-  WHERE e.claim_id = decided.claim_id
-    AND e.officer_id IS NULL
-  ORDER BY e.checked_at DESC
-  LIMIT 1
-) ec ON TRUE;
+SELECT prev.claim_id, prev.coverage_id, :officer_id, NOW(),
+  :result::varchar,
+  COALESCE(:result::varchar <> prev.auto_result, FALSE),
+  NULLIF(BTRIM(:override_reason::varchar), ''), prev.evidence_ref
+FROM prev
+JOIN decided ON decided.claim_id = prev.claim_id;
 
 -- QO3.1  [O3] ปฏิเสธคำร้อง (Reject Injury Application)
 WITH prev AS (
-  SELECT claim_id, claim_status
-  FROM InjuryClaim
-  WHERE claim_id = :claim_id
-    AND claim_status IN ('Awaiting verification', 'Needs review',
+  SELECT ic.claim_id, ic.claim_status, ec.coverage_id,
+    ec.result AS auto_result, ec.evidence_ref
+  FROM InjuryClaim ic
+  LEFT JOIN LATERAL (
+    SELECT e.coverage_id, e.result, e.evidence_ref
+    FROM EligibilityCheck e
+    WHERE e.claim_id = ic.claim_id
+      AND e.officer_id IS NULL
+    ORDER BY e.checked_at DESC
+    LIMIT 1
+  ) ec ON TRUE
+  WHERE ic.claim_id = :claim_id
+    AND ic.claim_status IN ('Awaiting verification', 'Needs review',
       'Register unavailable')
+    AND (ec.result IS NULL
+      OR ec.result = :result::varchar
+      OR NULLIF(BTRIM(:override_reason::varchar), '') IS NOT NULL)
 ), decided AS (
   UPDATE InjuryClaim ic
   SET claim_status = :result::varchar
@@ -554,25 +589,20 @@ WITH prev AS (
     (claim_id, officer_id, from_status, to_status,
      changed_at, change_reason)
   SELECT prev.claim_id, :officer_id, prev.claim_status,
-    :result::varchar, NOW(), :override_reason::varchar
+    :result::varchar, NOW(),
+    NULLIF(BTRIM(:override_reason::varchar), '')
   FROM prev
   JOIN decided ON decided.claim_id = prev.claim_id
 )
 INSERT INTO EligibilityCheck
   (claim_id, coverage_id, officer_id, checked_at, result,
    is_override, override_reason, evidence_ref)
-SELECT decided.claim_id, ec.coverage_id, :officer_id, NOW(),
-  :result::varchar, COALESCE(:result::varchar <> ec.result, FALSE),
-  :override_reason::varchar, ec.evidence_ref
-FROM decided
-LEFT JOIN LATERAL (
-  SELECT e.coverage_id, e.result, e.evidence_ref
-  FROM EligibilityCheck e
-  WHERE e.claim_id = decided.claim_id
-    AND e.officer_id IS NULL
-  ORDER BY e.checked_at DESC
-  LIMIT 1
-) ec ON TRUE;
+SELECT prev.claim_id, prev.coverage_id, :officer_id, NOW(),
+  :result::varchar,
+  COALESCE(:result::varchar <> prev.auto_result, FALSE),
+  NULLIF(BTRIM(:override_reason::varchar), ''), prev.evidence_ref
+FROM prev
+JOIN decided ON decided.claim_id = prev.claim_id;
 
 -- QO3.2  [O3] ปฏิเสธคำร้อง (Reject Injury Application)
 WITH prev AS (
@@ -648,6 +678,7 @@ LEFT JOIN Appointment a
       AND a.schedule_date + a.schedule_time = s.slot_at
       AND a.appointment_status IN ('Pending', 'Confirmed')
 WHERE s.slot_at::time <> TIME '12:00'
+  AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY consultant_name, s.slot_at;
 
 -- QO4.3  [O4] สร้างนัดหมาย (Schedule Appointment)
@@ -655,23 +686,44 @@ INSERT INTO Appointment
   (claim_id, officer_id, consultant_id, appointment_type,
    schedule_date, schedule_time, location, appointment_status,
    confirm_deadline, created_at)
-VALUES (:claim_id, :officer_id, :consultant_id,
-  :appointment_type, :schedule_date, :schedule_time, :location,
+SELECT ic.claim_id, :officer_id, c.consultant_id, 'Onsite',
+  :schedule_date::date, :schedule_time::time, c.office_location,
   'Pending',
-  :schedule_date::date + :schedule_time::time
-    - INTERVAL '24 hours',
-  NOW())
+  :schedule_date::date + :schedule_time::time - INTERVAL '24 hours',
+  NOW()
+FROM InjuryClaim ic
+JOIN Consultant c ON c.consultant_id = :consultant_id
+WHERE ic.claim_id = :claim_id
+  AND ic.claim_status = 'Covered'
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Appointment a
+        WHERE a.claim_id = ic.claim_id
+          AND a.appointment_status IN ('Pending', 'Confirmed'))
+  AND :schedule_date::date > CURRENT_DATE
+  AND EXTRACT(ISODOW FROM :schedule_date::date) < 6
+  AND :schedule_time::time IN (TIME '09:00', TIME '10:00',
+        TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00')
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Appointment b
+        WHERE b.consultant_id = c.consultant_id
+          AND b.schedule_date = :schedule_date::date
+          AND b.schedule_time = :schedule_time::time
+          AND b.appointment_status IN ('Pending', 'Confirmed'))
 RETURNING appointment_id;
 
 -- QO5.1  [O5.1] นัดหมายการรักษา (Book Treatment)
 SELECT ic.claim_id,
   ic.claim_no,
+  ip.title_name,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   cr.report_id,
   cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
-    AS report_author
+    AS report_author,
+  cs.recommended_treatment
 FROM ConsultationReport cr
 JOIN ConsultationSession cs ON cs.session_id = cr.session_id
 JOIN Appointment a ON a.appointment_id = cs.appointment_id
@@ -692,19 +744,35 @@ ORDER BY cr.delivered_at;
 SELECT s.slot_at,
   TO_CHAR(s.slot_at, 'Dy FMDD Mon - HH24:MI') AS slot_button,
   CASE
-    WHEN t.treatment_id IS NULL THEN 'free' -- white
-    WHEN t.officer_id = :officer_id
-     AND t.treatment_status = 'Pending' THEN 'mine' -- purple
-    ELSE 'busy' -- grey
+    WHEN EXISTS (
+           SELECT 1
+           FROM Treatment m
+           WHERE m.facility_name = :facility_name
+             AND m.scheduled_date + m.scheduled_time = s.slot_at
+             AND m.officer_id = :officer_id
+             AND m.treatment_status = 'Pending') THEN 'mine' -- purple
+    WHEN e.end_at > s.slot_at::date
+           + CASE WHEN s.slot_at::time < TIME '12:00'
+                  THEN TIME '12:00' ELSE TIME '17:00' END
+      OR EXISTS (
+           SELECT 1
+           FROM Treatment t
+           WHERE t.facility_name = :facility_name
+             AND t.treatment_status IN ('Pending', 'Accepted')
+             AND t.scheduled_date + t.scheduled_time < e.end_at
+             AND s.slot_at < t.scheduled_date + t.scheduled_time
+                   + make_interval(mins => t.duration_minutes))
+      THEN 'busy' -- grey
+    ELSE 'free' -- white
   END AS slot_state
 FROM generate_series(:date_from::date + TIME '09:00',
                      :date_to::date + TIME '16:00',
                      INTERVAL '1 hour') AS s(slot_at)
-LEFT JOIN Treatment t
-       ON t.facility_name = :facility_name
-      AND t.scheduled_date + t.scheduled_time = s.slot_at
-      AND t.treatment_status IN ('Pending', 'Accepted')
-WHERE s.slot_at::time BETWEEN TIME '09:00' AND TIME '16:00'
+CROSS JOIN LATERAL (
+  SELECT s.slot_at + make_interval(mins => :duration_minutes::int)
+    AS end_at) e
+WHERE s.slot_at::time IN (TIME '09:00', TIME '10:00', TIME '11:00',
+        TIME '13:00', TIME '14:00', TIME '15:00', TIME '16:00')
   AND s.slot_at > NOW()
   AND EXTRACT(ISODOW FROM s.slot_at) < 6
 ORDER BY s.slot_at;
@@ -714,9 +782,47 @@ INSERT INTO Treatment
   (claim_id, report_id, officer_id, treatment_type,
    duration_minutes, facility_name, scheduled_date, scheduled_time,
    treatment_status, created_at)
-VALUES (:claim_id, :report_id, :officer_id, :treatment_type,
-  :duration_minutes, :facility_name, :scheduled_date, :scheduled_time, 'Pending',
-  NOW())
+SELECT ic.claim_id, cr.report_id, :officer_id, :treatment_type,
+  :duration_minutes::int, :facility_name, :scheduled_date::date,
+  :scheduled_time::time, 'Pending', NOW()
+FROM ConsultationReport cr
+JOIN ConsultationSession cs ON cs.session_id = cr.session_id
+JOIN Appointment a ON a.appointment_id = cs.appointment_id
+JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
+CROSS JOIN LATERAL (
+  SELECT :scheduled_date::date + :scheduled_time::time AS start_at,
+    :scheduled_date::date + :scheduled_time::time
+      + make_interval(mins => :duration_minutes::int) AS end_at) v
+WHERE cr.report_id = :report_id
+  AND ic.claim_id = :claim_id
+  AND cr.delivered_at IS NOT NULL
+  AND cr.is_superseded = FALSE
+  AND ic.claim_status = 'Covered'
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment o
+        WHERE o.claim_id = ic.claim_id
+          AND o.treatment_status IN ('Pending', 'Accepted'))
+  AND :treatment_type::varchar IN ('Physiotherapy',
+        'Occupational therapy')
+  AND :duration_minutes::int IN (30, 45, 60, 90, 120)
+  AND :facility_name::varchar = 'SSO Rehabilitation Center'
+  AND v.start_at > NOW()
+  AND EXTRACT(ISODOW FROM v.start_at) < 6
+  AND :scheduled_time::time IN (TIME '09:00', TIME '10:00',
+        TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00',
+        TIME '16:00')
+  AND v.end_at <= :scheduled_date::date
+        + CASE WHEN :scheduled_time::time < TIME '12:00'
+               THEN TIME '12:00' ELSE TIME '17:00' END
+  AND NOT EXISTS (
+        SELECT 1
+        FROM Treatment t
+        WHERE t.facility_name = :facility_name
+          AND t.treatment_status IN ('Pending', 'Accepted')
+          AND t.scheduled_date + t.scheduled_time < v.end_at
+          AND v.start_at < t.scheduled_date + t.scheduled_time
+                + make_interval(mins => t.duration_minutes))
 RETURNING treatment_id;
 
 -- QO5.4  [O5.2] นัดหมายการรักษา (No Treatment Required)
@@ -770,17 +876,20 @@ SELECT ic.claim_no,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS consultant_name,
   cr.report_content,
+  cr.report_file_uri,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
-    AS view_status
+    AS view_status,
+  TO_CHAR(cr.read_at, 'FMDD FMMonth YYYY" : "HH24:MI') AS viewed_at
 FROM ConsultationReport cr
 JOIN ConsultationSession cs ON cs.session_id = cr.session_id
 JOIN Appointment a ON a.appointment_id = cs.appointment_id
 JOIN InjuryClaim ic ON ic.claim_id = a.claim_id
 JOIN InsuredPerson ip ON ip.insured_id = ic.insured_id
 JOIN Consultant c ON c.consultant_id = cr.consultant_id
-WHERE cr.report_id = :report_id;
+WHERE cr.report_id = :report_id
+  AND cr.delivered_at IS NOT NULL;
 
 -- QO6.3  [O6] ดูรายงานการให้คำปรึกษา (View Consultation Report)
 UPDATE ConsultationReport
@@ -850,6 +959,7 @@ SELECT cs.session_id,
   cr.report_id,
   COALESCE(cr.version_no, 1) AS version_no,
   cr.report_content,
+  cr.report_file_uri,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status
@@ -866,13 +976,16 @@ WHERE cs.appointment_id = :appointment_id;
 -- QC2.4  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
 INSERT INTO ConsultationReport
   (session_id, consultant_id, version_no, report_content,
-   is_superseded)
-VALUES (:session_id, :consultant_id, 1, :report_content, FALSE)
+   report_file_uri, is_superseded)
+VALUES (:session_id, :consultant_id, 1,
+  NULLIF(:report_content::text, ''),
+  NULLIF(:report_file_uri::varchar, ''), FALSE)
 RETURNING report_id;
 
 -- QC2.5  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
 UPDATE ConsultationReport
-SET report_content = :report_content,
+SET report_content = NULLIF(:report_content::text, ''),
+    report_file_uri = NULLIF(:report_file_uri::varchar, ''),
     signed_at = NULL
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
@@ -883,7 +996,7 @@ UPDATE ConsultationReport
 SET signed_at = NOW()
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
-  AND report_content IS NOT NULL
+  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
   AND signed_at IS NULL;
 
 -- QC2.7  [C2.3] สร้างรายงานการให้คำปรึกษา (File the Report)
@@ -891,7 +1004,7 @@ UPDATE ConsultationReport
 SET delivered_at = NOW()
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
-  AND report_content IS NOT NULL
+  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
   AND signed_at IS NOT NULL
   AND delivered_at IS NULL
 RETURNING report_id;

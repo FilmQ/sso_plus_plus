@@ -13,16 +13,8 @@ void main() {
   final repo = TreatmentRepository(db);
   const facility = 'SSO Rehabilitation Center';
 
-  Future<int> book(String date, {int claimId = 149, String time = '15:00'}) => repo.insertTreatment(
-        claimId: claimId,
-        reportId: 86,
-        officerId: 2,
-        treatmentType: 'Occupational therapy',
-        durationMinutes: 45,
-        facilityName: facility,
-        scheduledDate: date,
-        scheduledTime: time,
-      );
+  Future<int> book(String date, {int claimId = 149, String time = '15:00', int duration = 45}) =>
+      insertTestTreatment(db, claimId: claimId, date: date, time: time, duration: duration);
 
   Future<TestClient> signedIn() async {
     final c = TestClient(db);
@@ -124,6 +116,21 @@ void main() {
         final t = (await c.get('/u4/treatments/$id')).json['treatment'] as Map;
         expect(t['treatment_date'], pageDate(booked, '15:00'));
         expect(t['treatment_status'], 'Pending');
+      }));
+
+  test('U4.2: a longer treatment of another user that covers the hour blocks the date (R-044)', () =>
+      inRollback(db, () async {
+        final booked = weekday(20);
+        final id = await book(booked);
+        final covered = allowed(booked).first;
+        await book(covered, claimId: 155, time: '14:00', duration: 90); // 14:00 to 15:30
+        final c = await signedIn();
+        final dates = [
+          for (final r in ((await c.get('/u4/treatments/$id/available-dates')).json['dates'] as List).cast<Map>())
+            r['slot_date'],
+        ];
+        expect(dates, isNot(contains(covered)));
+        expect((await c.post('/u4/treatments/$id/change-date', {'new_date': covered})).status, 422);
       }));
 
   test('U4: a user cannot read or change the treatment of another claim (404)', () => inRollback(db, () async {

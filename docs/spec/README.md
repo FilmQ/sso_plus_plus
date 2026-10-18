@@ -2,7 +2,7 @@
 
 Extract of the SA report **SA Documents** for building the SST Injury Claim & Treatment Application
 (ระบบยื่นคำร้องและนัดหมายการรักษากรณีประสบอันตราย, ศูนย์ฟื้นฟูผู้ป่วย สำนักงานประกันสังคม).
-Generated on 2026-10-17 (U4 to U6 round) from the report as it stood that day. The report is the source of truth: if this pack
+Generated on 2026-10-18 (O1 to O6 round) from the report as it stood that day. The report is the source of truth: if this pack
 and the report disagree, the report wins, and the difference should be raised with the team.
 
 Report: https://docs.google.com/document/d/1qg-tSl0xflyYIMIpSg_7QGSjlLTMwYC9Z2lKpnLsHHk/edit
@@ -22,11 +22,14 @@ Report: https://docs.google.com/document/d/1qg-tSl0xflyYIMIpSg_7QGSjlLTMwYC9Z2lK
 | `database/data-dictionary.md` | Every attribute with key, NOT NULL, type and range / validation rule (Thai) | 2.17 |
 | `diagrams/` | Use case diagram, CRUD table, business process, ER with queries, class, state, sequence and site map diagrams | various |
 
-Checked on 2026-10-17 against PostgreSQL 16.15: `schema.sql` and `seed.sql` load without errors, every
-statement in `queries.sql` prepares against that schema with untyped parameters, and the U4 flows were run against
-the seed inside rolled-back transactions: QU4.4 and QU4.5 read the treatment and its free weekdays, QU4.2 accepts a
-free weekday and refuses a weekend, a date past the booked date + 7, the booked date, another user's treatment and
-a taken slot, QU4.3 cancels and closes the claim, QO5.2 offers no weekend, and Q3.5 refuses 12:30.
+Checked on 2026-10-18 against PostgreSQL 16.15: `schema.sql` and `seed.sql` load without errors, every
+statement in `queries.sql` prepares against that schema with untyped parameters, and the officer flows were run
+against the seed inside rolled-back transactions: QO2.1 and QO3.1 refuse a decision that differs from the automatic
+check without a reason and accept it with one; QO4.2 offers weekdays only; QO4.3 refuses a past date, a weekend,
+12:00, a claim that is not Covered and a busy consultant, and saves `Onsite` at the consultant's office; QO5.2 marks
+an hour busy when the chosen duration would overlap or end after 12:00 or 17:00; QO5.3 refuses those hours; QU4.2
+and QU4.5 apply the same overlap rule; QC2.4 and QC2.5 save text or a file and the CHECK refuses both; QO6.2 reads
+only a delivered report.
 
 ## Naming that ties code to the report
 
@@ -34,6 +37,40 @@ a taken slot, QU4.3 cancels and closes the claim, QO5.2 offers no weekend, and Q
 - **Query IDs:** Q1.1 to Q1.10 (U1), Q2.1 to Q2.4 (U2), Q3.1 to Q3.7 (U3), QU4.1 to QU4.5 (U4), QU5.1 (U5), Q6.1 (U6), QO1.1 to QO6.3 (officer), QC1.1 and QC2.1 to QC2.7 (consultant), QN.1 to QN.5 (notifications: QN.1 to QN.4 written by officer use cases, QN.5 by U3.1 to U3.3). Mixed prefixes (Q6.1 vs QU5.1) are as in the report; keep them.
 - **Screen codes:** `<use case>-<n>`, for example U1-2 or O4-3, matching the Figma frame names.
 - **Class names** come from the sequence diagrams (`InjuryFormPage`, `InsuredFormController`, `InsuredPersonModel`, `InsuredPersonRepository`, `DBConnector`, ...).
+
+## Changes since the 2026-10-17 pack (report-back 4, O1 to O6)
+
+Business decisions from the team (R-037, R-042, R-043, R-044, R-046) and documentation decisions on the rest; the
+full list is in `07-open-questions.md`, "Settled on 2026-10-18 (O1 to O6)".
+
+- **SQL (60 statements):**
+  - **QO2.1 and QO3.1** take `:override_reason` and refuse (0 rows) a result that differs from the latest automatic
+    EligibilityCheck when the reason is empty (R-037).
+  - **QO1.4** also returns the document type name and `uploaded_at` (R-039).
+  - **QO4.2** offers weekdays only; **QO4.3** is one guarded statement: a future weekday, one of the six hours, a
+    QO4.1 claim, a free consultant; it saves type `Onsite` and the consultant's `office_location` (R-043).
+  - **QO5.1** also returns the session's `recommended_treatment` and the user's `title_name` (R-045).
+  - **QO5.2** takes `:duration_minutes`: an hour is `busy` when the treatment would overlap a `Pending` or
+    `Accepted` treatment at the facility or end after 12:00 (morning) or 17:00 (afternoon). **QO5.3** is guarded
+    the same way (the claim and report are a QO5.1 row, the type, duration and facility lists, a future weekday,
+    the hours rule, no overlap) (R-044). **QU4.2** and **QU4.5** use the same overlap rule for the user's new date.
+  - **QC2.4 and QC2.5** save `:report_content` or `:report_file_uri` (an empty value is NULL); **QC2.6 and QC2.7**
+    need one of the two (R-046). **QO6.2** returns `report_file_uri` and `viewed_at` and needs `delivered_at IS NOT NULL` (D-053).
+- **Schema and data dictionary:** `Appointment.appointment_type` is `Onsite` only; new column
+  `ConsultationReport.report_file_uri varchar(255)` with `CHECK (num_nonnulls(report_content, report_file_uri) <= 1)`;
+  `Treatment.duration_minutes IN (30, 45, 60, 90, 120)`; `EligibilityCheck` `CHECK (NOT is_override OR override_reason IS NOT NULL)`.
+- **Seed (dev block):** persons 107 and 108; claim 161 `Awaiting verification` with documents 2006 to 2008 and its
+  automatic check (for O1 to O3); claim 162 `Covered` with appointment 511, session 306 and filed report 90 and no
+  treatment (for O5) (R-038, R-045). Document files are a dev-setup note in `07-open-questions.md`.
+- **Use cases (02):** O2 and O3 say when the override reason is needed; O2 step 6.1 and O5.1 step 6.1 give the QN.1
+  texts as the code sends them (R-036); O4 has no waiting list (R-042) and offers weekdays, Onsite at the
+  consultant's office; O5.1 lists the durations and the hours rule; O6 and C2.1 cover a report that is a file.
+- **Classes (04):** `confirmResult(..., override_reason)`, `rejectApplication(claim_id, reason_code, override_reason)`,
+  `saveResult(claim_id, result, override_reason)`; `getAvailableTimes`, `getFacilitySlots` and `findFacilitySlots`
+  take `duration`; `finishDraft`, `saveDraft`, `insertDraft`, `updateDraft` take `report_file_uri`; ReportModel `reportFileUri`.
+- **Sequence flows (03) and diagrams:** O2, O3, O5.1 and C2.1 redrawn; class diagrams of O1 to O3, O5 and C2; the
+  three ER diagrams with queries. The CRUD table and the state diagrams do not change.
+- **Screens (06):** see "Screen rules from the O1 to O6 decisions" there (all 29 console frames were redone).
 
 ## Changes since the 2026-10-15 evening pack (report-back 3, U4 to U6)
 

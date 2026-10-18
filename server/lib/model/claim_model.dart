@@ -79,20 +79,21 @@ class ClaimModel extends Model {
   Future<List<Map<String, Object?>>> getRejectionReasons() => claims.findRejectionReasons();
 
   /// O2 Approve Injury Application: QO2.1 with result 'Covered'. QO2.1 itself
-  /// decides only a claim that is not yet decided; else StateConflictException.
+  /// decides only a claim that is not yet decided (StateConflictException),
+  /// and needs [overrideReason] when 'Covered' is not the automatic result
+  /// (ValidationFailedException; R-037).
   Future<void> confirmResult(int claimId, {required int officerId, String? overrideReason}) =>
-      _decide(() => claims.saveResult(
+      _decide(claimId, 'Covered', overrideReason, () => claims.saveResult(
           claimId: claimId, result: 'Covered', officerId: officerId, overrideReason: overrideReason));
 
-  /// O3 Reject Injury Application: QO3.1 ('Not covered'), then QO3.2 ('Rejected').
-  /// Without an override reason, QO3.1 saves the reason code as the override
-  /// reason, because the data dictionary needs one when the officer changes
-  /// the automatic result (D-048).
+  /// O3 Reject Injury Application: QO3.1 ('Not covered'), then QO3.2
+  /// ('Rejected'). QO3.1 needs [overrideReason] when 'Not covered' is not the
+  /// automatic result (R-037).
   Future<void> rejectApplication(int claimId,
           {required int officerId, required String reasonCode, String? officerMessage, String? overrideReason}) =>
-      _decide(() async {
+      _decide(claimId, 'Not covered', overrideReason, () async {
         await claims.saveResult(
-            claimId: claimId, result: 'Not covered', officerId: officerId, overrideReason: overrideReason ?? reasonCode);
+            claimId: claimId, result: 'Not covered', officerId: officerId, overrideReason: overrideReason);
         await claims.insertRejection(
             claimId: claimId, reasonCode: reasonCode, officerId: officerId, officerMessage: officerMessage);
       });
@@ -103,12 +104,19 @@ class ClaimModel extends Model {
       claims.updateNoTreatment(claimId: claimId, officerId: officerId);
 
   /// Runs a decision in one transaction. A guarded query that changes no row
-  /// means that the claim is already decided (QO2.1, QO3.1 and QO3.2 of the
-  /// 2026-10-15 evening pack, R-013 settled).
-  Future<void> _decide(Future<void> Function() body) async {
+  /// means that the claim is already decided (409), or, for a claim that QO1.1
+  /// still lists, that [result] differs from the automatic result (QO1.5) and
+  /// the override reason is empty (422, D-054).
+  Future<void> _decide(int claimId, String result, String? overrideReason, Future<void> Function() body) async {
     try {
       await claims.db.transaction(body);
     } on NoRowChangedException {
+      final pending = (await claims.findPendingClaims()).any((c) => c['claim_id'] == claimId);
+      final auto = (await claims.findAutoEligibility(claimId))?['eligibility_status'];
+      if (pending && auto != null && auto != result && (overrideReason ?? '').trim().isEmpty) {
+        throw const ValidationFailedException(
+            {'override_reason': 'Give a reason, because your decision differs from the automatic result.'});
+      }
       throw const StateConflictException('The claim is already decided.');
     }
   }

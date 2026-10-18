@@ -1,7 +1,7 @@
 # Open questions and known gaps
 
 Things the SA report does not settle, or settles in a way the code has to work around. Raise each one with the
-team before building the part it affects; record what was decided in `docs/DECISIONS.md` so it can be written
+team before building the part "../../docs 2/spec"it affects; record what was decided in `docs/DECISIONS.md` so it can be written
 back into the report.
 
 ## Decide before or during the first build
@@ -38,6 +38,37 @@ back into the report.
 10. **Time zone** is Asia/Bangkok; the report's dates are written `[วัน] / [เดือน] / [ปี] : [เวลา]`.
 11. **Software platform.** The stack is settled (D-001: Flutter, a Dart server, PostgreSQL 16), but the stack
     figure in report section 2.20 is still a placeholder for the team to fill.
+
+## Settled on 2026-10-18 (report-back 4, O1 to O6)
+
+Business decisions (the team):
+
+- **R-037:** the override reason is required when the officer's decision differs from the automatic result (O2
+  Confirm on a claim the automatic check did not find covered, O3 Not Covered on a claim it did). QO2.1 and QO3.1
+  refuse (0 rows) such a decision without a reason; the data dictionary rule stands.
+- **R-042:** the "Add to waiting list" button is removed. A claim with no free slot stays in the Scheduling list.
+- **R-043:** consultation appointments are on weekdays only and always `Onsite` at the consultant's office.
+  `Online` is removed everywhere (schema, U3.1, frames).
+- **R-044:** treatment types Physiotherapy and Occupational therapy, facility SSO Rehabilitation Center (D-052);
+  durations 30, 45, 60, 90 or 120 minutes; a treatment blocks every hour it covers. Facility hours 09:00 to 17:00,
+  lunch 12:00 to 13:00: starts at 09, 10, 11, 13, 14, 15 or 16, and a treatment ends by 12:00 (morning) or 17:00
+  (afternoon), so a 120-minute treatment starts at 09, 10, 13, 14 or 15.
+- **R-046:** a consultation report is typed text or one attached file (`ConsultationReport.report_file_uri`); C2.1
+  saves the file, O6 opens it.
+
+Documentation decisions:
+
+- **R-043, R-044:** QO4.3 and QO5.3 are guarded single statements (0 rows = refused, the API answers 409); the
+  code's own checks (D-051, D-052) can stay as early validation.
+- **R-036, R-044:** QN.1 texts: O2 "Claim confirmed" / "Your claim <claim_no> is covered under Section 33."; O5.1
+  "Treatment booked" / "<type> on <date> : <time>. Please accept or choose another date."
+- **R-039:** QO1.4 returns the document type name and `uploaded_at`. **R-041:** no consultant specialty on any frame.
+- **R-045:** QO5.1 returns `recommended_treatment` and `title_name`. **R-046 (frames):** no page count; "Viewed on <time>".
+- **R-038, R-045:** dev seed claims 161 (to verify) and 162 (filed report, no treatment). The seed's document rows
+  point at `/claims/<claim_id>/...`; for a demo, put any small file at those paths in the file store (D-049).
+- **R-040:** no branch line and no bell or help icon in the console. **D-050:** the console uses the user app chip
+  colours (`Register unavailable` purple). **D-053:** QO6.2 needs `delivered_at IS NOT NULL`.
+- **D-048, D-050 to D-053** are taken into the report as the code has them.
 
 ## Settled on 2026-10-17 (report-back 3, U4 to U6)
 

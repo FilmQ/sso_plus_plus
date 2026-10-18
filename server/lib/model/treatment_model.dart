@@ -44,15 +44,25 @@ class TreatmentModel extends Model {
   /// Pending or Accepted treatment.
   Future<List<Map<String, Object?>>> getClaimsForTreatment() => treatments.findClaimsWithFiledReport();
 
-  /// QO5.2 (O5.1 step 2.1): the hours 09:00 to 16:00 of the weekdays from
-  /// [dateFrom] to [dateTo], after now, with slot_state free, mine or busy.
-  Future<List<Map<String, Object?>>> getFacilitySlots(String facility, String dateFrom, String dateTo, int officerId) =>
-      treatments.findFacilitySlots(facilityName: facility, dateFrom: dateFrom, dateTo: dateTo, officerId: officerId);
+  /// The lists of QO5.3 (R-044): the Model checks them first, so that the page
+  /// gets a field error (422).
+  static const types = ['Physiotherapy', 'Occupational therapy'];
+  static const durations = [30, 45, 60, 90, 120];
+  static const facilities = ['SSO Rehabilitation Center'];
 
-  /// QO5.3 (O5.1 step 6.1). QO5.3 checks nothing, so the Model first checks
-  /// (D-052): the fields (422), the claim and report are in QO5.1 (409) and
-  /// the hour is 'free' at the facility in QO5.2 (409). Gives the
-  /// treatment_id and the slot.
+  /// QO5.2 (O5.1 step 2.1): the start hours of the weekdays from [dateFrom] to
+  /// [dateTo], after now, with slot_state free, mine or busy for a treatment of
+  /// [duration] minutes.
+  Future<List<Map<String, Object?>>> getFacilitySlots(
+          String facility, int duration, String dateFrom, String dateTo, int officerId) =>
+      treatments.findFacilitySlots(
+          facilityName: facility, durationMinutes: duration, dateFrom: dateFrom, dateTo: dateTo, officerId: officerId);
+
+  /// QO5.3 (O5.1 step 6.1). QO5.3 refuses (409) what does not agree with its
+  /// conditions. So that the page can show a clear message, the Model first
+  /// checks (D-052): the fields (422), the claim and report are in QO5.1 (409)
+  /// and the hour is 'free' at the facility for [duration] in QO5.2 (409).
+  /// Gives the treatment_id and the slot.
   Future<({int treatmentId, DateTime slotAt})> bookTreatment(int claimId, int reportId,
       {required String type,
       required int duration,
@@ -61,15 +71,15 @@ class TreatmentModel extends Model {
       required String time,
       required int officerId}) async {
     final errors = {
-      if (type.trim().isEmpty || type.length > 80) 'treatment_type': 'Choose a treatment type.',
-      if (duration <= 0) 'duration_minutes': 'Choose a duration.',
-      if (facility.trim().isEmpty || facility.length > 160) 'facility_name': 'Choose a facility.',
+      if (!types.contains(type)) 'treatment_type': 'Choose a treatment type.',
+      if (!durations.contains(duration)) 'duration_minutes': 'Choose a duration.',
+      if (!facilities.contains(facility)) 'facility_name': 'Choose a facility.',
     };
     if (errors.isNotEmpty) throw ValidationFailedException(errors);
     if (!(await getClaimsForTreatment()).any((c) => c['claim_id'] == claimId && c['report_id'] == reportId)) {
       throw const StateConflictException('The claim cannot be booked. Open the page again.');
     }
-    final slot = (await getFacilitySlots(facility, date, date, officerId)).where((s) {
+    final slot = (await getFacilitySlots(facility, duration, date, date, officerId)).where((s) {
       final at = s['slot_at']! as DateTime;
       return '${_two(at.hour)}:${_two(at.minute)}' == time;
     }).firstOrNull;
@@ -80,9 +90,9 @@ class TreatmentModel extends Model {
       claimId: claimId,
       reportId: reportId,
       officerId: officerId,
-      treatmentType: type.trim(),
+      treatmentType: type,
       durationMinutes: duration,
-      facilityName: facility.trim(),
+      facilityName: facility,
       scheduledDate: date,
       scheduledTime: time,
     );

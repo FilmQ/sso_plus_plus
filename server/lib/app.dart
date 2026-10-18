@@ -81,7 +81,7 @@ class App {
   VerificationController verificationController(Request r) => VerificationController(
       sessionOf(r), db, ClaimModel(claims, storage), NotificationModel(notifications), storage);
 
-  ReportController reportController(Request r) => ReportController(sessionOf(r), ReportModel(reports));
+  ReportController reportController(Request r) => ReportController(sessionOf(r), ReportModel(reports), storage);
 
   /// U4.3: QU4.3 every day (D-043).
   AutoCancelJob autoCancelJob() => AutoCancelJob(treatmentController);
