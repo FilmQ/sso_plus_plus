@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../pages/console/consultant/consultant_schedule_page.dart';
+import '../pages/console/consultant/create_report_page.dart';
 import '../pages/console/console_login_page.dart';
 import '../pages/console/reports/consultation_report_page.dart';
 import '../pages/console/reports/report_list_page.dart';
@@ -12,7 +13,6 @@ import '../pages/console/treatment/schedule_treatment_page.dart';
 import '../pages/console/verification/eligibility_decision_page.dart';
 import '../pages/console/verification/verification_page.dart';
 import '../session/session_providers.dart';
-import '../widgets/pending_page.dart';
 import 'session_redirect.dart';
 import 'session_refresh.dart';
 
@@ -51,10 +51,7 @@ final Provider<GoRouter> consoleRouterProvider = Provider<GoRouter>((Ref ref) {
           ),
           GoRoute(
             path: '/consultations',
-            builder: (BuildContext context, GoRouterState state) => const ConsolePage(
-                title: 'Create Consultation Report',
-                subtitle: '',
-                body: PendingPage(title: 'Create Consultation Report', useCases: 'C2.1 to C2.3')),
+            builder: (BuildContext context, GoRouterState state) => const CreateReportPage(),
           ),
           GoRoute(
             path: '/verification',
