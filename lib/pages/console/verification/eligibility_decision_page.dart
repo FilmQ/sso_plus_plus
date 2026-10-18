@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../api/api_exception.dart';
 import '../../../api/verification_api.dart';
 import '../../../session/session_providers.dart';
+import '../scheduling/scheduling_providers.dart';
 import '../shell/console_shell.dart';
 import 'claim_cards.dart';
 import 'confirm_result_dialog.dart';
@@ -69,6 +70,7 @@ class _EligibilityDecisionPageState extends ConsumerState<EligibilityDecisionPag
               overrideReason: text(_decision.overrideReason));
       setState(() => _saved = <String, Object?>{...r, 'reason': reason});
       ref.invalidate(verificationListProvider);
+      ref.invalidate(claimsToScheduleProvider); // O2: the claim moves to scheduling
       _snack(covered
           ? 'Result saved. $name has been notified.'
           : 'Claim rejected. $name has been sent the reason and your message.');

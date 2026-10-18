@@ -13,6 +13,10 @@ abstract final class DateText {
   /// 'FMDD / FMMM / YYYY', for example '20 / 10 / 2026' (Q3.2).
   static String slashed(DateTime d) => '${d.day} / ${d.month} / ${d.year}';
 
+  /// 'Dy FMDD FMMonth YYYY', for example 'Fri 16 October 2026' (QO4.2).
+  static String withDay(DateTime d) =>
+      '${const <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1]} ${long(d)}';
+
   /// 'yyyy-MM-dd', for the server.
   static String iso(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 }

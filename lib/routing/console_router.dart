@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/console/console_home_page.dart';
 import '../pages/console/console_login_page.dart';
+import '../pages/console/scheduling/schedule_appointment_page.dart';
 import '../pages/console/shell/console_shell.dart';
 import '../pages/console/verification/eligibility_decision_page.dart';
 import '../pages/console/verification/verification_page.dart';
@@ -53,7 +54,10 @@ final Provider<GoRouter> consoleRouterProvider = Provider<GoRouter>((Ref ref) {
               ),
             ],
           ),
-          _pending('/scheduling', 'Scheduling', 'O4'),
+          GoRoute(
+            path: '/scheduling',
+            builder: (BuildContext context, GoRouterState state) => const ScheduleAppointmentPage(),
+          ),
           _pending('/treatment', 'Treatment', 'O5.1 and O5.2'),
           _pending('/reports', 'Consultation Reports', 'O6'),
         ],

@@ -75,6 +75,7 @@ treatment that is still Pending, sets the claim to `Withdrawn` and sends the mes
 The seed has no claim to verify. First submit a claim in the user app (U1). Then sign in to the console as
 `kanya.w@sso.go.th`: the claim is on the Verification Page (O1), and the officer can approve it (O2) or reject it
 (O3). The seed documents have no files, but the files of a U1 claim open with "View".
+An approved claim is then on the Scheduling page (O4): choose a date and a free hour, then "Offer to the Consultant".
 
 ## Lint and test
 

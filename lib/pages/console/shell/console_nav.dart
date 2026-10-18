@@ -6,6 +6,7 @@ import '../../../session/session_providers.dart';
 import '../../../session/user_session.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/person_avatar.dart';
+import '../scheduling/scheduling_providers.dart';
 import '../verification/verification_providers.dart';
 
 /// One destination of the officer navigation (Figma O1-1, left side).
@@ -41,6 +42,12 @@ class ConsoleNav extends ConsumerWidget {
     // QO1.2: the number of claims that wait for verification.
     final Map<String, Object?>? counts = ref.watch(verificationListProvider).value?['counts'] as Map<String, Object?>?;
     final Object? awaiting = counts?['awaiting_verification'];
+    // QO4.1: the number of claims ready to schedule.
+    final int? toSchedule = ref.watch(claimsToScheduleProvider).value?.length;
+    final Map<String, String?> navCounts = <String, String?>{
+      '/verification': awaiting?.toString(),
+      '/scheduling': toSchedule?.toString(),
+    };
     return Container(
       width: 256,
       color: colors.surfaceContainerLow,
@@ -68,7 +75,7 @@ class ConsoleNav extends ConsumerWidget {
               _NavItem(
                 destination: d,
                 selected: location.startsWith(d.path),
-                count: d.path == '/verification' ? awaiting?.toString() : null,
+                count: navCounts[d.path],
               ),
             const Spacer(),
             Padding(

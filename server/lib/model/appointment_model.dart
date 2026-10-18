@@ -41,4 +41,46 @@ class AppointmentModel extends Model {
   /// QU5.1 (U5): the Pending and Confirmed appointments from today on.
   Future<List<Map<String, Object?>>> getUpcomingAppointments(int insuredId) =>
       appointments.findUpcomingAppointments(insuredId);
+
+  /// QO4.1 (O4 step 2): the Covered claims without a Pending or Confirmed
+  /// appointment.
+  Future<List<Map<String, Object?>>> getClaimsToSchedule() => appointments.findClaimsToSchedule();
+
+  /// QO4.2 (O4 step 2.1): one row per consultant and bookable hour of
+  /// [slotDate], with slot_state free, mine or busy.
+  Future<List<Map<String, Object?>>> getConsultantSlots(String slotDate, int officerId) =>
+      appointments.findConsultantSlots(slotDate, officerId);
+
+  /// QO4.3 (O4 step 6.1): an Onsite appointment at the consultant's office.
+  /// QO4.3 checks nothing, so the Model first checks (D-051): the date is after
+  /// [today] (422), the claim is in QO4.1 (409), and the hour is 'free' for the
+  /// consultant in QO4.2 (409). Gives the appointment_id and the slot.
+  Future<({int appointmentId, DateTime slotAt})> createAppointment(int claimId, int consultantId, String date,
+      String time, {required int officerId, required String today}) async {
+    if (date.compareTo(today) <= 0) {
+      throw const ValidationFailedException({'date': 'Choose a date after today.'});
+    }
+    if (!(await getClaimsToSchedule()).any((c) => c['claim_id'] == claimId)) {
+      throw const StateConflictException('The claim cannot be scheduled. Open the page again.');
+    }
+    final slot = (await getConsultantSlots(date, officerId)).where((s) {
+      final at = s['slot_at']! as DateTime;
+      return s['consultant_id'] == consultantId && '${_two(at.hour)}:${_two(at.minute)}' == time;
+    }).firstOrNull;
+    if (slot == null || slot['slot_state'] != 'free') {
+      throw const StateConflictException('This time is not free any more. Choose another time.');
+    }
+    final id = await appointments.insertAppointment(
+      claimId: claimId,
+      officerId: officerId,
+      consultantId: consultantId,
+      appointmentType: 'Onsite',
+      scheduleDate: date,
+      scheduleTime: time,
+      location: slot['office_location']! as String,
+    );
+    return (appointmentId: id, slotAt: slot['slot_at']! as DateTime);
+  }
+
+  static String _two(int n) => n.toString().padLeft(2, '0');
 }

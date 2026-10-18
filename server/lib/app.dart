@@ -10,6 +10,7 @@ import 'controller/treatment_controller.dart';
 import 'controller/verification_controller.dart';
 import 'db/db_connector.dart';
 import 'http/auth_routes.dart';
+import 'http/officer_scheduling_routes.dart';
 import 'http/officer_verification_routes.dart';
 import 'http/cors.dart';
 import 'http/json.dart';
@@ -89,6 +90,7 @@ class App {
     addU4Routes(router, treatmentController);
     addScheduleRoutes(router, appointmentController, treatmentController);
     addVerificationRoutes(router, verificationController);
+    addSchedulingRoutes(router, appointmentController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())

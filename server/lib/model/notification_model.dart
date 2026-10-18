@@ -21,6 +21,9 @@ class NotificationModel extends Model {
   Future<int> notifyUser(int claimId, String subject, String body) =>
       notifications.insertNotification(claimId: claimId, subject: subject, body: body);
 
+  /// QN.3: O4 step 6.1, a message to the user and one to the consultant.
+  Future<int> notifyUserAndConsultant(int appointmentId) => notifications.insertAppointmentNotices(appointmentId);
+
   /// QN.2: O3 step 6.1, the rejection message with the reason and the
   /// officer's message.
   Future<int> notifyRejection(int claimId) => notifications.insertRejectionNotice(claimId);
