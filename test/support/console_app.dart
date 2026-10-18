@@ -16,13 +16,26 @@ const Map<String, Object?> officerSession = <String, Object?>{
   },
 };
 
+/// The session body of consultant 1, as POST /auth/login gives it.
+const Map<String, Object?> consultantSession = <String, Object?>{
+  'token': 't',
+  'session': <String, Object?>{
+    'account_id': 7,
+    'role': 'CONSULTANT',
+    'display_name': 'นพ. ธนา ศรีสุข',
+    'first_name': 'ธนา',
+    'consultant_id': 1,
+  },
+};
+
 /// Starts the console in the Figma desktop frame (1440 x 900) and signs in
-/// as officer 1.
-Future<void> signInToConsole(WidgetTester tester, FakeServer server) async {
+/// as officer 1, or with [session].
+Future<void> signInToConsole(WidgetTester tester, FakeServer server,
+    {Map<String, Object?> session = officerSession}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(1440, 900);
   addTearDown(tester.view.reset);
-  server.json('POST /auth/login', officerSession);
+  server.json('POST /auth/login', session);
   await tester.pumpWidget(testApp(server, consoleRouterProvider, app: 'console'));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('login_name')), 'kanya.w@sso.go.th');

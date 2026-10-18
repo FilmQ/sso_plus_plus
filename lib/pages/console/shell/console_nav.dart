@@ -6,6 +6,7 @@ import '../../../session/session_providers.dart';
 import '../../../session/user_session.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/person_avatar.dart';
+import '../consultant/consultant_providers.dart';
 import '../reports/report_providers.dart';
 import '../scheduling/scheduling_providers.dart';
 import '../treatment/treatment_providers.dart';
@@ -28,7 +29,13 @@ const List<ConsoleDestination> officerDestinations = <ConsoleDestination>[
   ConsoleDestination('Consultation Reports', Icons.description, '/reports'),
 ];
 
-/// The left navigation of the console: the logo, the officer pages with
+/// The consultant pages (site map: diagrams/sitemap-consultant.png).
+const List<ConsoleDestination> consultantDestinations = <ConsoleDestination>[
+  ConsoleDestination('Schedule Page', Icons.calendar_month, '/schedule'),
+  ConsoleDestination('Create Consultation Report', Icons.edit_note, '/consultations'),
+];
+
+/// The left navigation of the console: the logo, the pages of the role with
 /// their counts, and the signed-in person with "Sign out".
 class ConsoleNav extends ConsumerWidget {
   const ConsoleNav({super.key, required this.location});
@@ -41,6 +48,7 @@ class ConsoleNav extends ConsumerWidget {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final TextTheme text = Theme.of(context).textTheme;
     final UserSession? session = ref.watch(sessionProvider).value;
+    final bool officer = session?.isOfficer ?? true;
     // QO1.2: the number of claims that wait for verification.
     final Map<String, Object?>? counts = ref.watch(verificationListProvider).value?['counts'] as Map<String, Object?>?;
     final Object? awaiting = counts?['awaiting_verification'];
@@ -53,6 +61,9 @@ class ConsoleNav extends ConsumerWidget {
       '/treatment': ref.watch(claimsForTreatmentProvider).value?.length.toString(),
       // QO6.1: the number of filed reports.
       '/reports': ref.watch(reportListProvider).value?.length.toString(),
+      // QC1.1 and QC2.1 (consultant).
+      '/schedule': ref.watch(consultantScheduleProvider).value?.length.toString(),
+      '/consultations': ref.watch(pendingConsultationsProvider).value?.length.toString(),
     };
     return Container(
       width: 256,
@@ -75,9 +86,10 @@ class ConsoleNav extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text('EVALUATION OFFICER', style: text.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
+              child: Text(officer ? 'EVALUATION OFFICER' : 'CONSULTANT',
+                  style: text.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
             ),
-            for (final ConsoleDestination d in officerDestinations)
+            for (final ConsoleDestination d in officer ? officerDestinations : consultantDestinations)
               _NavItem(
                 destination: d,
                 selected: location.startsWith(d.path),
@@ -91,7 +103,7 @@ class ConsoleNav extends ConsumerWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                     Text(session?.displayName ?? '', style: text.titleSmall),
-                    Text('Evaluation Officer', style: text.bodySmall),
+                    Text(officer ? 'Evaluation Officer' : 'Consultant', style: text.bodySmall),
                   ]),
                 ),
                 IconButton(
