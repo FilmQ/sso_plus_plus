@@ -70,6 +70,12 @@ The server runs `AutoCancelJob` (U4.3) when it starts and every day at 00:05: on
 treatment that is still Pending, sets the claim to `Withdrawn` and sends the message "Treatment cancelled".
 `make db-reset` loads the seed again with new dates.
 
+### O1 to O3 demo data
+
+The seed has no claim to verify. First submit a claim in the user app (U1). Then sign in to the console as
+`kanya.w@sso.go.th`: the claim is on the Verification Page (O1), and the officer can approve it (O2) or reject it
+(O3). The seed documents have no files, but the files of a U1 claim open with "View".
+
 ## Lint and test
 
 ```sh

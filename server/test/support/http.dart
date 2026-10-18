@@ -38,6 +38,12 @@ class TestClient {
     return TestResponse(response.statusCode, text.isEmpty ? null : jsonDecode(text));
   }
 
+  /// A GET of a file: the status, the content type and the bytes.
+  Future<(int, String?, List<int>)> getBytes(String path) async {
+    final response = await handler(Request('GET', _uri(path), headers: _headers()));
+    return (response.statusCode, response.headers['content-type'], await response.read().expand((b) => b).toList());
+  }
+
   /// Signs in and keeps the token for the next requests.
   Future<TestResponse> login(String loginName, {String password = 'Password123', String app = 'user'}) async {
     final r = await post('/auth/login', {'login_name': loginName, 'password': password, 'app': app});

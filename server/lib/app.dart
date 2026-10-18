@@ -7,8 +7,10 @@ import 'controller/appointment_controller.dart';
 import 'controller/insured_form_controller.dart';
 import 'controller/notification_controller.dart';
 import 'controller/treatment_controller.dart';
+import 'controller/verification_controller.dart';
 import 'db/db_connector.dart';
 import 'http/auth_routes.dart';
+import 'http/officer_verification_routes.dart';
 import 'http/cors.dart';
 import 'http/json.dart';
 import 'http/schedule_routes.dart';
@@ -68,6 +70,9 @@ class App {
   TreatmentController treatmentController([Request? r]) =>
       TreatmentController(r == null ? null : sessionOf(r), db, TreatmentModel(treatments));
 
+  VerificationController verificationController(Request r) => VerificationController(
+      sessionOf(r), db, ClaimModel(claims, storage), NotificationModel(notifications), storage);
+
   /// U4.3: QU4.3 every day (D-043).
   AutoCancelJob autoCancelJob() => AutoCancelJob(treatmentController);
 
@@ -83,6 +88,7 @@ class App {
     addU3Routes(router, appointmentController);
     addU4Routes(router, treatmentController);
     addScheduleRoutes(router, appointmentController, treatmentController);
+    addVerificationRoutes(router, verificationController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())

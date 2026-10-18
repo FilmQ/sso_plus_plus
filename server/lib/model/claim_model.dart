@@ -57,6 +57,27 @@ class ClaimModel extends Model {
     return assigned;
   }
 
+  /// O1 steps 1 to 2: the claims to verify (QO1.1) and the counts by status
+  /// (QO1.2).
+  Future<({List<Map<String, Object?>> claims, Map<String, Object?> counts})> getPendingApplications() async =>
+      (claims: await claims.findPendingClaims(), counts: await claims.countByStatus());
+
+  /// O1 step 4: the header and summary (QO1.3), the documents (QO1.4) and the
+  /// automatic Section 33 result (QO1.5, null when there is none). Null when
+  /// the claim does not exist.
+  Future<Map<String, Object?>?> getClaimDetail(int claimId) async {
+    final summary = await claims.findClaimSummary(claimId);
+    if (summary == null) return null;
+    return {
+      'summary': summary,
+      'documents': await claims.findDocuments(claimId),
+      'eligibility': await claims.findAutoEligibility(claimId),
+    };
+  }
+
+  /// O3 step 2: the rejection reasons of the dropdown (QO1.6).
+  Future<List<Map<String, Object?>>> getRejectionReasons() => claims.findRejectionReasons();
+
   /// O2 Approve Injury Application: QO2.1 with result 'Covered'. QO2.1 itself
   /// decides only a claim that is not yet decided; else StateConflictException.
   Future<void> confirmResult(int claimId, {required int officerId, String? overrideReason}) =>
@@ -64,10 +85,14 @@ class ClaimModel extends Model {
           claimId: claimId, result: 'Covered', officerId: officerId, overrideReason: overrideReason));
 
   /// O3 Reject Injury Application: QO3.1 ('Not covered'), then QO3.2 ('Rejected').
+  /// Without an override reason, QO3.1 saves the reason code as the override
+  /// reason, because the data dictionary needs one when the officer changes
+  /// the automatic result (D-048).
   Future<void> rejectApplication(int claimId,
-          {required int officerId, required String reasonCode, String? officerMessage}) =>
+          {required int officerId, required String reasonCode, String? officerMessage, String? overrideReason}) =>
       _decide(() async {
-        await claims.saveResult(claimId: claimId, result: 'Not covered', officerId: officerId, overrideReason: reasonCode);
+        await claims.saveResult(
+            claimId: claimId, result: 'Not covered', officerId: officerId, overrideReason: overrideReason ?? reasonCode);
         await claims.insertRejection(
             claimId: claimId, reasonCode: reasonCode, officerId: officerId, officerMessage: officerMessage);
       });
