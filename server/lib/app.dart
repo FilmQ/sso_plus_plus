@@ -6,10 +6,12 @@ import 'config.dart';
 import 'controller/appointment_controller.dart';
 import 'controller/insured_form_controller.dart';
 import 'controller/notification_controller.dart';
+import 'controller/report_controller.dart';
 import 'controller/treatment_controller.dart';
 import 'controller/verification_controller.dart';
 import 'db/db_connector.dart';
 import 'http/auth_routes.dart';
+import 'http/officer_report_routes.dart';
 import 'http/officer_scheduling_routes.dart';
 import 'http/officer_treatment_routes.dart';
 import 'http/officer_verification_routes.dart';
@@ -26,11 +28,13 @@ import 'model/appointment_model.dart';
 import 'model/claim_model.dart';
 import 'model/insured_person_model.dart';
 import 'model/notification_model.dart';
+import 'model/report_model.dart';
 import 'model/treatment_model.dart';
 import 'repository/appointment_repository.dart';
 import 'repository/claim_repository.dart';
 import 'repository/insured_person_repository.dart';
 import 'repository/notification_repository.dart';
+import 'repository/report_repository.dart';
 import 'repository/treatment_repository.dart';
 import 'repository/user_account_repository.dart';
 import 'storage/file_storage.dart';
@@ -53,6 +57,7 @@ class App {
   late final notifications = NotificationRepository(db);
   late final appointments = AppointmentRepository(db);
   late final treatments = TreatmentRepository(db);
+  late final reports = ReportRepository(db);
 
   InsuredFormController insuredFormController() => InsuredFormController(
         db: db,
@@ -76,6 +81,8 @@ class App {
   VerificationController verificationController(Request r) => VerificationController(
       sessionOf(r), db, ClaimModel(claims, storage), NotificationModel(notifications), storage);
 
+  ReportController reportController(Request r) => ReportController(sessionOf(r), ReportModel(reports));
+
   /// U4.3: QU4.3 every day (D-043).
   AutoCancelJob autoCancelJob() => AutoCancelJob(treatmentController);
 
@@ -94,6 +101,7 @@ class App {
     addVerificationRoutes(router, verificationController);
     addSchedulingRoutes(router, appointmentController);
     addOfficerTreatmentRoutes(router, treatmentController);
+    addOfficerReportRoutes(router, reportController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())

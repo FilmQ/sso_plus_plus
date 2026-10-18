@@ -130,7 +130,7 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
         loading: claims.isLoading,
         onSelect: (int id) => setState(() => (claimId = id, selectedSlot = null)),
       ),
-      if (claim != null) ReportShortcutCard(claim: claim, onView: () => context.go('/reports')),
+      if (claim != null) ReportShortcutCard(claim: claim, onView: () => context.go('/reports/${claim['report_id']}')),
       TreatmentForm(
         type: type,
         duration: duration,

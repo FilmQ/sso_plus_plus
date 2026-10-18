@@ -6,6 +6,7 @@ import '../../../session/session_providers.dart';
 import '../../../session/user_session.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/person_avatar.dart';
+import '../reports/report_providers.dart';
 import '../scheduling/scheduling_providers.dart';
 import '../treatment/treatment_providers.dart';
 import '../verification/verification_providers.dart';
@@ -50,6 +51,8 @@ class ConsoleNav extends ConsumerWidget {
       '/scheduling': toSchedule?.toString(),
       // QO5.1: the number of claims with a filed report.
       '/treatment': ref.watch(claimsForTreatmentProvider).value?.length.toString(),
+      // QO6.1: the number of filed reports.
+      '/reports': ref.watch(reportListProvider).value?.length.toString(),
     };
     return Container(
       width: 256,

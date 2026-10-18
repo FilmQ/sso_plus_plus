@@ -4,13 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../pages/console/console_home_page.dart';
 import '../pages/console/console_login_page.dart';
+import '../pages/console/reports/consultation_report_page.dart';
+import '../pages/console/reports/report_list_page.dart';
 import '../pages/console/scheduling/schedule_appointment_page.dart';
 import '../pages/console/shell/console_shell.dart';
 import '../pages/console/treatment/schedule_treatment_page.dart';
 import '../pages/console/verification/eligibility_decision_page.dart';
 import '../pages/console/verification/verification_page.dart';
 import '../session/session_providers.dart';
-import '../widgets/pending_page.dart';
 import 'session_redirect.dart';
 import 'session_refresh.dart';
 
@@ -63,16 +64,20 @@ final Provider<GoRouter> consoleRouterProvider = Provider<GoRouter>((Ref ref) {
             path: '/treatment',
             builder: (BuildContext context, GoRouterState state) => const ScheduleTreatmentPage(),
           ),
-          _pending('/reports', 'Consultation Reports', 'O6'),
+          GoRoute(
+            path: '/reports',
+            builder: (BuildContext context, GoRouterState state) => const ReportListPage(),
+            routes: <RouteBase>[
+              GoRoute(
+                path: ':reportId',
+                builder: (BuildContext context, GoRouterState state) => ConsultationReportPage(
+                    key: ValueKey<String>(state.pathParameters['reportId']!),
+                    reportId: int.parse(state.pathParameters['reportId']!)),
+              ),
+            ],
+          ),
         ],
       ),
     ],
   );
 });
-
-/// An officer page that a later step builds.
-GoRoute _pending(String path, String title, String useCases) => GoRoute(
-      path: path,
-      builder: (BuildContext context, GoRouterState state) =>
-          ConsolePage(title: title, subtitle: '', body: PendingPage(title: title, useCases: useCases)),
-    );
