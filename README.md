@@ -77,6 +77,12 @@ The seed has no claim to verify. First submit a claim in the user app (U1). Then
 (O3). The seed documents have no files, but the files of a U1 claim open with "View".
 An approved claim is then on the Scheduling page (O4): choose a date and a free hour, then "Offer to the Consultant".
 
+### O5 and O6 demo data
+
+Consultation Reports (O6) shows the 3 filed seed reports; CR-0087 is not viewed yet, and "View" marks it as viewed.
+The Treatment page (O5.1, O5.2) lists a Covered claim with a filed report and no open treatment. The seed has none
+(claim 149 has the Pending treatment 403), so this page is empty until a consultant files a report (C2, later).
+
 ## Lint and test
 
 ```sh
