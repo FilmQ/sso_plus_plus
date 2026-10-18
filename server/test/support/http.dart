@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:shelf/shelf.dart';
 import 'package:sst_server/app.dart';
 import 'package:sst_server/config.dart';
@@ -36,6 +37,18 @@ class TestClient {
     final response = await handler(request);
     final text = await response.readAsString();
     return TestResponse(response.statusCode, text.isEmpty ? null : jsonDecode(text));
+  }
+
+  /// A multipart/form-data POST with text [fields] and [files] (part name to
+  /// file name and bytes), as the Flutter pages send it.
+  Future<TestResponse> postMultipart(String path,
+      {Map<String, String> fields = const {}, Map<String, (String, List<int>)> files = const {}}) async {
+    final m = http.MultipartRequest('POST', _uri(path))..fields.addAll(fields);
+    for (final MapEntry(key: name, value: (fileName, bytes)) in files.entries) {
+      m.files.add(http.MultipartFile.fromBytes(name, bytes, filename: fileName));
+    }
+    final stream = m.finalize();
+    return _send(Request('POST', m.url, headers: {...m.headers, ..._headers()}, body: stream));
   }
 
   /// A GET of a file: the status, the content type and the bytes.

@@ -22,6 +22,8 @@ class AppointmentController extends Controller {
 
   int get _officerId => requireRole(Role.officer).officerId!;
 
+  int get _consultantId => requireRole(Role.consultant).consultantId!;
+
   static final _date = RegExp(r'^\d{4}-\d{2}-\d{2}$');
   static final _time = RegExp(r'^\d{2}:\d{2}$');
 
@@ -92,6 +94,9 @@ class AppointmentController extends Controller {
   Future<void> _markRead(int? notificationId) async {
     if (notificationId != null) await notificationModel.markRead(notificationId, _insuredId);
   }
+
+  /// C1 steps 1 to 2 (QC1.1): the Schedule Page of the consultant.
+  Future<List<Map<String, Object?>>> getSchedule() => appointmentModel.getConsultantSchedule(_consultantId);
 
   /// O4 steps 1 to 2 (QO4.1): the claims of the Scheduling page.
   Future<List<Map<String, Object?>>> getClaimsToSchedule() {

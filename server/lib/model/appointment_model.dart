@@ -42,6 +42,11 @@ class AppointmentModel extends Model {
   Future<List<Map<String, Object?>>> getUpcomingAppointments(int insuredId) =>
       appointments.findUpcomingAppointments(insuredId);
 
+  /// QC1.1 (C1 step 2): the Confirmed appointments of the consultant from
+  /// today on.
+  Future<List<Map<String, Object?>>> getConsultantSchedule(int consultantId) =>
+      appointments.findConfirmedAppointments(consultantId);
+
   /// QO4.1 (O4 step 2): the Covered claims without a Pending or Confirmed
   /// appointment.
   Future<List<Map<String, Object?>>> getClaimsToSchedule() => appointments.findClaimsToSchedule();

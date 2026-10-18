@@ -12,6 +12,10 @@ abstract interface class FileStorage {
   /// Removes all files of [claimId] (when the submission rolls back).
   Future<void> deleteClaim(int claimId);
 
+  /// Keeps the report file of a consultation session (C2.1 [Attach file]) and
+  /// gives its report_file_uri, for example '/reports/306/xray.pdf'.
+  Future<String> saveReportFile(int sessionId, String fileName, Uint8List bytes);
+
   /// The bytes of a [save]d file (O1 step 6), or null when there is no file.
   Future<Uint8List?> read(String fileUri);
 }
@@ -23,8 +27,16 @@ class LocalFileStorage implements FileStorage {
   final String root;
 
   @override
-  Future<String> save(int claimId, String fileName, Uint8List bytes) async {
-    final dir = Directory(p.join(root, 'claims', '$claimId'));
+  Future<String> save(int claimId, String fileName, Uint8List bytes) => _saveIn('claims', claimId, fileName, bytes);
+
+  @override
+  Future<String> saveReportFile(int sessionId, String fileName, Uint8List bytes) =>
+      _saveIn('reports', sessionId, fileName, bytes);
+
+  /// Keeps [bytes] as `<root>/<folder>/<id>/<file name>`; a second file with
+  /// the same name gets a number. Gives `/<folder>/<id>/<file name>`.
+  Future<String> _saveIn(String folder, int id, String fileName, Uint8List bytes) async {
+    final dir = Directory(p.join(root, folder, '$id'));
     await dir.create(recursive: true);
     var name = _safeName(fileName);
     var n = 1;
@@ -32,7 +44,7 @@ class LocalFileStorage implements FileStorage {
       name = '${p.basenameWithoutExtension(_safeName(fileName))}_${n++}${p.extension(fileName)}';
     }
     await File(p.join(dir.path, name)).writeAsBytes(bytes, flush: true);
-    return '/claims/$claimId/$name';
+    return '/$folder/$id/$name';
   }
 
   @override
@@ -44,11 +56,15 @@ class LocalFileStorage implements FileStorage {
   @override
   Future<Uint8List?> read(String fileUri) async {
     final parts = p.posix.split(fileUri).where((String s) => s != '/').toList();
-    // Only '/claims/<claim_id>/<file name>', as [save] gives it.
-    if (parts.length != 3 || parts[0] != 'claims' || int.tryParse(parts[1]) == null || parts[2] != _safeName(parts[2])) {
+    // Only '/claims/<claim_id>/<file name>' or '/reports/<session_id>/<file name>',
+    // as [save] and [saveReportFile] give them.
+    if (parts.length != 3 ||
+        !const ['claims', 'reports'].contains(parts[0]) ||
+        int.tryParse(parts[1]) == null ||
+        parts[2] != _safeName(parts[2])) {
       return null;
     }
-    final file = File(p.join(root, 'claims', parts[1], parts[2]));
+    final file = File(p.join(root, parts[0], parts[1], parts[2]));
     return file.existsSync() ? file.readAsBytes() : null;
   }
 

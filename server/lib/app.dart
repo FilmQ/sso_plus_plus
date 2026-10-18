@@ -11,6 +11,7 @@ import 'controller/treatment_controller.dart';
 import 'controller/verification_controller.dart';
 import 'db/db_connector.dart';
 import 'http/auth_routes.dart';
+import 'http/consultant_routes.dart';
 import 'http/officer_report_routes.dart';
 import 'http/officer_scheduling_routes.dart';
 import 'http/officer_treatment_routes.dart';
@@ -81,7 +82,7 @@ class App {
   VerificationController verificationController(Request r) => VerificationController(
       sessionOf(r), db, ClaimModel(claims, storage), NotificationModel(notifications), storage);
 
-  ReportController reportController(Request r) => ReportController(sessionOf(r), ReportModel(reports), storage);
+  ReportController reportController(Request r) => ReportController(sessionOf(r), db, ReportModel(reports), storage);
 
   /// U4.3: QU4.3 every day (D-043).
   AutoCancelJob autoCancelJob() => AutoCancelJob(treatmentController);
@@ -102,6 +103,7 @@ class App {
     addSchedulingRoutes(router, appointmentController);
     addOfficerTreatmentRoutes(router, treatmentController);
     addOfficerReportRoutes(router, reportController);
+    addConsultantRoutes(router, appointmentController, reportController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())
