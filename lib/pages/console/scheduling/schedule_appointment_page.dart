@@ -43,6 +43,7 @@ class _ScheduleAppointmentPageState extends ConsumerState<ScheduleAppointmentPag
       initialDate: slotDate,
       firstDate: DateTime(now.year, now.month, now.day + 1),
       lastDate: DateTime(now.year + 1, now.month, now.day),
+      selectableDayPredicate: (DateTime d) => d.weekday <= DateTime.friday, // weekdays only (QO4.2)
     );
     if (d != null) setState(() => (slotDate = d, selectedSlot = null));
   }

@@ -75,7 +75,10 @@ class AvailabilityCard extends StatelessWidget {
 
 /// The colour legend under the date (Figma O4-1).
 class SlotLegend extends StatelessWidget {
-  const SlotLegend({super.key});
+  const SlotLegend({super.key, this.busy = 'Busy, not clickable'});
+
+  /// The text of the grey hours (O5.1-1 adds the 12:00 and 17:00 limits).
+  final String busy;
 
   @override
   Widget build(BuildContext context) {
@@ -88,11 +91,11 @@ class SlotLegend extends StatelessWidget {
             decoration: BoxDecoration(
                 color: fill, border: Border.all(color: border), borderRadius: BorderRadius.circular(4)),
           ),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
         ]);
     return Wrap(spacing: 16, runSpacing: 8, children: <Widget>[
       item(colors.surfaceContainerLowest, colors.outline, 'Free'),
-      item(colors.surfaceContainerHighest, colors.surfaceContainerHighest, 'Busy, not clickable'),
+      item(colors.surfaceContainerHighest, colors.surfaceContainerHighest, busy),
       item(colors.primary, colors.primary, 'Scheduled by you, pending'),
       item(colors.secondaryContainer, colors.primary, 'Selected'),
     ]);

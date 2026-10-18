@@ -29,13 +29,14 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
   Map<String, Object?>? selectedSlot;
   bool _busy = false;
 
-  /// The QO5.2 key of the chosen facility: tomorrow and the next days.
+  /// The QO5.2 key of the chosen facility and duration: tomorrow and the next
+  /// days.
   String? get _timesKey {
     if (type == null || duration == null || facility == null) return null;
     final DateTime now = DateTime.now();
     final DateTime from = DateTime(now.year, now.month, now.day + 1);
     final DateTime to = DateTime(now.year, now.month, now.day + TreatmentOptions.days);
-    return '$facility|${DateText.iso(from)}|${DateText.iso(to)}';
+    return '$facility|$duration|${DateText.iso(from)}|${DateText.iso(to)}';
   }
 
   void _reset() => setState(() => (claimId = null, type = null, duration = null, facility = null, selectedSlot = null));
@@ -50,7 +51,7 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
   /// "Treatment Booked" (O5.1-3).
   Future<void> bookSlot(Map<String, Object?> claim) async {
     final DateTime start = BookingSummary.startOf(selectedSlot!);
-    final String user = '${claim['user_name']}';
+    final String user = _fullName(claim);
     final bool? ok = await showTreatmentConfirmDialog(
       context,
       title: 'Do you confirm to book this treatment at $facility : ${DateText.long(start)} - ${DateText.time(start)}',
@@ -81,7 +82,7 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
   /// O5.2 steps 3 to 6: the confirmation card (O5.2-1), QO5.4 and QN.4, then
   /// "No Treatment Required" (O5.2-2).
   Future<void> clickNoTreatmentRequired(Map<String, Object?> claim) async {
-    final String user = '${claim['user_name']}';
+    final String user = _fullName(claim);
     final bool? ok = await showTreatmentConfirmDialog(
       context,
       title: 'Do you confirm that no treatment require for user $user',
@@ -97,6 +98,10 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
           text: 'Claim ${claim['claim_no']} is closed. $user has been notified that no treatment is required.');
     });
   }
+
+  /// The title and name of the user (QO5.1 title_name and user_name).
+  static String _fullName(Map<String, Object?> claim) =>
+      <Object?>[claim['title_name'], claim['user_name']].whereType<Object>().join(' ');
 
   /// Runs a change; a refused change shows the server message. Then the
   /// lists are loaded again and the form starts again.
@@ -138,7 +143,7 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
         slots: key == null ? null : ref.watch(availableTimesProvider(key)),
         selected: selectedSlot,
         onType: (String? v) => setState(() => type = v),
-        onDuration: (int? v) => setState(() => duration = v),
+        onDuration: (int? v) => setState(() => (duration = v, selectedSlot = null)),
         onFacility: (String? v) => setState(() => (facility = v, selectedSlot = null)),
         onSelect: (Map<String, Object?> s) => setState(() => selectedSlot = s),
       ),

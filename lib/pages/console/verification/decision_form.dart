@@ -16,8 +16,10 @@ class Decision {
 }
 
 /// "Officer decision" (Figma O2-1, O3-1): Confirm or Not Covered, the
-/// rejection reason (QO1.6) and the message for Not Covered, the optional
-/// override reason, and "Confirm Result". [errors] are the 422 field errors.
+/// rejection reason (QO1.6) and the message for Not Covered, the override
+/// reason (QO2.1 and QO3.1 need it when the decision differs from the
+/// automatic result; R-037), and "Confirm Result". [errors] are the 422 field
+/// errors.
 class DecisionForm extends StatelessWidget {
   const DecisionForm({
     super.key,
@@ -87,8 +89,8 @@ class DecisionForm extends StatelessWidget {
         controller: decision.overrideReason,
         maxLength: 255,
         decoration: InputDecoration(
-          labelText: 'Override reason (optional)',
-          hintText: 'Only needed if you disagree with the automatic result',
+          labelText: 'Override reason (required if your decision differs)',
+          hintText: 'Why your decision differs from the automatic result',
           border: const OutlineInputBorder(),
           errorText: errors['override_reason'] as String?,
         ),

@@ -52,7 +52,10 @@ class _DocumentDialogState extends State<_DocumentDialog> {
         width: 600,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12,
             children: <Widget>[
-          Text('${widget.document['file_size']}'),
+          Text(<Object?>[
+            widget.document['file_size'],
+            if (widget.document['uploaded_at'] != null) 'uploaded ${widget.document['uploaded_at']}',
+          ].whereType<Object>().join(' · ')),
           Container(
             height: 360,
             width: double.infinity,

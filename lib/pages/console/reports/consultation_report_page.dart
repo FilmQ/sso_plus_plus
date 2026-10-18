@@ -7,6 +7,7 @@ import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
 import '../shell/console_shell.dart';
 import '../verification/claim_cards.dart';
+import '../verification/document_dialog.dart';
 import 'report_providers.dart';
 import 'report_text_dialog.dart';
 import 'view_status_chip.dart';
@@ -26,14 +27,27 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
   /// The report after "View" (QO6.3 gives Viewed).
   Map<String, Object?>? _viewed;
 
-  /// O6 steps 3 to 4: QO6.3, then the report text (O6-3).
+  /// The file name of a report that is a file, or null for a text report.
+  static String? fileName(Map<String, Object?> r) {
+    final String? uri = r['report_file_uri'] as String?;
+    return uri?.substring(uri.lastIndexOf('/') + 1);
+  }
+
+  /// O6 steps 3 to 4: QO6.3, then the report text (4.1, O6-3) or the report
+  /// file (4.2, Alternate Case 1 [File]).
   Future<void> clickView() async {
     try {
       final Map<String, Object?> r = await ref.read(reportApiProvider).viewReport(widget.reportId);
       if (!mounted) return;
       setState(() => _viewed = r);
       ref.invalidate(reportListProvider);
-      await showReportTextDialog(context, r);
+      final String? file = fileName(r);
+      if (file == null) {
+        await showReportTextDialog(context, r);
+      } else {
+        await showDocumentDialog(context, <String, Object?>{'file_name': file, 'file_size': 'Report file'},
+            () => ref.read(reportApiProvider).openReportFile(widget.reportId));
+      }
     } on ApiException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(e.message));
     }
@@ -78,11 +92,11 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
       ]),
       ConsoleCard(title: 'Report', children: <Widget>[
         Row(spacing: 12, children: <Widget>[
-          Icon(Icons.notes, color: colors.primary),
+          Icon(fileName(r) == null ? Icons.notes : Icons.description, color: colors.primary),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              Text('Report text', style: Theme.of(context).textTheme.bodyLarge),
-              Text('Written report', style: Theme.of(context).textTheme.bodySmall),
+              Text(fileName(r) == null ? 'Report text' : 'Report file', style: Theme.of(context).textTheme.bodyLarge),
+              Text(fileName(r) ?? 'Written report', style: Theme.of(context).textTheme.bodySmall),
             ]),
           ),
           TextButton.icon(onPressed: clickView, icon: const Icon(Icons.visibility), label: const Text('View')),
@@ -104,7 +118,7 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
       ]),
       ConsoleCard(title: 'View status', children: <Widget>[
         Align(alignment: Alignment.centerLeft, child: ViewStatusChip('${r['view_status']}')),
-        Text(viewed ? 'An officer has opened this report.' : 'You have not opened this report yet'),
+        Text(viewed ? 'Viewed on ${r['viewed_at']}' : 'You have not opened this report yet'),
       ]),
       Container(
         padding: const EdgeInsets.all(16),

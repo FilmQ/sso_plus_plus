@@ -83,8 +83,8 @@ class LabelValue extends StatelessWidget {
   }
 }
 
-/// "Documents lodged with the claim" (QO1.4). QO1.4 gives no document type,
-/// so each row shows the file name and the size (R-039).
+/// "Documents lodged with the claim" (QO1.4): the document type, the file
+/// name and the size.
 class DocumentsCard extends StatelessWidget {
   const DocumentsCard({super.key, required this.documents, required this.onView});
 
@@ -105,8 +105,8 @@ class DocumentsCard extends StatelessWidget {
             Icon(isImage('${d['file_name']}') ? Icons.image : Icons.description, color: colors.primary),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                Text('${d['file_name']}', style: Theme.of(context).textTheme.bodyLarge),
-                Text('${d['file_size']}', style: Theme.of(context).textTheme.bodySmall),
+                Text('${d['document_type'] ?? d['file_name']}', style: Theme.of(context).textTheme.bodyLarge),
+                Text('${d['file_name']} · ${d['file_size']}', style: Theme.of(context).textTheme.bodySmall),
               ]),
             ),
             TextButton.icon(onPressed: () => onView(d), icon: const Icon(Icons.visibility), label: const Text('View')),

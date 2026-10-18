@@ -41,7 +41,14 @@ const Map<String, Object?> _claim = <String, Object?>{
     'body_part': 'Right wrist',
   },
   'documents': <Map<String, Object?>>[
-    <String, Object?>{'file_name': 'medical_record_rama.pdf', 'file_size': '845 kB', 'file_uri': '/claims/143/x.pdf'},
+    <String, Object?>{
+      'document_id': 2002,
+      'document_type': 'Medical Record File',
+      'file_name': 'medical_record_rama.pdf',
+      'file_size': '845 kB',
+      'uploaded_at': '2 October 2026 : 14:30',
+      'file_uri': '/claims/143/x.pdf',
+    },
   ],
   'eligibility': <String, Object?>{
     'eligibility_status': 'Covered',
@@ -97,7 +104,10 @@ void main() {
     expect(find.text('Siam Precision Parts Co., Ltd. · SSO account 1000123456'), findsOneWidget);
     expect(find.text('Confirm Result'), findsOneWidget);
 
+    expect(find.text('Medical Record File'), findsOneWidget);
+    expect(find.text('medical_record_rama.pdf · 845 kB'), findsOneWidget);
     await tapText(tester, 'View');
+    expect(find.text('845 kB · uploaded 2 October 2026 : 14:30'), findsOneWidget);
     expect(find.text('Download'), findsOneWidget);
     expect(find.textContaining('cannot show a preview'), findsOneWidget);
     await tapText(tester, 'Close');
@@ -174,6 +184,27 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
     expect(find.text('The claim is already decided.'), findsOneWidget);
+    expect(find.text('Confirm Result'), findsOneWidget);
+  });
+
+  testWidgets('R-037: a missing override reason shows the field error of the server (422)', (WidgetTester tester) async {
+    final FakeServer server = _server()
+      ..json('POST /o3/claims/143/reject', <String, Object?>{
+        'error': 'validation_failed',
+        'fields': <String, String>{
+          'override_reason': 'Give a reason, because your decision differs from the automatic result.',
+        },
+      }, status: 422);
+    await _openClaim(tester, server);
+    expect(find.text('Override reason (required if your decision differs)'), findsOneWidget);
+    await tapText(tester, 'Not Covered');
+    await tester.tap(find.byKey(const Key('rejection_reason')));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'R02 · ส่งเงินสมทบไม่ครบตามเงื่อนไข');
+    await tapText(tester, 'Confirm Result');
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Give a reason, because your decision differs from the automatic result.'), findsOneWidget);
     expect(find.text('Confirm Result'), findsOneWidget);
   });
 }

@@ -76,9 +76,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Fri 16 October 2026'), findsWidgets);
     expect(find.text('10:00 - 11:00'), findsOneWidget);
-    expect(find.text('Building A'), findsOneWidget);
-    expect(find.text('Floor 3, Room 305'), findsOneWidget);
-    expect(tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Add to waiting list')).enabled, isFalse);
+    expect(find.text('Onsite'), findsOneWidget);
+    expect(find.text("Consultant's office, Building A, Floor 3, Room 305"), findsOneWidget);
+    expect(find.text('Add to waiting list'), findsNothing, reason: 'R-042');
 
     await tapText(tester, 'Offer to the Consultant');
     expect(find.text('Do you confirm to make an appointment at 16 October 2026 and 10:00 - 11:00'), findsOneWidget);

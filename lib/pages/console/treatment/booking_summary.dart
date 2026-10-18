@@ -51,9 +51,15 @@ class BookingSummary extends StatelessWidget {
           ],
         );
     final DateTime? start = s == null ? null : startOf(s);
+    final String? recommended = c?['recommended_treatment'] as String?;
+    final bool none = c != null && (recommended == null || recommended == 'None');
     return ConsoleCard(
       title: 'Booking Summary',
       children: <Widget>[
+        // Figma O5.2-1: the report says that no treatment is required.
+        if (none && type == null && duration == null)
+          Text('Recommended treatment in the report from ${c['report_author']}: None. '
+              'No treatment is required for this claim.'),
         if (type != null || duration != null)
           section('Treatment details', <(String, String)>[
             ('Type', type ?? '-'),
@@ -75,6 +81,7 @@ class BookingSummary extends StatelessWidget {
           section('Report details', <(String, String)>[
             ('Report', ReportShortcutCard.reportNo(c['report_id'])),
             ('Signed', '${c['signed_date']} - ${c['report_author']}'),
+            if (!none) ('Recommended', recommended!),
           ]),
         ],
         FilledButton.icon(

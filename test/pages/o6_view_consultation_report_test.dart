@@ -7,7 +7,7 @@ import '../support/fake_server.dart';
 import '../support/user_app.dart';
 
 /// A QO6.2 row of report 87 with [view].
-Map<String, Object?> _report(String view) => <String, Object?>{
+Map<String, Object?> _report(String view, {String? file}) => <String, Object?>{
       'claim_no': 'SST-2026-000143',
       'user_name': 'สมชาย ประเสริฐ',
       'signed_date': '16 October 2026',
@@ -16,9 +16,11 @@ Map<String, Object?> _report(String view) => <String, Object?>{
       'consultation_datetime': '16 October 2026 : 10:00',
       'submitted_date': '16 October 2026',
       'consultant_name': 'นพ. ธนา ศรีสุข',
-      'report_content': 'Closed fracture of the distal radius, right wrist. Physiotherapy is recommended.',
+      'report_content': file == null ? 'Closed fracture of the distal radius, right wrist. Physiotherapy is recommended.' : null,
+      'report_file_uri': file,
       'signature_status': 'Signature signed',
       'view_status': view,
+      'viewed_at': view == 'Viewed' ? '17 October 2026 : 09:05' : null,
     };
 
 FakeServer _server() => FakeServer()
@@ -73,7 +75,28 @@ void main() {
     expect(find.textContaining('Physiotherapy is recommended.'), findsOneWidget);
     await tapText(tester, 'Close');
     expect(find.text('Viewed'), findsOneWidget);
-    expect(find.text('An officer has opened this report.'), findsOneWidget);
+    expect(find.text('Viewed on 17 October 2026 : 09:05'), findsOneWidget);
     expect(find.text('Go to Treatment'), findsOneWidget);
+  });
+
+  testWidgets('O6 Alternate Case 1 [File]: View opens the report file', (WidgetTester tester) async {
+    final FakeServer server = _server()
+      ..json('GET /o6/reports/87', <String, Object?>{'report': _report('Pending', file: '/claims/143/xray_right_wrist.pdf')})
+      ..json('POST /o6/reports/87/view',
+          <String, Object?>{'report': _report('Viewed', file: '/claims/143/xray_right_wrist.pdf')})
+      ..on('GET /o6/reports/87/file', (_) async => http.Response.bytes(
+          '%PDF'.codeUnits, 200, headers: <String, String>{'content-type': 'application/pdf'}));
+    await signInToConsole(tester, server);
+    await tapText(tester, 'Consultation Reports');
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Open').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Open').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Report file'), findsOneWidget);
+    expect(find.text('xray_right_wrist.pdf'), findsOneWidget);
+    await tapText(tester, 'View');
+    expect(server.requests.any((http.Request r) => r.url.path == '/o6/reports/87/file'), isTrue);
+    expect(find.text('Download'), findsOneWidget);
+    await tapText(tester, 'Close');
   });
 }

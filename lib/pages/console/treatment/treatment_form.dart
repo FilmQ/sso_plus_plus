@@ -48,7 +48,7 @@ class TreatmentForm extends StatelessWidget {
         ]),
         Text('Available Times', style: Theme.of(context).textTheme.titleSmall),
         _times(context),
-        const SlotLegend(),
+        const SlotLegend(busy: 'Busy or does not fit before 12:00 or 17:00, not clickable'),
       ],
     );
   }

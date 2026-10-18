@@ -51,7 +51,7 @@ class ClaimStatusChip extends StatelessWidget {
       'Covered' => (Icons.verified, ok.successContainer, ok.success),
       'No treatment required' => (Icons.task_alt, ok.successContainer, ok.success),
       'Rejected' || 'Not covered' => (Icons.block, colors.errorContainer, colors.onErrorContainer),
-      'Register unavailable' => (Icons.cloud_off, colors.tertiaryContainer, colors.onTertiaryContainer),
+      'Register unavailable' => (Icons.cloud_off, colors.secondaryContainer, colors.onSecondaryContainer),
       'Withdrawn' => (Icons.do_not_disturb_on, colors.surfaceContainerHighest, colors.onSurfaceVariant),
       _ => (Icons.hourglass_top, colors.secondaryContainer, colors.onSecondaryContainer),
     };

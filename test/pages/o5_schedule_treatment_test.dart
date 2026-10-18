@@ -22,7 +22,9 @@ FakeServer _server() => FakeServer()
       <String, Object?>{
         'claim_id': 143,
         'claim_no': 'SST-2026-000143',
+        'title_name': 'นาย',
         'user_name': 'สมชาย ประเสริฐ',
+        'recommended_treatment': 'Physiotherapy',
         'report_id': 87,
         'version_no': 1,
         'signed_date': '16 October 2026',
@@ -40,7 +42,7 @@ FakeServer _server() => FakeServer()
 Future<void> _choose(WidgetTester tester, String menu, String option) async {
   await tester.tap(find.byKey(Key(menu)));
   await tester.pumpAndSettle();
-  await tester.tap(find.text(option).last);
+  await tester.tap(find.widgetWithText(MenuItemButton, option).last);
   await tester.pumpAndSettle();
 }
 
@@ -61,20 +63,24 @@ void main() {
     expect(find.text('Choose a treatment type, duration and facility first.'), findsOneWidget);
 
     await _choose(tester, 'treatment_type', 'Physiotherapy');
-    await _choose(tester, 'duration', '60 minutes');
+    await _choose(tester, 'duration', '90 minutes');
     await _choose(tester, 'facility', 'SSO Rehabilitation Center');
     expect(tester.widget<ButtonStyleButton>(find.byKey(const ValueKey<String>('time:2026-10-23T09:00:00.000'))).enabled,
         isFalse);
     await tester.tap(find.text('Fri 23 Oct - 13:00'));
     await tester.pumpAndSettle();
     expect(find.text('Friday 23 October 2026'), findsOneWidget);
-    expect(find.text('13:00 - 14:00'), findsOneWidget);
+    expect(find.text('13:00 - 14:30'), findsOneWidget, reason: 'the end is the start plus 90 minutes');
     expect(find.text('16 October 2026 - นพ. ธนา ศรีสุข'), findsOneWidget);
+    expect(find.text('Recommended'), findsOneWidget);
+    final http.Request times = server.requests.lastWhere((http.Request r) => r.url.path == '/o5/available-times');
+    expect(times.url.queryParameters['duration'], '90');
+    expect(find.text('Busy or does not fit before 12:00 or 17:00, not clickable'), findsOneWidget);
 
     await tapText(tester, 'Book treatment');
     expect(find.text('Do you confirm to book this treatment at SSO Rehabilitation Center : 23 October 2026 - 13:00'),
         findsOneWidget);
-    expect(find.text('Physiotherapy, 60 minutes, for สมชาย ประเสริฐ (SST-2026-000143).'), findsOneWidget);
+    expect(find.text('Physiotherapy, 90 minutes, for นาย สมชาย ประเสริฐ (SST-2026-000143).'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
 
@@ -82,14 +88,14 @@ void main() {
     expect(jsonDecode(sent.body), <String, Object?>{
       'report_id': 87,
       'treatment_type': 'Physiotherapy',
-      'duration_minutes': 60,
+      'duration_minutes': 90,
       'facility_name': 'SSO Rehabilitation Center',
       'date': '2026-10-23',
       'time': '13:00',
     });
     expect(find.text('Treatment Booked'), findsOneWidget);
     expect(
-        find.text('Physiotherapy on 23 October 2026 : 13:00 at SSO Rehabilitation Center is booked. สมชาย ประเสริฐ '
+        find.text('Physiotherapy on 23 October 2026 : 13:00 at SSO Rehabilitation Center is booked. นาย สมชาย ประเสริฐ '
             'has been notified and can accept or ask for another date.'),
         findsOneWidget);
     await tapText(tester, 'OK');
@@ -100,14 +106,14 @@ void main() {
     await _openTreatment(tester, server);
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Book treatment')).enabled, isFalse);
     await tapText(tester, 'No treatment require');
-    expect(find.text('Do you confirm that no treatment require for user สมชาย ประเสริฐ'), findsOneWidget);
+    expect(find.text('Do you confirm that no treatment require for user นาย สมชาย ประเสริฐ'), findsOneWidget);
     expect(find.text('Claim SST-2026-000143 will be closed with the status No treatment required.'), findsOneWidget);
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
     expect(server.requests.any((http.Request r) => r.url.path == '/o5/claims/143/no-treatment'), isTrue);
     expect(find.text('No Treatment Required'), findsOneWidget);
     expect(
-        find.text('Claim SST-2026-000143 is closed. สมชาย ประเสริฐ has been notified that no treatment is required.'),
+        find.text('Claim SST-2026-000143 is closed. นาย สมชาย ประเสริฐ has been notified that no treatment is required.'),
         findsOneWidget);
   });
 
@@ -117,5 +123,29 @@ void main() {
     await tapText(tester, 'No treatment require');
     await tapText(tester, 'Cancel');
     expect(server.requests.where((http.Request r) => r.method == 'POST' && r.url.path.startsWith('/o5')), isEmpty);
+  });
+
+  testWidgets('O5.2: a report that recommends no treatment says so in the summary', (WidgetTester tester) async {
+    final FakeServer server = _server()
+      ..json('GET /o5/claims', <String, Object?>{
+        'claims': <Map<String, Object?>>[
+          <String, Object?>{
+            'claim_id': 147,
+            'claim_no': 'SST-2026-000147',
+            'title_name': 'นาง',
+            'user_name': 'สุดา แก้วมณี',
+            'recommended_treatment': 'None',
+            'report_id': 85,
+            'version_no': 1,
+            'signed_date': '15 October 2026',
+            'report_author': 'พญ. มาลี ใจดี',
+          },
+        ],
+      });
+    await signInToConsole(tester, server);
+    await tapText(tester, 'Treatment');
+    expect(find.text('Recommended treatment in the report from พญ. มาลี ใจดี: None. No treatment is required for this claim.'),
+        findsOneWidget);
+    expect(find.text('Recommended'), findsNothing);
   });
 }
