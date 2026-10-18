@@ -97,6 +97,11 @@ class ClaimModel extends Model {
             claimId: claimId, reasonCode: reasonCode, officerId: officerId, officerMessage: officerMessage);
       });
 
+  /// O5.2 No Treatment Required: QO5.4 closes a Covered claim; else
+  /// NoRowChangedException (409).
+  Future<void> closeWithoutTreatment(int claimId, {required int officerId}) =>
+      claims.updateNoTreatment(claimId: claimId, officerId: officerId);
+
   /// Runs a decision in one transaction. A guarded query that changes no row
   /// means that the claim is already decided (QO2.1, QO3.1 and QO3.2 of the
   /// 2026-10-15 evening pack, R-013 settled).

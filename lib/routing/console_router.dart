@@ -6,6 +6,7 @@ import '../pages/console/console_home_page.dart';
 import '../pages/console/console_login_page.dart';
 import '../pages/console/scheduling/schedule_appointment_page.dart';
 import '../pages/console/shell/console_shell.dart';
+import '../pages/console/treatment/schedule_treatment_page.dart';
 import '../pages/console/verification/eligibility_decision_page.dart';
 import '../pages/console/verification/verification_page.dart';
 import '../session/session_providers.dart';
@@ -58,7 +59,10 @@ final Provider<GoRouter> consoleRouterProvider = Provider<GoRouter>((Ref ref) {
             path: '/scheduling',
             builder: (BuildContext context, GoRouterState state) => const ScheduleAppointmentPage(),
           ),
-          _pending('/treatment', 'Treatment', 'O5.1 and O5.2'),
+          GoRoute(
+            path: '/treatment',
+            builder: (BuildContext context, GoRouterState state) => const ScheduleTreatmentPage(),
+          ),
           _pending('/reports', 'Consultation Reports', 'O6'),
         ],
       ),

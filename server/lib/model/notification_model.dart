@@ -24,6 +24,9 @@ class NotificationModel extends Model {
   /// QN.3: O4 step 6.1, a message to the user and one to the consultant.
   Future<int> notifyUserAndConsultant(int appointmentId) => notifications.insertAppointmentNotices(appointmentId);
 
+  /// QN.4: O5.2 step 6.1, the claim is closed because no treatment is required.
+  Future<int> notifyNoTreatment(int claimId) => notifications.insertNoTreatmentNotice(claimId);
+
   /// QN.2: O3 step 6.1, the rejection message with the reason and the
   /// officer's message.
   Future<int> notifyRejection(int claimId) => notifications.insertRejectionNotice(claimId);

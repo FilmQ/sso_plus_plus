@@ -7,6 +7,7 @@ import '../../../session/user_session.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/person_avatar.dart';
 import '../scheduling/scheduling_providers.dart';
+import '../treatment/treatment_providers.dart';
 import '../verification/verification_providers.dart';
 
 /// One destination of the officer navigation (Figma O1-1, left side).
@@ -47,6 +48,8 @@ class ConsoleNav extends ConsumerWidget {
     final Map<String, String?> navCounts = <String, String?>{
       '/verification': awaiting?.toString(),
       '/scheduling': toSchedule?.toString(),
+      // QO5.1: the number of claims with a filed report.
+      '/treatment': ref.watch(claimsForTreatmentProvider).value?.length.toString(),
     };
     return Container(
       width: 256,

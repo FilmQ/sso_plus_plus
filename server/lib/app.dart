@@ -11,6 +11,7 @@ import 'controller/verification_controller.dart';
 import 'db/db_connector.dart';
 import 'http/auth_routes.dart';
 import 'http/officer_scheduling_routes.dart';
+import 'http/officer_treatment_routes.dart';
 import 'http/officer_verification_routes.dart';
 import 'http/cors.dart';
 import 'http/json.dart';
@@ -69,7 +70,8 @@ class App {
 
   /// [r] is null for [AutoCancelJob], which has no session.
   TreatmentController treatmentController([Request? r]) =>
-      TreatmentController(r == null ? null : sessionOf(r), db, TreatmentModel(treatments));
+      TreatmentController(r == null ? null : sessionOf(r), db, TreatmentModel(treatments), ClaimModel(claims, storage),
+          NotificationModel(notifications));
 
   VerificationController verificationController(Request r) => VerificationController(
       sessionOf(r), db, ClaimModel(claims, storage), NotificationModel(notifications), storage);
@@ -91,6 +93,7 @@ class App {
     addScheduleRoutes(router, appointmentController, treatmentController);
     addVerificationRoutes(router, verificationController);
     addSchedulingRoutes(router, appointmentController);
+    addOfficerTreatmentRoutes(router, treatmentController);
     return const Pipeline()
         .addMiddleware(cors())
         .addMiddleware(errorMiddleware())

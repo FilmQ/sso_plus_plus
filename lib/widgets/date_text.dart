@@ -17,6 +17,14 @@ abstract final class DateText {
   static String withDay(DateTime d) =>
       '${const <String>['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1]} ${long(d)}';
 
+  /// 'FMDay FMDD FMMonth YYYY', for example 'Friday 23 October 2026' (O5.1-1).
+  static String fullDay(DateTime d) => '${const <String>[
+        'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+      ][d.weekday - 1]} ${long(d)}';
+
+  /// 'HH:mm', for example '13:00'.
+  static String time(DateTime d) => '${_two(d.hour)}:${_two(d.minute)}';
+
   /// 'yyyy-MM-dd', for the server.
   static String iso(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 }
