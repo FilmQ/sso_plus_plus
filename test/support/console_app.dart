@@ -1,0 +1,32 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sso_plus_plus/routing/console_router.dart';
+
+import 'fake_server.dart';
+
+/// The session body of officer 1, as POST /auth/login gives it.
+const Map<String, Object?> officerSession = <String, Object?>{
+  'token': 't',
+  'session': <String, Object?>{
+    'account_id': 6,
+    'role': 'OFFICER',
+    'display_name': 'กัญญา วงศ์ศิริ',
+    'first_name': 'กัญญา',
+    'officer_id': 1,
+  },
+};
+
+/// Starts the console in the Figma desktop frame (1440 x 900) and signs in
+/// as officer 1.
+Future<void> signInToConsole(WidgetTester tester, FakeServer server) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(1440, 900);
+  addTearDown(tester.view.reset);
+  server.json('POST /auth/login', officerSession);
+  await tester.pumpWidget(testApp(server, consoleRouterProvider, app: 'console'));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const Key('login_name')), 'kanya.w@sso.go.th');
+  await tester.enterText(find.byKey(const Key('password')), 'Password123');
+  await tester.tap(find.byKey(const Key('sign_in')));
+  await tester.pumpAndSettle();
+}

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import '../auth/user_session.dart';
 import '../db/db_connector.dart';
 import '../model/claim_model.dart';
+import '../model/date_text.dart';
 import '../model/field_rules.dart';
 import '../model/model.dart';
 import '../model/notification_model.dart';
@@ -65,7 +66,7 @@ class VerificationController extends Controller {
       // The QN.1 text of O2 is the text of the seed messages 901 and 906 (D-048).
       await notificationModel.notifyUser(
           claimId, 'Claim confirmed', 'Your claim ${summary['claim_no']} is covered under Section 33.');
-      return {'claim_status': 'Covered'};
+      return {'claim_status': 'Covered', 'decided_at': _now()};
     });
   }
 
@@ -87,9 +88,13 @@ class VerificationController extends Controller {
           officerMessage: _blankToNull(officerMessage),
           overrideReason: _blankToNull(overrideReason));
       await notificationModel.notifyRejection(claimId);
-      return {'claim_status': 'Rejected'};
+      return {'claim_status': 'Rejected', 'decided_at': _now()};
     });
   }
+
+  /// The time of the decision for O2-3 and O3-3, Asia/Bangkok (UTC+7), in the
+  /// report's format. No query gives it (D-050).
+  static String _now() => DateText.dateTime(DateTime.now().toUtc().add(const Duration(hours: 7)));
 
   /// The column lengths of the data dictionary (422).
   static void _checkLength(Map<String, (String?, int)> fields) {

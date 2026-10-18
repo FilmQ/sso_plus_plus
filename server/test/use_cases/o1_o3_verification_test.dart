@@ -86,7 +86,8 @@ void main() {
         final id = await pendingClaim(result: 'Register unavailable');
         final c = await officer();
         final r = await c.post('/o2/claims/$id/confirm', {'override_reason': 'Register checked by phone'});
-        expect(r.json, {'claim_status': 'Covered'});
+        expect(r.json['claim_status'], 'Covered');
+        expect(r.json['decided_at'], matches(RegExp(r'^\d{1,2} [A-Z][a-z]+ \d{4} : \d{2}:\d{2}$')));
         expect(await status(id), 'Covered');
         final no = (await db.performQuery('SELECT claim_no FROM InjuryClaim WHERE claim_id = :id', {'id': id}))
             .rows
@@ -120,7 +121,7 @@ void main() {
 
         final r = await c.post('/o3/claims/$id/reject',
             {'reason_code': 'R05', 'officer_message': 'The injury happened at home, not at work.'});
-        expect(r.json, {'claim_status': 'Rejected'});
+        expect(r.json['claim_status'], 'Rejected');
         expect(await status(id), 'Rejected');
         final msg = await lastMessage(id);
         expect(msg['subject'], 'Application rejected');

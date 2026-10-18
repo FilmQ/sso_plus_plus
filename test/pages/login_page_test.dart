@@ -54,6 +54,10 @@ void main() {
           'officer_id': 1,
         },
       });
+    server.json('GET /o1/claims', <String, Object?>{'claims': <Object>[], 'counts': <String, int>{}});
+    tester.view.physicalSize = const Size(1440, 900); // the Figma console frame
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(testApp(server, consoleRouterProvider, app: 'console'));
     await tester.pumpAndSettle();
     expect(find.text('Social Security Office'), findsOneWidget); // L-2

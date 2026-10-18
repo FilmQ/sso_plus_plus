@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -29,6 +30,29 @@ class ApiClient {
       request.body = jsonEncode(body);
     }
     return _send(request);
+  }
+
+  /// A GET of a file (O1 step 6): the bytes and the content type.
+  Future<({Uint8List bytes, String? mimeType})> getBytes(String path) async {
+    final request = http.Request('GET', _uri(path));
+    if (token != null) request.headers['authorization'] = 'Bearer $token';
+    final http.Response response;
+    try {
+      response = await http.Response.fromStream(await _client.send(request));
+    } on Exception {
+      throw const ApiException(0, 'Cannot connect to the server. Make sure that it runs.');
+    }
+    if (response.statusCode >= 400) {
+      Object? body;
+      try {
+        body = jsonDecode(utf8.decode(response.bodyBytes));
+      } on FormatException {
+        body = null;
+      }
+      final String message = body is Map ? (body['error'] as String?) ?? '' : '';
+      throw ApiException(response.statusCode, message.isEmpty ? 'Error ${response.statusCode}' : message);
+    }
+    return (bytes: response.bodyBytes, mimeType: response.headers['content-type']);
   }
 
   /// Sends a multipart form: [fields] as text parts, [files] as file parts.
