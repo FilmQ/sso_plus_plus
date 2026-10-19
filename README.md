@@ -82,6 +82,30 @@ Sign in to the console as `kanya.w@sso.go.th`.
   duration and facility, then a free time; a treatment must end by 12:00 or 17:00.
 - Consultation Reports (O6): the 4 filed seed reports; CR-0087 and CR-0090 are not viewed yet.
 
+### C1 and C2 demo data (consultant console)
+
+Sign in to the console as `thana.s@ssorehab.go.th`. The seed has no rows for this consultant (R-047), so the
+Schedule Page and the report list are empty. To add one future and one past Confirmed appointment for claim
+SST-2026-000143, run this after `make db-reset`:
+
+```sh
+docker compose exec -T db psql -U sst -d sst <<'SQL'
+INSERT INTO Appointment (claim_id, officer_id, consultant_id, appointment_type, schedule_date, schedule_time,
+  location, appointment_status, confirm_deadline, created_at)
+VALUES
+  (143, 1, 1, 'Onsite', CURRENT_DATE + 3, TIME '10:00', 'Building A, Floor 3, Room 305', 'Confirmed',
+   CURRENT_DATE + 2 + TIME '10:00', NOW()),
+  (143, 1, 1, 'Onsite', CURRENT_DATE - 1, TIME '10:00', 'Building A, Floor 3, Room 305', 'Confirmed',
+   CURRENT_DATE - 2 + TIME '10:00', NOW() - INTERVAL '3 days');
+SQL
+```
+
+- Schedule Page (C1): the future appointment.
+- Create Consultation Report (C2.1 to C2.3): the past appointment. Type the report or attach one PDF, JPG or PNG
+  file, then "Finish the draft". Sign, then "File the report". The officer then sees the report in O6.
+- The drawn signature is not stored (D-059): after a reload, the page shows "Signed on <date>".
+- The user `1103700123456` also sees the future appointment in the user app.
+
 ## Lint and test
 
 ```sh
