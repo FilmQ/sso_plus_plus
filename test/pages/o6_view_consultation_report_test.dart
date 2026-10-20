@@ -11,7 +11,7 @@ Map<String, Object?> _report(String view, {String? file}) => <String, Object?>{
       'claim_no': 'SST-2026-000143',
       'user_name': 'สมชาย ประเสริฐ',
       'signed_date': '16 October 2026',
-      'version_no': 1,
+      'signature_uri': '/reports/303/signature.png',
       'user_age': 38,
       'consultation_datetime': '16 October 2026 : 10:00',
       'submitted_date': '16 October 2026',
@@ -31,7 +31,6 @@ FakeServer _server() => FakeServer()
         'report_id': 87,
         'claim_no': 'SST-2026-000143',
         'user_name': 'สมชาย ประเสริฐ',
-        'version_no': 1,
         'signed_date': '16 October 2026',
         'view_status': 'Pending',
       },
@@ -39,14 +38,14 @@ FakeServer _server() => FakeServer()
         'report_id': 85,
         'claim_no': 'SST-2026-000147',
         'user_name': 'สุดา แก้วมณี',
-        'version_no': 1,
         'signed_date': '15 October 2026',
         'view_status': 'Viewed',
       },
     ],
   })
   ..json('GET /o6/reports/87', <String, Object?>{'report': _report('Pending')})
-  ..json('POST /o6/reports/87/view', <String, Object?>{'report': _report('Viewed')});
+  ..json('POST /o6/reports/87/view', <String, Object?>{'report': _report('Viewed')})
+  ..on('GET /o6/reports/87/signature', (_) async => http.Response.bytes(tinyPng, 200, headers: <String, String>{'content-type': 'image/png'}));
 
 void main() {
   testWidgets('O6 Normal Case: the list, Open, View; the report text and Viewed', (WidgetTester tester) async {
@@ -63,9 +62,12 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Open').first);
     await tester.pumpAndSettle();
     expect(find.text('Consultation Report · SST-2026-000143'), findsOneWidget);
-    expect(find.text('สมชาย ประเสริฐ · signed 16 October 2026 · version 1'), findsOneWidget);
+    expect(find.text('สมชาย ประเสริฐ · signed 16 October 2026'), findsOneWidget);
+    expect(find.text('Version'), findsNothing, reason: 'one report, one version (R-055)');
     expect(find.text('38'), findsOneWidget);
     expect(find.text('Signed by นพ. ธนา ศรีสุข on 16 October 2026'), findsOneWidget);
+    expect(find.bySemanticsLabel('Signature of นพ. ธนา ศรีสุข'), findsOneWidget, reason: 'the stored signature (R-048)');
+    expect(server.requests.any((http.Request r) => r.url.path == '/o6/reports/87/signature'), isTrue);
     expect(find.text('You have not opened this report yet'), findsOneWidget);
 
     await tapText(tester, 'View');

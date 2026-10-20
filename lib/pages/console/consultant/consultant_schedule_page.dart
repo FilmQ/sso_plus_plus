@@ -1,27 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../api/consultant_api.dart';
 import '../../../widgets/person_avatar.dart';
 import '../shell/console_shell.dart';
 import 'consultant_providers.dart';
+import 'recent_changes_card.dart';
 
 /// C1-1 Schedule Page (SA report figure 2-95): C1 View Appointment Schedule,
-/// the Confirmed appointments of the consultant from today on (QC1.1).
+/// the "Recent changes" card (QC1.2) and the Confirmed appointments of the
+/// consultant from today on (QC1.1).
 class ConsultantSchedulePage extends ConsumerWidget {
   const ConsultantSchedulePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Map<String, Object?>>> list = ref.watch(consultantScheduleProvider);
-    final List<Map<String, Object?>> rows = list.value ?? const <Map<String, Object?>>[];
+    final AsyncValue<ConsultantSchedule> list = ref.watch(consultantScheduleProvider);
+    final List<Map<String, Object?>> rows = list.value?.appointments ?? const <Map<String, Object?>>[];
     final ColorScheme colors = Theme.of(context).colorScheme;
     final TextTheme text = Theme.of(context).textTheme;
     return ConsolePage(
       title: 'Schedule Page',
-      subtitle: 'Confirmed appointments from today',
+      subtitle: 'Confirmed appointments from today and recent changes from users',
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(consultantScheduleProvider.future),
         child: ListView(padding: const EdgeInsets.all(24), children: <Widget>[
+          RecentChangesCard(
+            messages: list.value?.recentChanges ?? const <Map<String, Object?>>[],
+            loading: list.isLoading,
+          ),
+          const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
               color: colors.surfaceContainerLowest,

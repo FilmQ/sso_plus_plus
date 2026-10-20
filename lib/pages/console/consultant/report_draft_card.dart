@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../theme/status_colors.dart';
 import '../verification/claim_cards.dart';
+import 'recommended_treatment_field.dart';
 
 /// "Report" of the report page (Figma C2.1-1 to C2.1-4): the saved text, the
-/// attached file, or the editor after "Amend the draft" with "Attach".
+/// attached file, or the editor after "Amend the draft" with "Attach", and
+/// the "Recommended treatment" field (R-050).
 class ReportDraftCard extends StatelessWidget {
   const ReportDraftCard({
     super.key,
@@ -16,6 +18,9 @@ class ReportDraftCard extends StatelessWidget {
     required this.onAttach,
     required this.onRemoveFile,
     required this.onViewFile,
+    required this.treatment,
+    required this.onTreatmentChanged,
+    required this.treatmentError,
   });
 
   /// The saved report text (QC2.3), or null.
@@ -30,6 +35,11 @@ class ReportDraftCard extends StatelessWidget {
   final VoidCallback onAttach;
   final VoidCallback onRemoveFile;
   final VoidCallback? onViewFile;
+
+  /// The recommended treatment: the saved one, or the one chosen while editing.
+  final String? treatment;
+  final ValueChanged<String?> onTreatmentChanged;
+  final String? treatmentError;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +75,12 @@ class ReportDraftCard extends StatelessWidget {
             ),
             child: Text(content ?? 'No report yet. Click Amend the draft to start writing, or attach a report file.'),
           ),
+        RecommendedTreatmentField(
+          value: treatment,
+          editing: editing,
+          onChanged: onTreatmentChanged,
+          error: treatmentError,
+        ),
       ],
     );
   }

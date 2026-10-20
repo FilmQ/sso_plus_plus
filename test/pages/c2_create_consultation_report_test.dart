@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:sso_plus_plus/pages/console/consultant/signature_png.dart';
 import 'package:sso_plus_plus/pages/user/injury_form/injury_form_data.dart';
 import 'package:sso_plus_plus/pages/user/injury_form/upload_section.dart';
 
@@ -13,7 +14,8 @@ import '../support/user_app.dart';
 const String _base = '/c2/consultations/520';
 
 /// A QC2.3 row of appointment 520 (claim 155) with the report [content] or [file].
-Map<String, Object?> _page({String? content, String? file, bool signed = false}) => <String, Object?>{
+Map<String, Object?> _page({String? content, String? file, bool signed = false, String? treatment}) =>
+    <String, Object?>{
       'session_id': 310,
       'claim_no': 'SST-2026-000155',
       'user_name': 'ชัยวัฒน์ สุขเจริญ',
@@ -21,25 +23,30 @@ Map<String, Object?> _page({String? content, String? file, bool signed = false})
       'consultation_datetime': '16 October 2026 : 10:00',
       'consultant_name': 'นพ. ธนา ศรีสุข',
       'report_id': content == null && file == null ? null : 91,
-      'version_no': 1,
+      'recommended_treatment': treatment,
       'report_content': content,
       'report_file_uri': file,
+      'signature_uri': signed ? '/reports/310/signature.png' : null,
       'signed_date': signed ? '18 October 2026' : null,
       'signature_status': signed ? 'Signature signed' : 'Signature pending',
     };
 
+const Map<String, Object?> _consultations = <String, Object?>{
+  'consultations': <Map<String, Object?>>[
+    <String, Object?>{
+      'appointment_id': 520,
+      'claim_no': 'SST-2026-000155',
+      'user_name': 'ชัยวัฒน์ สุขเจริญ',
+      'consultation_datetime': '16 October 2026 : 10:00',
+    },
+  ],
+};
+
 FakeServer _server() => FakeServer()
-  ..json('GET /c1/appointments', <String, Object?>{'appointments': <Object>[]})
-  ..json('GET /c2/consultations', <String, Object?>{
-    'consultations': <Map<String, Object?>>[
-      <String, Object?>{
-        'appointment_id': 520,
-        'claim_no': 'SST-2026-000155',
-        'user_name': 'ชัยวัฒน์ สุขเจริญ',
-        'consultation_datetime': '16 October 2026 : 10:00',
-      },
-    ],
-  })
+  ..json('GET /c1/appointments', <String, Object?>{'appointments': <Object>[], 'recent_changes': <Object>[]})
+  ..json('GET /c2/consultations', _consultations)
+  ..on('GET $_base/signature',
+      (_) async => http.Response.bytes(tinyPng, 200, headers: <String, String>{'content-type': 'image/png'}))
   ..json('POST $_base/open', <String, Object?>{'report': _page()})
   ..json('POST $_base/draft', <String, Object?>{'report': _page(content: 'Sprain of the right knee.')})
   ..json('POST $_base/sign', <String, Object?>{'report': _page(content: 'Sprain of the right knee.', signed: true)});
@@ -51,7 +58,15 @@ Future<void> _openReport(WidgetTester tester, FakeServer server, {List<Object> e
   await signInToConsole(tester, server, session: consultantSession, extra: extra);
   await tapText(tester, 'Create Consultation Report');
   expect(find.text('Consultation Report · SST-2026-000155'), findsOneWidget);
-  expect(find.text('ชัยวัฒน์ สุขเจริญ · version 1 · not signed yet'), findsOneWidget);
+  expect(find.text('ชัยวัฒน์ สุขเจริญ · not signed yet'), findsOneWidget);
+}
+
+/// Chooses [choice] in the "Recommended treatment" field (R-050).
+Future<void> _chooseTreatment(WidgetTester tester, String choice) async {
+  await tester.tap(find.byType(DropdownMenu<String>));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(choice).last);
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -67,10 +82,14 @@ void main() {
     await tapText(tester, 'Amend the draft');
     expect(find.text('Finish the draft'), findsOneWidget);
     expect(find.text('Attach'), findsOneWidget);
+    expect(find.text('Physiotherapy, Occupational therapy or None. Filing needs a choice.'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('report_text')), 'Sprain of the right knee.');
+    await _chooseTreatment(tester, 'Occupational therapy');
     await tapText(tester, 'Finish the draft');
 
-    expect(_sentBody(server, '$_base/draft'), contains('Sprain of the right knee.'));
+    final String body = _sentBody(server, '$_base/draft');
+    expect(body, contains('Sprain of the right knee.'));
+    expect(body, allOf(contains('name="recommended_treatment"'), contains('Occupational therapy')));
     expect(find.text('Draft saved.'), findsOneWidget);
     expect(find.text('Sprain of the right knee.'), findsOneWidget);
     expect(find.text('Amend the draft'), findsOneWidget);
@@ -100,7 +119,10 @@ void main() {
   testWidgets('C2.2 Normal Case: draw, Delete, draw again, Confirm; the status is Signed (QC2.6)',
       (WidgetTester tester) async {
     final FakeServer server = _server()..json('POST $_base/open', <String, Object?>{'report': _page(content: 'Text')});
-    await _openReport(tester, server);
+    await _openReport(tester, server, extra: <Object>[
+      signatureEncoderProvider.overrideWithValue((_) async => tinyPng),
+    ]);
+    expect(find.text('User did not attend'), findsNothing, reason: 'the consultation has a report');
     await tapText(tester, 'Sign the signature');
     expect(find.text('Sign the report'), findsOneWidget);
     final Finder confirm = find.widgetWithText(FilledButton, 'Confirm');
@@ -119,10 +141,11 @@ void main() {
     await tester.tap(confirm);
     await tester.pumpAndSettle();
 
-    expect(server.requests.any((http.Request r) => r.url.path == '$_base/sign'), isTrue);
+    expect(_sentBody(server, '$_base/sign'), contains('filename="signature.png"'));
     expect(find.text('Signature saved. The status is now Signed.'), findsOneWidget);
     expect(find.text('Signed'), findsOneWidget);
-    expect(find.text('ชัยวัฒน์ สุขเจริญ · version 1 · signed 18 October 2026'), findsOneWidget);
+    expect(find.text('ชัยวัฒน์ สุขเจริญ · signed 18 October 2026'), findsOneWidget);
+    expect(find.bySemanticsLabel('Signature of นพ. ธนา ศรีสุข'), findsOneWidget, reason: 'the stored image (R-048)');
   });
 
   testWidgets('C2.3: Validation Failed shows what is missing; then Report filed', (WidgetTester tester) async {
@@ -132,23 +155,57 @@ void main() {
       ..on('POST $_base/file-report', (_) async => ++calls == 1
           ? FakeServer.reply(<String, Object?>{
               'error': 'validation_failed',
-              'fields': <String, String>{'signature': 'Sign the report.'},
+              'fields': <String, String>{
+                'recommended_treatment': 'Choose the recommended treatment.',
+                'signature': 'Sign the report.',
+              },
             }, status: 422)
           : FakeServer.reply(<String, Object?>{'report': _page(content: 'Text', signed: true)}));
     await _openReport(tester, server);
     await tapText(tester, 'File the report');
     expect(
-        find.text('The report cannot be filed yet: the signature status is Pending. Sign the report, then click '
-            'File the report again.'),
+        find.text('The report cannot be filed yet: no recommended treatment is chosen and the signature status is '
+            'Pending. Complete the report, then click File the report again.'),
         findsOneWidget);
 
     await tapText(tester, 'File the report');
     expect(find.text('Report filed'), findsOneWidget);
     expect(
-        find.text('Consultation report CR-0091 for SST-2026-000155 has been filed. The evaluation officer has been '
-            'notified and can now book the treatment.'),
+        find.text('Consultation report CR-0091 for SST-2026-000155 has been filed. It now appears in the evaluation '
+            "officer's Consultation Reports list, where the treatment is booked."),
         findsOneWidget);
     await tapText(tester, 'OK');
-    expect(find.text('Filed · officer notified'), findsOneWidget);
+    expect(find.text('Filed'), findsOneWidget, reason: 'no message to the officer (R-049)');
+  });
+
+  testWidgets('C2.1 Alternate Case 3 [User did not attend]: Cancel, then Confirm (QC2.8); Marked as no show',
+      (WidgetTester tester) async {
+    bool marked = false;
+    final FakeServer server = _server()
+      ..on('GET /c2/consultations', (_) async => FakeServer.reply(
+          marked ? <String, Object?>{'consultations': <Object>[]} : _consultations))
+      ..on('POST $_base/no-show', (_) async {
+        marked = true;
+        return FakeServer.reply(<String, Object?>{
+          'no_show': <String, Object?>{'appointment_id': 520, 'claim_id': 155},
+        });
+      });
+    await _openReport(tester, server);
+    const String question =
+        'Do you confirm that ชัยวัฒน์ สุขเจริญ did not attend the consultation on 16 October 2026 : 10:00';
+
+    await tapText(tester, 'User did not attend');
+    expect(find.text(question), findsOneWidget); // C2.1-5
+    await tapText(tester, 'Cancel');
+    expect(find.text(question), findsNothing);
+    expect(marked, isFalse);
+
+    await tapText(tester, 'User did not attend');
+    await tapText(tester, 'Confirm');
+    expect(marked, isTrue);
+    expect(find.text('Marked as no show'), findsOneWidget); // C2.1-6
+    expect(find.textContaining('the claim is back on the Scheduling list'), findsOneWidget);
+    await tapText(tester, 'OK');
+    expect(find.text('There are no consultations waiting for a report.'), findsOneWidget);
   });
 }

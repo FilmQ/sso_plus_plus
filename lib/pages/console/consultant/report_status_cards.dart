@@ -3,29 +3,30 @@ import 'package:flutter/material.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
 import '../verification/claim_cards.dart';
-import 'signature_dialog.dart';
 
 /// The right side of the report page (Figma C2.1-1 to C2.3-2): "Signature
-/// status", "Filing" and "Actions".
+/// status" with the stored signature image (R-048), "Filing" and "Actions"
+/// with "User did not attend" (C2.1-5, R-051).
 class ReportStatusCards extends StatelessWidget {
   const ReportStatusCards({
     super.key,
     required this.signed,
     required this.signedDate,
-    required this.signature,
+    required this.signatureImage,
     required this.filed,
     required this.editing,
     required this.busy,
     required this.onAmend,
     required this.onSign,
     required this.onFile,
+    required this.onNoShow,
   });
 
   final bool signed;
   final String? signedDate;
 
-  /// The signature drawn in this visit of the page, or null.
-  final Signature? signature;
+  /// The stored signature image of a signed report, or null.
+  final Widget? signatureImage;
   final bool filed;
   final bool editing;
   final bool busy;
@@ -33,11 +34,14 @@ class ReportStatusCards extends StatelessWidget {
   final VoidCallback onSign;
   final VoidCallback onFile;
 
+  /// "User did not attend", or null to hide the button (the consultation
+  /// has a report).
+  final VoidCallback? onNoShow;
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final StatusColors s = StatusColors.of(context);
-    final Signature? drawn = signature;
     Widget chip(IconData icon, String label, bool ok) => Align(
           alignment: Alignment.centerLeft,
           child: StatusPill(
@@ -58,19 +62,11 @@ class ReportStatusCards extends StatelessWidget {
             foreground: signed ? s.success : s.warning,
           ),
         ),
-        if (signed && drawn != null)
-          Container(
-            height: 80,
-            decoration: BoxDecoration(
-                border: Border.all(color: colors.outlineVariant), borderRadius: BorderRadius.circular(4)),
-            child: CustomPaint(painter: SignaturePainter(drawn, colors.primary, scale: 0.45)),
-          ),
-        Text(signed
-            ? (drawn == null ? 'Signed on ${signedDate ?? '-'}' : 'Signed on ${signedDate ?? 'today'}')
-            : 'Sign the report after the text or file is ready.'),
+        if (signed && signatureImage != null) signatureImage!,
+        if (!signed) const Text('Sign the report after the text or file is ready.'),
       ]),
       ConsoleCard(title: 'Filing', children: <Widget>[
-        filed ? chip(Icons.task_alt, 'Filed · officer notified', true) : chip(Icons.drafts, 'Not filed', false),
+        filed ? chip(Icons.task_alt, 'Filed', true) : chip(Icons.drafts, 'Not filed', false),
       ]),
       ConsoleCard(title: 'Actions', children: <Widget>[
         FilledButton.icon(
@@ -88,6 +84,12 @@ class ReportStatusCards extends StatelessWidget {
           icon: const Icon(Icons.send),
           label: const Text('File the report'),
         ),
+        if (onNoShow != null)
+          OutlinedButton.icon(
+            onPressed: busy || filed || editing ? null : onNoShow,
+            icon: const Icon(Icons.person_off),
+            label: const Text('User did not attend'),
+          ),
       ]),
     ]);
   }

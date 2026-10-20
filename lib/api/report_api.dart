@@ -20,6 +20,10 @@ class ReportApi {
   Future<({Uint8List bytes, String? mimeType})> openReportFile(int reportId) =>
       api.getBytes('/o6/reports/$reportId/file');
 
+  /// O6-2 and O6-3: the signature image of the report (R-048).
+  Future<({Uint8List bytes, String? mimeType})> openReportSignature(int reportId) =>
+      api.getBytes('/o6/reports/$reportId/signature');
+
   /// QO6.3 and QO6.2: "View". Gives the report again (Viewed).
   Future<Map<String, Object?>> viewReport(int reportId) async =>
       (await api.post('/o6/reports/$reportId/view'))['report']! as Map<String, Object?>;

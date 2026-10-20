@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../api/api_exception.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
+import '../../../widgets/stored_image.dart';
 import '../shell/console_shell.dart';
 import '../verification/claim_cards.dart';
 import '../verification/document_dialog.dart';
@@ -59,7 +60,7 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
     final Map<String, Object?>? r = _viewed ?? page.value;
     return ConsolePage(
       title: r == null ? 'Consultation Report' : 'Consultation Report · ${r['claim_no']}',
-      subtitle: r == null ? '' : '${r['user_name']} · signed ${r['signed_date']} · version ${r['version_no']}',
+      subtitle: r == null ? '' : '${r['user_name']} · signed ${r['signed_date']}',
       onBack: () => context.go('/reports'),
       body: r != null
           ? _body(r)
@@ -115,6 +116,12 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
           ),
         ),
         if (signed) Text('Signed by ${r['consultant_name']} on ${r['signed_date']}'),
+        if (signed && r['signature_uri'] != null)
+          StoredImage(
+            cacheKey: '${r['signature_uri']}',
+            label: 'Signature of ${r['consultant_name']}',
+            load: () => ref.read(reportApiProvider).openReportSignature(widget.reportId),
+          ),
       ]),
       ConsoleCard(title: 'View status', children: <Widget>[
         Align(alignment: Alignment.centerLeft, child: ViewStatusChip('${r['view_status']}')),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../api/api_exception.dart';
 import '../../../api/consultant_api.dart';
 import '../../../widgets/error_banner.dart';
+import '../../../widgets/stored_image.dart';
 import '../../user/injury_form/injury_form_data.dart';
 import '../../user/injury_form/upload_section.dart';
 import '../scheduling/claim_chips.dart';
@@ -13,12 +14,15 @@ import '../treatment/report_card.dart';
 import '../verification/claim_cards.dart';
 import '../verification/document_dialog.dart';
 import 'consultant_providers.dart';
+import 'no_show_dialogs.dart';
 import 'report_draft_card.dart';
 import 'report_status_cards.dart';
 import 'signature_dialog.dart';
+import 'signature_png.dart';
 
-/// C2.1-1 Report page (SA report figures 2-100 to 2-113): C2.1 Amend the
-/// draft, C2.2 Sign the signature and C2.3 File the report.
+/// C2.1-1 Report page (SA report figures 2-101 to 2-116): C2.1 Amend the
+/// draft (with "User did not attend"), C2.2 Sign the signature and C2.3 File
+/// the report.
 class CreateReportPage extends ConsumerStatefulWidget {
   const CreateReportPage({super.key});
 
@@ -33,10 +37,11 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   bool editing = false;
   PickedFile? _picked;
   bool _fileRemoved = false;
-  Signature? _signature;
+  String? _treatment; // the choice while editing (R-050)
   bool _filed = false;
   String? _banner;
   String? _textError;
+  String? _treatmentError;
   bool _busy = false;
 
   ConsultantApi get _api => ref.read(consultantApiProvider);
@@ -50,7 +55,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   /// C2.1 steps 2.1 to 2.2 (QC2.2, QC2.3): open the report page of [id].
   Future<void> selectConsultation(int id) async {
     setState(() => (appointmentId = id, _page = null, editing = false, _picked = null, _fileRemoved = false,
-        _signature = null, _filed = false, _banner = null, _textError = null));
+        _filed = false, _banner = null, _textError = null, _treatmentError = null));
     try {
       final Map<String, Object?> page = await _api.openReport(id);
       if (mounted && appointmentId == id) setState(() => _page = page);
@@ -65,22 +70,43 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   }
 
   /// C2.1 steps 3 to 8: "Amend the draft" opens the editor; "Finish the
-  /// draft" saves the text or the chosen file (QC2.4 or QC2.5).
+  /// draft" saves the text or the chosen file and the recommended treatment
+  /// (QC2.4 or QC2.5). Without a new file, a saved file stays.
   Future<void> clickAmend() async {
+    final String? savedTreatment = _page?['recommended_treatment'] as String?;
     if (!editing) {
-      setState(() => (editing = true, _text.text = (_page?['report_content'] as String?) ?? '', _textError = null));
+      setState(() => (editing = true, _text.text = (_page?['report_content'] as String?) ?? '', _textError = null,
+          _treatment = savedTreatment, _treatmentError = null));
       return;
     }
     final PickedFile? file = _picked;
-    if (file == null && !_fileRemoved && _savedFile != null) {
-      setState(() => editing = false); // the saved file stays as it is
+    final bool keepFile = file == null && !_fileRemoved && _savedFile != null;
+    if (keepFile && _treatment == savedTreatment) {
+      setState(() => editing = false); // nothing changed
       return;
     }
     await _run(() async {
       final Map<String, Object?> page = await _api.saveDraft(appointmentId!,
-          content: file == null ? _text.text : null, file: file == null ? null : (name: file.name, bytes: file.bytes));
-      setState(() => (_page = page, editing = false, _picked = null, _fileRemoved = false, _signature = null));
+          content: file == null && !keepFile ? _text.text : null,
+          file: file == null ? null : (name: file.name, bytes: file.bytes),
+          recommendedTreatment: _treatment);
+      setState(() => (_page = page, editing = false, _picked = null, _fileRemoved = false));
       _snack(file == null ? 'Draft saved.' : 'Draft saved. The report file is attached.');
+    });
+  }
+
+  /// C2.1 steps 9 to 12 (Alternate Case 3 [User did not attend]): the
+  /// confirmation card (C2.1-5), QC2.8, then "Marked as no show" (C2.1-6).
+  /// The next consultation opens.
+  Future<void> clickNoShow() async {
+    final Map<String, Object?> page = _page!;
+    if (!await showNoShowConfirmation(context, page) || !mounted) return;
+    await _run(() async {
+      await _api.markNoShow(appointmentId!);
+      ref.invalidate(pendingConsultationsProvider);
+      if (!mounted) return;
+      await showMarkedAsNoShow(context, page);
+      if (mounted) setState(() => (appointmentId = null, _page = null));
     });
   }
 
@@ -90,13 +116,15 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     if (f != null && mounted) setState(() => (_picked = f, _textError = null));
   }
 
-  /// C2.2 steps 3 to 6: the signature card, then QC2.6.
+  /// C2.2 steps 3 to 6: the signature card, then QC2.6 with the drawing as
+  /// a PNG image (R-048).
   Future<void> clickSign() async {
     final Signature? drawn = await showSignatureDialog(context);
     if (drawn == null || !mounted) return; // the card was closed
     await _run(() async {
-      final Map<String, Object?> page = await _api.signReport(appointmentId!);
-      setState(() => (_page = page, _signature = drawn));
+      final Map<String, Object?> page =
+          await _api.signReport(appointmentId!, await ref.read(signatureEncoderProvider)(drawn));
+      setState(() => _page = page);
       _snack('Signature saved. The status is now Signed.');
     });
   }
@@ -115,8 +143,8 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
           icon: const Icon(Icons.task_alt),
           title: const Text('Report filed'),
           content: Text('Consultation report ${ReportShortcutCard.reportNo(page['report_id'])} for '
-              '${page['claim_no']} has been filed. The evaluation officer has been notified and can now book the '
-              'treatment.'),
+              '${page['claim_no']} has been filed. It now appears in the evaluation officer\'s Consultation Reports '
+              'list, where the treatment is booked.'),
           actions: <Widget>[FilledButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('OK'))],
         ),
       );
@@ -134,6 +162,8 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
       setState(() {
         if (editing) {
           _textError = (fields['report'] ?? fields['file']) as String?;
+          _treatmentError = fields['recommended_treatment'] as String?;
+          if (fields.isEmpty) _banner = e.message;
         } else {
           _banner = fields.isEmpty ? e.message : missingMessage(fields);
         }
@@ -145,18 +175,16 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
 
   /// The banner of C2.3-1 from the 422 fields of QC2.7 (and of QC2.6).
   static String missingMessage(Map<String, Object?> fields) {
-    final bool text = fields.containsKey('report');
-    final bool sign = fields.containsKey('signature');
-    if (text && sign) {
-      return 'The report cannot be filed yet: there is no report text or file, and the signature status is '
-          'Pending. Write the report and sign it, then click File the report again.';
-    }
-    if (sign) {
-      return 'The report cannot be filed yet: the signature status is Pending. Sign the report, then click '
-          'File the report again.';
-    }
-    return 'The report cannot be signed or filed yet: there is no report text or file. Write the report or attach '
-        'a file first.';
+    final List<String> missing = <String>[
+      if (fields.containsKey('report')) 'there is no report text or file',
+      if (fields.containsKey('recommended_treatment')) 'no recommended treatment is chosen',
+      if (fields.containsKey('signature')) 'the signature status is Pending',
+    ];
+    if (missing.isEmpty) return 'The report cannot be signed or filed yet.';
+    final String list = missing.length == 1
+        ? missing.single
+        : '${missing.sublist(0, missing.length - 1).join(', ')} and ${missing.last}';
+    return 'The report cannot be filed yet: $list. Complete the report, then click File the report again.';
   }
 
   void _snack(String text) {
@@ -167,7 +195,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   Widget build(BuildContext context) {
     final AsyncValue<List<Map<String, Object?>>> list = ref.watch(pendingConsultationsProvider);
     final List<Map<String, Object?>> rows = list.value ?? const <Map<String, Object?>>[];
-    if (appointmentId == null && rows.isNotEmpty && !_filed) {
+    if (appointmentId == null && rows.isNotEmpty && !_filed && !list.isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && appointmentId == null) selectConsultation(rows.first['appointment_id']! as int);
       });
@@ -210,6 +238,9 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
               : () => showDocumentDialog(context,
                   <String, Object?>{'file_name': _savedFile, 'file_size': 'Report file'},
                   () => _api.openDraftFile(appointmentId!)),
+          treatment: editing ? _treatment : page['recommended_treatment'] as String?,
+          onTreatmentChanged: (String? t) => setState(() => (_treatment = t, _treatmentError = null)),
+          treatmentError: _treatmentError,
         ),
       ],
     ]);
@@ -218,20 +249,26 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
         : ReportStatusCards(
             signed: signed,
             signedDate: page['signed_date'] as String?,
-            signature: _signature,
+            signatureImage: signed && page['signature_uri'] != null
+                ? StoredImage(
+                    cacheKey: '${page['signature_uri']} ${page['signed_date']}',
+                    label: 'Signature of ${page['consultant_name']}',
+                    load: () => _api.openSignature(appointmentId!),
+                  )
+                : null,
             filed: _filed,
             editing: editing,
             busy: _busy,
             onAmend: clickAmend,
             onSign: clickSign,
             onFile: clickFile,
+            onNoShow: page['report_id'] == null ? clickNoShow : null,
           );
     return ConsolePage(
       title: page == null ? 'Create Consultation Report' : 'Consultation Report · ${page['claim_no']}',
       subtitle: page == null
           ? 'Consultations waiting for a report'
-          : '${page['user_name']} · version ${page['version_no']} · '
-              '${signed ? 'signed ${page['signed_date']}' : 'not signed yet'}',
+          : '${page['user_name']} · ${signed ? 'signed ${page['signed_date']}' : 'not signed yet'}',
       onBack: () => context.go('/schedule'),
       body: LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
         final bool wide = box.maxWidth >= 1000;

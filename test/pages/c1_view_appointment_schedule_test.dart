@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
 
-FakeServer _server({List<Object> appointments = const <Object>[]}) => FakeServer()
-  ..json('GET /c1/appointments', <String, Object?>{'appointments': appointments})
+FakeServer _server({List<Object> appointments = const <Object>[], List<Object> changes = const <Object>[]}) =>
+    FakeServer()
+  ..json('GET /c1/appointments', <String, Object?>{'appointments': appointments, 'recent_changes': changes})
   ..json('GET /c2/consultations', <String, Object?>{
     'consultations': <Map<String, Object?>>[
       <String, Object?>{
@@ -30,10 +31,22 @@ void main() {
             'injury': 'Fracture, right wrist',
             'injury_date': '28 September 2026',
           },
+        ], changes: <Object>[
+          <String, Object?>{
+            'notification_id': 909,
+            'subject': 'Appointment confirmed',
+            'body': 'นาย ประเสริฐ มีสุข (claim SST-2026-000163) confirmed the appointment on 21 October 2026 : 10:00.',
+            'sent_time': '20 October 2026 : 08:00',
+          },
         ]),
         session: consultantSession);
     expect(find.text('Schedule Page'), findsWidgets);
-    expect(find.text('Confirmed appointments from today'), findsOneWidget);
+    expect(find.text('Confirmed appointments from today and recent changes from users'), findsOneWidget);
+    expect(find.text('Recent changes'), findsOneWidget); // QC1.2
+    expect(find.text('Messages from the last 14 days'), findsOneWidget);
+    expect(find.text('Appointment confirmed'), findsOneWidget);
+    expect(find.textContaining('(claim SST-2026-000163) confirmed'), findsOneWidget);
+    expect(find.text('20 October 2026 : 08:00'), findsOneWidget);
     expect(find.text('CONSULTANT'), findsOneWidget);
     expect(find.text('Create Consultation Report'), findsOneWidget);
     expect(find.text('Verification'), findsNothing, reason: 'the officer pages are not in the navigation');
@@ -48,6 +61,7 @@ void main() {
   testWidgets('C1: no confirmed appointments', (WidgetTester tester) async {
     await signInToConsole(tester, _server(), session: consultantSession);
     expect(find.text('You have no confirmed appointments.'), findsOneWidget);
+    expect(find.text('No recent changes'), findsOneWidget);
     expect(find.text('0 confirmed'), findsOneWidget);
   });
 }

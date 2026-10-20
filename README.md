@@ -84,27 +84,19 @@ Sign in to the console as `kanya.w@sso.go.th`.
 
 ### C1 and C2 demo data (consultant console)
 
-Sign in to the console as `thana.s@ssorehab.go.th`. The seed has no rows for this consultant (R-047), so the
-Schedule Page and the report list are empty. To add one future and one past Confirmed appointment for claim
-SST-2026-000143, run this after `make db-reset`:
+Sign in to the console as `thana.s@ssorehab.go.th` (consultant 1). The seed has a dev block for this consultant
+(R-047); `make db-reset` loads it again with new dates.
 
-```sh
-docker compose exec -T db psql -U sst -d sst <<'SQL'
-INSERT INTO Appointment (claim_id, officer_id, consultant_id, appointment_type, schedule_date, schedule_time,
-  location, appointment_status, confirm_deadline, created_at)
-VALUES
-  (143, 1, 1, 'Onsite', CURRENT_DATE + 3, TIME '10:00', 'Building A, Floor 3, Room 305', 'Confirmed',
-   CURRENT_DATE + 2 + TIME '10:00', NOW()),
-  (143, 1, 1, 'Onsite', CURRENT_DATE - 1, TIME '10:00', 'Building A, Floor 3, Room 305', 'Confirmed',
-   CURRENT_DATE - 2 + TIME '10:00', NOW() - INTERVAL '3 days');
-SQL
-```
-
-- Schedule Page (C1): the future appointment.
-- Create Consultation Report (C2.1 to C2.3): the past appointment. Type the report or attach one PDF, JPG or PNG
-  file, then "Finish the draft". Sign, then "File the report". The officer then sees the report in O6.
-- The drawn signature is not stored (D-059): after a reload, the page shows "Signed on <date>".
-- The user `1103700123456` also sees the future appointment in the user app.
+- Schedule Page (C1): appointment 512 of claim SST-2026-000163 on the next weekday at 10:00, and the "Recent changes"
+  card with message 909 ("Appointment confirmed", QC1.2: the QN.5 messages of the last 14 days).
+- Create Consultation Report (C2.1 to C2.3): appointment 513 of claim SST-2026-000164 on the last weekday before the
+  load day at 09:00, with no session yet. Type the report or attach one PDF, JPG or PNG file, choose the
+  "Recommended treatment" (Physiotherapy, Occupational therapy or None), then "Finish the draft". Sign (the drawing
+  is stored as `/reports/<session_id>/signature.png`), then "File the report". The officer then sees the report,
+  with the signature image, in O6.
+- "User did not attend" (C2.1 Alternate Case 3): shows while the consultation has no report. Confirm makes
+  appointment 513 `No show`; claim SST-2026-000164 is then on the officer's Scheduling list (O4) again.
+- `make db-reset` also copies made-up signature images of the filed seed reports into `server/storage/reports/`.
 
 ## Lint and test
 

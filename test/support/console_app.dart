@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sso_plus_plus/routing/console_router.dart';
@@ -43,3 +45,7 @@ Future<void> signInToConsole(WidgetTester tester, FakeServer server,
   await tester.tap(find.byKey(const Key('sign_in')));
   await tester.pumpAndSettle();
 }
+
+/// A 1 x 1 PNG image: a stored signature in the tests (R-048).
+final Uint8List tinyPng = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');

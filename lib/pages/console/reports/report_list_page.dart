@@ -59,7 +59,6 @@ class ReportListPage extends ConsumerWidget {
                       DataColumn(label: Text('Report')),
                       DataColumn(label: Text('Claim ID')),
                       DataColumn(label: Text('User')),
-                      DataColumn(label: Text('Version')),
                       DataColumn(label: Text('Signed')),
                       DataColumn(label: Text('View status')),
                       DataColumn(label: SizedBox.shrink()),
@@ -70,7 +69,6 @@ class ReportListPage extends ConsumerWidget {
                           DataCell(Text(ReportShortcutCard.reportNo(r['report_id']), style: text.titleSmall)),
                           DataCell(Text('${r['claim_no']}')),
                           DataCell(Text('${r['user_name']}')),
-                          DataCell(Text('${r['version_no']}')),
                           DataCell(Text('${r['signed_date']}')),
                           DataCell(ViewStatusChip('${r['view_status']}')),
                           DataCell(FilledButton.tonal(

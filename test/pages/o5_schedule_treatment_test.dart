@@ -26,7 +26,6 @@ FakeServer _server() => FakeServer()
         'user_name': 'สมชาย ประเสริฐ',
         'recommended_treatment': 'Physiotherapy',
         'report_id': 87,
-        'version_no': 1,
         'signed_date': '16 October 2026',
         'report_author': 'นพ. ธนา ศรีสุข',
       },
@@ -58,7 +57,7 @@ void main() {
       (WidgetTester tester) async {
     final FakeServer server = _server();
     await _openTreatment(tester, server);
-    expect(find.text('Consultation report CR-0087 · version 1'), findsOneWidget);
+    expect(find.text('Consultation report CR-0087'), findsOneWidget);
     expect(find.text('Signed'), findsWidgets);
     expect(find.text('Choose a treatment type, duration and facility first.'), findsOneWidget);
 
@@ -136,8 +135,7 @@ void main() {
             'user_name': 'สุดา แก้วมณี',
             'recommended_treatment': 'None',
             'report_id': 85,
-            'version_no': 1,
-            'signed_date': '15 October 2026',
+                'signed_date': '15 October 2026',
             'report_author': 'พญ. มาลี ใจดี',
           },
         ],

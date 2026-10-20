@@ -31,8 +31,7 @@ class ReportShortcutCard extends StatelessWidget {
         Icon(Icons.description, color: colors.primary),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-            Text('Consultation report ${reportNo(claim['report_id'])} · version ${claim['version_no']}',
-                style: text.titleSmall),
+            Text('Consultation report ${reportNo(claim['report_id'])}', style: text.titleSmall),
             Text('By ${claim['report_author']} · signed ${claim['signed_date']}', style: text.bodySmall),
           ]),
         ),

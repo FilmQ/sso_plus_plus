@@ -62,7 +62,7 @@ class ConsoleNav extends ConsumerWidget {
       // QO6.1: the number of filed reports.
       '/reports': ref.watch(reportListProvider).value?.length.toString(),
       // QC1.1 and QC2.1 (consultant).
-      '/schedule': ref.watch(consultantScheduleProvider).value?.length.toString(),
+      '/schedule': ref.watch(consultantScheduleProvider).value?.appointments.length.toString(),
       '/consultations': ref.watch(pendingConsultationsProvider).value?.length.toString(),
     };
     return Container(
