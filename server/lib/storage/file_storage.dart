@@ -16,6 +16,11 @@ abstract interface class FileStorage {
   /// gives its report_file_uri, for example '/reports/306/xray.pdf'.
   Future<String> saveReportFile(int sessionId, String fileName, Uint8List bytes);
 
+  /// Keeps the drawn signature of a report (C2.2, R-048) as
+  /// `/reports/<session_id>/signature.png` and gives its signature_uri. A new
+  /// signature of the same session replaces the old file.
+  Future<String> saveSignature(int sessionId, Uint8List pngBytes);
+
   /// The bytes of a [save]d file (O1 step 6), or null when there is no file.
   Future<Uint8List?> read(String fileUri);
 }
@@ -33,14 +38,27 @@ class LocalFileStorage implements FileStorage {
   Future<String> saveReportFile(int sessionId, String fileName, Uint8List bytes) =>
       _saveIn('reports', sessionId, fileName, bytes);
 
+  @override
+  Future<String> saveSignature(int sessionId, Uint8List pngBytes) async {
+    final dir = Directory(p.join(root, 'reports', '$sessionId'));
+    await dir.create(recursive: true);
+    await File(p.join(dir.path, signatureFileName)).writeAsBytes(pngBytes, flush: true);
+    return '/reports/$sessionId/$signatureFileName';
+  }
+
+  /// The name of the signature file in a report folder. A report file does
+  /// not get this name.
+  static const signatureFileName = 'signature.png';
+
   /// Keeps [bytes] as `<root>/<folder>/<id>/<file name>`; a second file with
-  /// the same name gets a number. Gives `/<folder>/<id>/<file name>`.
+  /// the same name (or the name of the signature file) gets a number. Gives
+  /// `/<folder>/<id>/<file name>`.
   Future<String> _saveIn(String folder, int id, String fileName, Uint8List bytes) async {
     final dir = Directory(p.join(root, folder, '$id'));
     await dir.create(recursive: true);
     var name = _safeName(fileName);
     var n = 1;
-    while (File(p.join(dir.path, name)).existsSync()) {
+    while (File(p.join(dir.path, name)).existsSync() || (folder == 'reports' && name == signatureFileName)) {
       name = '${p.basenameWithoutExtension(_safeName(fileName))}_${n++}${p.extension(fileName)}';
     }
     await File(p.join(dir.path, name)).writeAsBytes(bytes, flush: true);

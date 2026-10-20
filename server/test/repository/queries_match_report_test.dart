@@ -22,8 +22,8 @@ void main() {
   };
   final report = _readQueriesSql();
 
-  test('the code has all 60 Query IDs of queries.sql', () {
-    expect(report.length, 60);
+  test('the code has all 62 Query IDs of queries.sql', () {
+    expect(report.length, 62);
     expect(code.keys.toSet(), report.keys.toSet());
   });
 

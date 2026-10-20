@@ -21,6 +21,11 @@ void addOfficerReportRoutes(
       final file = await reports(r).openReportFile(int.parse(id));
       return Response.ok(file.bytes, headers: {'content-type': file.mimeType});
     })
+    // O6-2 and O6-3: the signature image of the report (no SQL, R-048)
+    ..get('$report/signature', (Request r, String id) async {
+      final file = await reports(r).openReportSignature(int.parse(id));
+      return Response.ok(file.bytes, headers: {'content-type': file.mimeType});
+    })
     // QO6.3, QO6.2
     ..post('$report/view', (Request r, String id) async =>
         jsonOk({'report': await reports(r).viewReport(int.parse(id))}));

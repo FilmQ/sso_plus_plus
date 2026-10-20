@@ -257,6 +257,18 @@ WHERE a.consultant_id = :consultant_id
 ORDER BY a.schedule_date, a.schedule_time
 ''';
 
+  // QC1.2 [C1] ดูตารางนัดหมาย (View Appointment Schedule)
+  static const qC1_2 = r'''
+SELECT n.notification_id,
+  n.subject,
+  n.body,
+  TO_CHAR(n.sent_at, 'FMDD FMMonth YYYY" : "HH24:MI') AS sent_time
+FROM Notification n
+WHERE n.consultant_id = :consultant_id
+  AND n.sent_at >= NOW() - INTERVAL '14 days'
+ORDER BY n.sent_at DESC
+''';
+
   /// Every Query ID of this class, for the test that compares the SQL with the report.
   static const all = <String, List<String>>{
     'Q3.2': [q3_2],
@@ -269,5 +281,6 @@ ORDER BY a.schedule_date, a.schedule_time
     'QO4.2': [qO4_2],
     'QO4.3': [qO4_3],
     'QC1.1': [qC1_1],
+    'QC1.2': [qC1_2],
   };
 }

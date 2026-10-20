@@ -69,4 +69,8 @@ class AppointmentRepository extends Repository {
   // QC1.1 [C1]
   Future<List<Row>> findConfirmedAppointments(int consultantId) async =>
       (await query(AppointmentSql.qC1_1, {'consultant_id': consultantId})).rows;
+
+  // QC1.2 [C1] The QN.5 messages to the consultant of the last 14 days, the newest first.
+  Future<List<Row>> findRecentChanges(int consultantId) async =>
+      (await query(AppointmentSql.qC1_2, {'consultant_id': consultantId})).rows;
 }

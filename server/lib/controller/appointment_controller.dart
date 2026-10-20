@@ -95,8 +95,9 @@ class AppointmentController extends Controller {
     if (notificationId != null) await notificationModel.markRead(notificationId, _insuredId);
   }
 
-  /// C1 steps 1 to 2 (QC1.1): the Schedule Page of the consultant.
-  Future<List<Map<String, Object?>>> getSchedule() => appointmentModel.getConsultantSchedule(_consultantId);
+  /// C1 steps 1 to 2.1 (QC1.1, QC1.2): the Schedule Page of the consultant.
+  Future<({List<Map<String, Object?>> appointments, List<Map<String, Object?>> recentChanges})> getSchedule() =>
+      appointmentModel.getConsultantSchedule(_consultantId);
 
   /// O4 steps 1 to 2 (QO4.1): the claims of the Scheduling page.
   Future<List<Map<String, Object?>>> getClaimsToSchedule() {

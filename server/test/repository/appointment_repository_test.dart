@@ -40,14 +40,14 @@ void main() {
       }));
 
   test('Q3.5 rescheduleAppointment: old row Rescheduled, new row Confirmed', () => inRollback(db, () async {
-        await expectLater(repo.rescheduleAppointment(504, day(12), '12:30'), throwsA(isA<NoRowChangedException>()),
+        await expectLater(repo.rescheduleAppointment(504, weekday(12), '12:30'), throwsA(isA<NoRowChangedException>()),
             reason: 'only the six hours of Q3.4');
-        final newId = await repo.rescheduleAppointment(504, day(12), '14:00');
+        final newId = await repo.rescheduleAppointment(504, weekday(12), '14:00');
         expect((await appt(504))['appointment_status'], 'Rescheduled');
         final row = await appt(newId);
         expect(row['appointment_status'], 'Confirmed');
         expect(row['supersedes_appt_id'], 504);
-        await expectLater(repo.rescheduleAppointment(504, day(12), '15:00'), throwsA(isA<NoRowChangedException>()));
+        await expectLater(repo.rescheduleAppointment(504, weekday(12), '15:00'), throwsA(isA<NoRowChangedException>()));
       }));
 
   test('Q3.6 cancelAppointment: Confirmed to Cancelled, claim Withdrawn; not twice', () => inRollback(db, () async {
@@ -120,5 +120,16 @@ void main() {
         final rows = await repo.findConfirmedAppointments(3);
         expect(rows.single['appointment_id'], id);
         expect(rows.single['user_name'], 'นาย ชัยวัฒน์ สุขเจริญ');
+      }));
+
+  test('QC1.2 findRecentChanges: the QN.5 messages to the consultant of the last 14 days, the newest first', () =>
+      inRollback(db, () async {
+        final rows = await repo.findRecentChanges(1);
+        expect(rows.first['notification_id'], 909);
+        expect(rows.first['subject'], 'Appointment confirmed');
+        expect(rows.first['sent_time'], matches(RegExp(r'^\d{1,2} [A-Z][a-z]+ \d{4} : \d{2}:\d{2}$')));
+        await db.performQuery("UPDATE Notification SET sent_at = NOW() - INTERVAL '15 days' WHERE notification_id = 909");
+        expect((await repo.findRecentChanges(1)).any((r) => r['notification_id'] == 909), isFalse);
+        expect((await repo.findRecentChanges(2)).any((r) => r['notification_id'] == 909), isFalse);
       }));
 }

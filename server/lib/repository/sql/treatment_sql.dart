@@ -169,7 +169,6 @@ SELECT ic.claim_id,
   ip.title_name,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   cr.report_id,
-  cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS report_author,
