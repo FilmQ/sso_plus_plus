@@ -719,7 +719,6 @@ SELECT ic.claim_id,
   ip.title_name,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   cr.report_id,
-  cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS report_author,
@@ -851,7 +850,6 @@ JOIN closed ON closed.claim_id = prev.claim_id;
 SELECT cr.report_id,
   ic.claim_no,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
-  cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
     AS view_status
@@ -868,7 +866,6 @@ ORDER BY cr.read_at IS NOT NULL, cr.delivered_at DESC;
 SELECT ic.claim_no,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
-  cr.version_no,
   DATE_PART('year', AGE(ip.date_of_birth))::int AS user_age,
   TO_CHAR(cs.started_at, 'FMDD FMMonth YYYY" : "HH24:MI')
     AS consultation_datetime,
@@ -877,6 +874,7 @@ SELECT ic.claim_no,
     AS consultant_name,
   cr.report_content,
   cr.report_file_uri,
+  cr.signature_uri,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
@@ -914,6 +912,16 @@ WHERE a.consultant_id = :consultant_id
   AND a.schedule_date >= CURRENT_DATE
 ORDER BY a.schedule_date, a.schedule_time;
 
+-- QC1.2  [C1] ดูตารางนัดหมาย (View Appointment Schedule)
+SELECT n.notification_id,
+  n.subject,
+  n.body,
+  TO_CHAR(n.sent_at, 'FMDD FMMonth YYYY" : "HH24:MI') AS sent_time
+FROM Notification n
+WHERE n.consultant_id = :consultant_id
+  AND n.sent_at >= NOW() - INTERVAL '14 days'
+ORDER BY n.sent_at DESC;
+
 -- QC2.1  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
 SELECT a.appointment_id,
   ic.claim_no,
@@ -942,10 +950,9 @@ SELECT a.appointment_id, a.consultant_id, a.officer_id,
   a.schedule_date + a.schedule_time, 'Attended', 'Completed'
 FROM Appointment a
 WHERE a.appointment_id = :appointment_id
-  AND NOT EXISTS (
-        SELECT 1
-        FROM ConsultationSession cs
-        WHERE cs.appointment_id = a.appointment_id);
+  AND a.consultant_id = :consultant_id
+  AND a.appointment_status = 'Confirmed'
+ON CONFLICT (appointment_id) DO NOTHING;
 
 -- QC2.3  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
 SELECT cs.session_id,
@@ -956,10 +963,11 @@ SELECT cs.session_id,
     AS consultation_datetime,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS consultant_name,
+  cs.recommended_treatment,
   cr.report_id,
-  COALESCE(cr.version_no, 1) AS version_no,
   cr.report_content,
   cr.report_file_uri,
+  cr.signature_uri,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status
@@ -974,40 +982,103 @@ LEFT JOIN ConsultationReport cr
 WHERE cs.appointment_id = :appointment_id;
 
 -- QC2.4  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
+WITH sess AS (
+  UPDATE ConsultationSession
+  SET recommended_treatment = NULLIF(:recommended_treatment::text, '')
+  WHERE session_id = :session_id
+    AND consultant_id = :consultant_id
+    AND (NULLIF(:recommended_treatment::text, '') IS NULL
+      OR :recommended_treatment::text IN
+           ('Physiotherapy', 'Occupational therapy', 'None'))
+  RETURNING session_id, consultant_id
+)
 INSERT INTO ConsultationReport
   (session_id, consultant_id, version_no, report_content,
    report_file_uri, is_superseded)
-VALUES (:session_id, :consultant_id, 1,
+SELECT session_id, consultant_id, 1,
   NULLIF(:report_content::text, ''),
-  NULLIF(:report_file_uri::varchar, ''), FALSE)
+  NULLIF(:report_file_uri::varchar, ''), FALSE
+FROM sess
+ON CONFLICT (session_id) DO NOTHING
 RETURNING report_id;
 
 -- QC2.5  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
-UPDATE ConsultationReport
-SET report_content = NULLIF(:report_content::text, ''),
-    report_file_uri = NULLIF(:report_file_uri::varchar, ''),
-    signed_at = NULL
-WHERE report_id = :report_id
-  AND consultant_id = :consultant_id
-  AND delivered_at IS NULL;
+WITH rpt AS (
+  UPDATE ConsultationReport
+  SET report_content = NULLIF(:report_content::text, ''),
+      report_file_uri = NULLIF(:report_file_uri::varchar, ''),
+      signed_at = NULL,
+      signature_uri = NULL
+  WHERE report_id = :report_id
+    AND consultant_id = :consultant_id
+    AND delivered_at IS NULL
+    AND (NULLIF(:recommended_treatment::text, '') IS NULL
+      OR :recommended_treatment::text IN
+           ('Physiotherapy', 'Occupational therapy', 'None'))
+  RETURNING session_id
+)
+UPDATE ConsultationSession cs
+SET recommended_treatment = NULLIF(:recommended_treatment::text, '')
+FROM rpt
+WHERE cs.session_id = rpt.session_id
+RETURNING cs.session_id;
 
 -- QC2.6  [C2.2] สร้างรายงานการให้คำปรึกษา (Sign the Signature)
 UPDATE ConsultationReport
-SET signed_at = NOW()
+SET signed_at = NOW(),
+    signature_uri = :signature_uri::varchar
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
   AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
-  AND signed_at IS NULL;
+  AND NULLIF(:signature_uri::varchar, '') IS NOT NULL
+  AND signed_at IS NULL
+RETURNING report_id;
 
 -- QC2.7  [C2.3] สร้างรายงานการให้คำปรึกษา (File the Report)
-UPDATE ConsultationReport
+UPDATE ConsultationReport cr
 SET delivered_at = NOW()
-WHERE report_id = :report_id
-  AND consultant_id = :consultant_id
-  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
-  AND signed_at IS NOT NULL
-  AND delivered_at IS NULL
-RETURNING report_id;
+FROM ConsultationSession cs
+WHERE cr.report_id = :report_id
+  AND cr.consultant_id = :consultant_id
+  AND cs.session_id = cr.session_id
+  AND cs.recommended_treatment IS NOT NULL
+  AND (cr.report_content IS NOT NULL OR cr.report_file_uri IS NOT NULL)
+  AND cr.signed_at IS NOT NULL
+  AND cr.delivered_at IS NULL
+RETURNING cr.report_id;
+
+-- QC2.8  [C2.1] สร้างรายงานการให้คำปรึกษา (Amend the Draft)
+WITH appt AS (
+  SELECT a.appointment_id, a.consultant_id, a.officer_id,
+    a.schedule_date + a.schedule_time AS start_at
+  FROM Appointment a
+  WHERE a.appointment_id = :appointment_id
+    AND a.consultant_id = :consultant_id
+    AND a.appointment_status = 'Confirmed'
+    AND a.schedule_date + a.schedule_time <= NOW()
+    AND NOT EXISTS (
+          SELECT 1
+          FROM ConsultationSession cs
+          JOIN ConsultationReport cr ON cr.session_id = cs.session_id
+          WHERE cs.appointment_id = a.appointment_id)
+), sess AS (
+  INSERT INTO ConsultationSession
+    (appointment_id, consultant_id, officer_id, started_at,
+     ended_at, attendance, session_status)
+  SELECT appointment_id, consultant_id, officer_id, start_at,
+    NOW(), 'No show', 'Cancelled'
+  FROM appt
+  ON CONFLICT (appointment_id) DO UPDATE
+  SET attendance = 'No show',
+      session_status = 'Cancelled',
+      ended_at = NOW()
+  RETURNING appointment_id
+)
+UPDATE Appointment a
+SET appointment_status = 'No show'
+FROM sess
+WHERE a.appointment_id = sess.appointment_id
+RETURNING a.appointment_id, a.claim_id;
 
 -- QN.1  [O2, O5.1] อนุมัติคำร้อง (Approve Injury Application) / นัดหมายการรักษา (Book Treatment)
 INSERT INTO Notification

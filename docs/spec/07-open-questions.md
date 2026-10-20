@@ -1,7 +1,7 @@
 # Open questions and known gaps
 
 Things the SA report does not settle, or settles in a way the code has to work around. Raise each one with the
-team before building the part "../../docs 2/spec"it affects; record what was decided in `docs/DECISIONS.md` so it can be written
+team before building the part it affects; record what was decided in `docs/DECISIONS.md` so it can be written
 back into the report.
 
 ## Decide before or during the first build
@@ -21,9 +21,9 @@ back into the report.
    reached and the person is not `ACTIVE`, U1 fails validation (screen U1-3).
 4. **Uploaded files.** `ClaimDocument` keeps `file_uri`, `mime_type` and `file_size_bytes`; where the bytes live
    is not specified. A local folder behind a storage interface is enough for the prototype.
-5. **Consultant attachment and signature.** C2.1 Alternate Case 1 attaches a file to the report and C2.2 captures
-   a signature, but `ConsultationReport` has no column for either (only `signed_at`). Decide where they go before
-   building C2.
+5. **Consultant attachment and signature (settled 2026-10-19).** C2.1 Alternate Case 1 saves the attached file
+   in `ConsultationReport.report_file_uri` (R-046, stored at `/reports/<session_id>/<file name>`, D-057); C2.2 saves
+   the drawn signature as an image file in `ConsultationReport.signature_uri` together with `signed_at` (R-048).
 6. **Deadlines.**
    - Appointments: QO4.3 sets `Appointment.confirm_deadline` to 24 hours before the appointment. Nothing in the
      system acts on it; the officer sees unconfirmed appointments as purple slots on the Schedule Appointment page
@@ -38,6 +38,43 @@ back into the report.
 10. **Time zone** is Asia/Bangkok; the report's dates are written `[วัน] / [เดือน] / [ปี] : [เวลา]`.
 11. **Software platform.** The stack is settled (D-001: Flutter, a Dart server, PostgreSQL 16), but the stack
     figure in report section 2.20 is still a placeholder for the team to fill.
+
+## Settled on 2026-10-19 (report-back 5, C1 and C2)
+
+Business decisions (the team):
+
+- **R-050:** the C2.1 Report card has a required "Recommended treatment" field (Physiotherapy, Occupational therapy,
+  None), saved with the draft into `ConsultationSession.recommended_treatment`. O5.1 and O5.2 show it; C2.3 cannot
+  file without it.
+- **R-048:** the drawn signature is kept as an image file with the report (`ConsultationReport.signature_uri`); O6-2
+  and O6-3 show it next to "Signed by".
+- **R-049:** no message to the officer when a report is filed; it appears in the O6 list (QO6.1). C2.3 step 4 and
+  the frames say "Filed".
+- **R-051:** no-show: the consultant clicks "User did not attend" on the report page (C2.1 Alternate Case 3). The
+  session is saved as `No show` / `Cancelled`, the appointment becomes `No show`, and the claim (still `Covered`)
+  returns to the officer's Scheduling list (QO4.1) for a new appointment.
+- **R-052:** the consultant reads the QN.5 messages in a "Recent changes" card on the Schedule Page (C1, QC1.2); no
+  new page.
+- **R-055:** a report has one version, amended in place until it is filed; no version line on any page.
+
+Documentation decisions:
+
+- **R-053:** `UNIQUE (appointment_id)` on ConsultationSession and `UNIQUE (session_id)` on ConsultationReport. QC2.2
+  and QC2.4 use `ON CONFLICT DO NOTHING`; 0 rows from QC2.4 means a draft exists, so the page uses QC2.5.
+- **R-050:** QC2.4 and QC2.5 also write the session's `recommended_treatment` (guarded WITH statements); QC2.7
+  needs it; QC2.3 returns it.
+- **R-048:** QC2.6 saves `:signature_uri` with `signed_at`; QC2.5 clears both; a CHECK keeps them both NULL or both
+  set; QC2.3 and QO6.2 return `signature_uri`.
+- **R-051:** new QC2.8 (guarded: `Confirmed`, start time passed, the consultant's own, no report yet);
+  `appointment_status` adds `No show`.
+- **R-052:** new QC1.2 returns the consultant's QN.5 messages of the last 14 days, newest first.
+- **R-055:** `version_no` stays in the table (always 1); QC2.3, QO6.1 and QO6.2 no longer return it;
+  `is_superseded` stays FALSE.
+- **R-054:** ConsultationReport Draft to Signed needs `report_content or report_file_uri IS NOT NULL`.
+- **R-047:** the dev seed adds two `Confirmed` appointments for consultant 1 (one in the future for C1, one in the
+  past without a session for C2) on two new `Covered` claims, and a QN.5 message for the C1 card.
+- **D-057** (upload step in C2.1, file stored at `/reports/<session_id>/<file name>`), **D-058** and **D-059** are
+  taken into the report as the code has them.
 
 ## Settled on 2026-10-18 (report-back 4, O1 to O6)
 

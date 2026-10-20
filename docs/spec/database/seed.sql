@@ -100,10 +100,10 @@ INSERT INTO ConsultationSession (session_id, appointment_id, consultant_id, offi
   (302, 503, 1, 2, '2026-10-16 13:00', '2026-10-16 13:50', 'Attended', 'Swelling of the left foot', 'Crush injury, left foot', 'Occupational therapy', 'Completed'),
   (303, 504, 1, 1, '2026-10-16 10:00', '2026-10-16 10:45', 'Attended', 'Stiff right wrist after cast', 'Distal radius fracture', 'Physiotherapy', 'Completed');
 
-INSERT INTO ConsultationReport (report_id, session_id, consultant_id, version_no, report_content, signed_at, delivered_at, read_at, is_superseded) OVERRIDING SYSTEM VALUE VALUES
-  (85, 301, 2, 1, 'Second-degree burn on the left hand, healing well. No further treatment required.', '2026-10-15 16:00', '2026-10-15 16:10', '2026-10-15 17:30', FALSE),
-  (86, 302, 1, 1, 'Crush injury of the left foot with soft tissue swelling. Occupational therapy twice a week for 4 weeks.', '2026-10-16 15:05', '2026-10-16 15:10', '2026-10-17 09:00', FALSE),
-  (87, 303, 1, 1, 'Closed fracture of the distal radius, right wrist. Physiotherapy twice a week for 6 weeks.', '2026-10-16 11:20', '2026-10-16 11:25', NULL, FALSE);
+INSERT INTO ConsultationReport (report_id, session_id, consultant_id, version_no, report_content, signature_uri, signed_at, delivered_at, read_at, is_superseded) OVERRIDING SYSTEM VALUE VALUES
+  (85, 301, 2, 1, 'Second-degree burn on the left hand, healing well. No further treatment required.', '/reports/301/signature.png', '2026-10-15 16:00', '2026-10-15 16:10', '2026-10-15 17:30', FALSE),
+  (86, 302, 1, 1, 'Crush injury of the left foot with soft tissue swelling. Occupational therapy twice a week for 4 weeks.', '/reports/302/signature.png', '2026-10-16 15:05', '2026-10-16 15:10', '2026-10-17 09:00', FALSE),
+  (87, 303, 1, 1, 'Closed fracture of the distal radius, right wrist. Physiotherapy twice a week for 6 weeks.', '/reports/303/signature.png', '2026-10-16 11:20', '2026-10-16 11:25', NULL, FALSE);
 
 INSERT INTO Treatment (treatment_id, claim_id, report_id, officer_id, treatment_type, duration_minutes, facility_name, scheduled_date, scheduled_time, treatment_status, created_at) OVERRIDING SYSTEM VALUE VALUES
   (401, 143, 87, 1, 'Physiotherapy', 60, 'SSO Rehabilitation Center', '2026-10-23', '13:00', 'Accepted', '2026-10-17 09:30'),
@@ -249,8 +249,53 @@ INSERT INTO Appointment (appointment_id, claim_id, officer_id, consultant_id, su
 INSERT INTO ConsultationSession (session_id, appointment_id, consultant_id, officer_id, started_at, ended_at, attendance, findings, diagnosis, recommended_treatment, session_status) OVERRIDING SYSTEM VALUE VALUES
   (306, 511, 2, 2, '2026-10-15 11:00', '2026-10-15 11:40', 'Attended', 'Swelling and pain of the left knee', 'Sprain of the left knee', 'Physiotherapy', 'Completed');
 
-INSERT INTO ConsultationReport (report_id, session_id, consultant_id, version_no, report_content, signed_at, delivered_at, read_at, is_superseded) OVERRIDING SYSTEM VALUE VALUES
-  (90, 306, 2, 1, 'Sprain of the left knee with mild swelling. Physiotherapy once a week for 4 weeks.', '2026-10-15 15:00', '2026-10-15 15:05', NULL, FALSE);
+INSERT INTO ConsultationReport (report_id, session_id, consultant_id, version_no, report_content, signature_uri, signed_at, delivered_at, read_at, is_superseded) OVERRIDING SYSTEM VALUE VALUES
+  (90, 306, 2, 1, 'Sprain of the left knee with mild swelling. Physiotherapy once a week for 4 weeks.', '/reports/306/signature.png', '2026-10-15 15:00', '2026-10-15 15:05', NULL, FALSE);
+
+-- C1 and C2 demo (R-047): consultant 1 (the consultant with a console account) has a Confirmed appointment on the
+-- next weekday (C1 Schedule Page) and one on the last weekday before today with no session yet (C2 report list,
+-- and the User did not attend case). Message 909 is a QN.5 message for the Recent changes card (QC1.2).
+INSERT INTO master_table (national_id, title_name, first_name, last_name, coverage_status, employer_account_no,  employer_name, registration_date, contribution_start, contribution_end, contribution_months) VALUES
+  ('1100400556671', 'นาย', 'ประเสริฐ', 'มีสุข', 'ACTIVE', '1000123456', 'Siam Precision Parts Co., Ltd.', '2019-05-13', '2019-06-01', NULL, 89),
+  ('2730100778893', 'นางสาว', 'วรรณา', 'แสงทอง', 'ACTIVE', '1000456789', 'Bangna Logistics Co., Ltd.', '2021-01-11', '2021-02-01', NULL, 69);
+
+INSERT INTO InsuredPerson (insured_id, national_id, title_name, first_name, last_name, date_of_birth, gender, phone_no, email, address, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (109, '1100400556671', 'นาย', 'ประเสริฐ', 'มีสุข', '1987-03-21', 'M', '0861112233', NULL, '55 ม.4 ต.ราชาเทวะ อ.บางพลี สมุทรปราการ 10540', '2026-10-05 09:10'),
+  (110, '2730100778893', 'นางสาว', 'วรรณา', 'แสงทอง', '1995-11-02', 'F', '0892223344', NULL, '120/8 ถ.สรรพาวุธ แขวงบางนา เขตบางนา กรุงเทพมหานคร 10260', '2026-10-06 13:40');
+
+INSERT INTO Section33Coverage (coverage_id, insured_id, employer_id, registration_date, contribution_start, contribution_end, contribution_months, coverage_status) OVERRIDING SYSTEM VALUE VALUES
+  (209, 109, 11, '2019-05-13', '2019-06-01', NULL, 89, 'ACTIVE'),
+  (210, 110, 14, '2021-01-11', '2021-02-01', NULL, 69, 'ACTIVE');
+
+INSERT INTO InjuryClaim (claim_id, claim_no, insured_id, employer_id, injury_datetime, injury_place, injury_cause, body_part, injury_category, claim_status, submitted_at, created_at) OVERRIDING SYSTEM VALUE VALUES
+  (163, 'SST-2026-000163', 109, 11, '2026-10-03 15:30', 'Press line 2, Bang Phli, Samut Prakan', 'Hand pressed in a stamping machine', 'left hand', 'Fracture', 'Covered', '2026-10-05 09:10', '2026-10-05 09:10'),
+  (164, 'SST-2026-000164', 110, 14, '2026-10-04 11:00', 'Warehouse 3, Bang Na, Bangkok', 'Lifted a heavy box', 'lower back', 'Back strain', 'Covered', '2026-10-06 13:40', '2026-10-06 13:40');
+
+INSERT INTO EligibilityCheck (check_id, claim_id, coverage_id, officer_id, checked_at, result, is_override, override_reason, evidence_ref) OVERRIDING SYSTEM VALUE VALUES
+  (814, 163, 209, NULL, '2026-10-05 09:10', 'Covered', FALSE, NULL, 'REG-20261005-0163'),
+  (815, 163, 209, 1, '2026-10-06 10:00', 'Covered', FALSE, NULL, 'REG-20261005-0163'),
+  (816, 164, 210, NULL, '2026-10-06 13:40', 'Covered', FALSE, NULL, 'REG-20261006-0164'),
+  (817, 164, 210, 1, '2026-10-07 09:20', 'Covered', FALSE, NULL, 'REG-20261006-0164');
+
+INSERT INTO ClaimStatusHistory (history_id, claim_id, officer_id, from_status, to_status, changed_at, change_reason) OVERRIDING SYSTEM VALUE VALUES
+  (1016, 163, NULL, NULL, 'Awaiting verification', '2026-10-05 09:10', 'Submitted by the user'),
+  (1017, 163, 1, 'Awaiting verification', 'Covered', '2026-10-06 10:00', NULL),
+  (1018, 164, NULL, NULL, 'Awaiting verification', '2026-10-06 13:40', 'Submitted by the user'),
+  (1019, 164, 1, 'Awaiting verification', 'Covered', '2026-10-07 09:20', NULL);
+
+INSERT INTO Appointment (appointment_id, claim_id, officer_id, consultant_id, supersedes_appt_id, appointment_type, schedule_date, schedule_time, location, appointment_status, confirm_deadline, created_at) OVERRIDING SYSTEM VALUE
+SELECT 512, 163, 1, 1, NULL::integer, 'Onsite', d, TIME '10:00', 'Building A, Floor 3, Room 305', 'Confirmed', d - 1 + TIME '10:00', NOW() - INTERVAL '2 days'
+FROM (SELECT (CURRENT_DATE + 1) + CASE EXTRACT(ISODOW FROM CURRENT_DATE + 1) WHEN 6 THEN 2 WHEN 7 THEN 1 ELSE 0 END AS d) x
+UNION ALL
+SELECT 513, 164, 1, 1, NULL::integer, 'Onsite', d, TIME '09:00', 'Building A, Floor 3, Room 305', 'Confirmed', d - 1 + TIME '09:00', NOW() - INTERVAL '5 days'
+FROM (SELECT (CURRENT_DATE - 1) - CASE EXTRACT(ISODOW FROM CURRENT_DATE - 1) WHEN 6 THEN 1 WHEN 7 THEN 2 ELSE 0 END AS d) y;
+
+INSERT INTO Notification (notification_id, claim_id, insured_id, consultant_id, subject, body, sent_at, read_at) OVERRIDING SYSTEM VALUE
+SELECT 909, 163, NULL, 1, 'Appointment confirmed',
+  'นาย ประเสริฐ มีสุข (claim SST-2026-000163) confirmed the appointment on '
+    || TO_CHAR(a.schedule_date + a.schedule_time, 'FMDD FMMonth YYYY" : "HH24:MI') || ' at ' || a.location || '.',
+  NOW() - INTERVAL '3 hours', NULL::timestamp
+FROM Appointment a WHERE a.appointment_id = 512;
 
 SELECT setval(pg_get_serial_sequence('insuredperson', 'insured_id'), (SELECT MAX(insured_id) FROM InsuredPerson));
 SELECT setval(pg_get_serial_sequence('employer', 'employer_id'), (SELECT MAX(employer_id) FROM Employer));

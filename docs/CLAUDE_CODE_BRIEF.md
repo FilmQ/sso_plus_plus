@@ -38,12 +38,12 @@ Actors and use cases (14, some split into sub-cases):
    Query IDs, alternate cases).
 4. `04-classes.md`: the MVC classes with attributes and methods.
 5. `05-states.md`: state machines for InjuryClaim, Appointment, Treatment and ConsultationReport.
-6. `06-screens.md`: the 52 screens, their codes and the Figma pages.
+6. `06-screens.md`: the 54 screens, their codes and the Figma pages.
 7. `07-open-questions.md`: gaps the report leaves open. Several affect the first session.
 8. `database/schema.sql`, `database/seed.sql`, `database/queries.sql`, `database/data-dictionary.md`.
 9. `diagrams/`: use case, business process, ER, class, state, sequence and site map diagrams as PNG.
 
-`schema.sql` and `seed.sql` load cleanly into PostgreSQL 16, and all 60 statements in `queries.sql` prepare
+`schema.sql` and `seed.sql` load cleanly into PostgreSQL 16, and all 62 statements in `queries.sql` prepare
 against that schema. `docs/spec/README.md` ends with what changed since the previous pack. If `docs/spec/` is missing, stop and ask me for it.
 
 **Live sources (links).** They need our team's Google, Figma or Canva sign-in, so you may not be able to open
@@ -123,7 +123,7 @@ Do these in order, commit after each step, and stop after step 5 with a short su
 1. **Scaffold** the repository with the agreed stack, Docker Compose for PostgreSQL 16, the migration from
    `schema.sql`, the seed from `seed.sql`, lint and test scripts, README and `.env.example`.
 2. **Data layer:** `DBConnector` (pool, `performQuery`, transactions, `:name` parameter conversion) and every
-   Repository class from `04-classes.md` with **all 60 queries** as methods. Add a test per query that runs it
+   Repository class from `04-classes.md` with **all 62 queries** as methods. Add a test per query that runs it
    against the seeded database inside a rolled-back transaction, with parameters taken from the seed rows.
 3. **Login** as agreed in question 2, with seed accounts for one user, one officer and one consultant from the
    seed people.

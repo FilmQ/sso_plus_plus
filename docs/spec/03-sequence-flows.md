@@ -561,8 +561,12 @@ Participants: Consultant (actor), SchedulePage (ui), AppointmentController (cont
 5. AppointmentRepository -> DB connector: performs query {QC1.1}
 6. DB connector --> AppointmentRepository: result rows
 7. AppointmentRepository --> AppointmentModel: appointments
-8. AppointmentModel --> AppointmentController: appointments
-9. AppointmentController --> SchedulePage: show schedule list
+8. AppointmentModel -> AppointmentRepository: findRecentChanges(consultant_id) {QC1.2}
+9. AppointmentRepository -> DB connector: performs query {QC1.2}
+10. DB connector --> AppointmentRepository: result rows
+11. AppointmentRepository --> AppointmentModel: messages
+12. AppointmentModel --> AppointmentController: appointments, recent changes
+13. AppointmentController --> SchedulePage: show schedule list and "Recent changes"
 
 ## C2.1: Create Consultant Report (Amend the draft)
 
@@ -590,29 +594,42 @@ Participants: Consultant (actor), CreateReportPage (ui), ReportController (contr
 20. ReportRepository --> ReportModel: reportPage
 21. ReportModel --> ReportController: reportPage
 22. ReportController --> CreateReportPage: show report page
-23. Consultant -> CreateReportPage: click "Amend the draft"
-24. CreateReportPage -> CreateReportPage: enableDraftEditing()
+- alt [User did not attend]
+  23. Consultant -> CreateReportPage: click "User did not attend"
+  24. CreateReportPage -> CreateReportPage: showNoShowConfirmation()
+  25. Consultant -> CreateReportPage: click "Confirm"
+  26. CreateReportPage -> ReportController: markNoShow(appointment_id)
+  27. ReportController -> ReportModel: markNoShow(appointment_id, consultant_id)
+  28. ReportModel -> ReportRepository: updateNoShow(appointment_id, consultant_id) {QC2.8}
+  29. ReportRepository -> DB connector: performs query {QC2.8}
+  30. DB connector --> ReportRepository: rows affected
+  31. ReportRepository --> ReportModel: appointment_id, claim_id (0 rows when the appointment is not Confirmed, not the consultant's own, not started yet or already has a report)
+  32. ReportModel --> ReportController: ok
+  33. ReportController --> CreateReportPage: show "Marked as no show"
+34. Consultant -> CreateReportPage: click "Amend the draft"
+35. CreateReportPage -> CreateReportPage: enableDraftEditing()
 - alt [Attach file]
-  25. Consultant -> CreateReportPage: click "Attach"
-  26. CreateReportPage -> CreateReportPage: openFileExplorer()
-  27. Consultant -> CreateReportPage: choose file, click "Open"
-  28. CreateReportPage -> CreateReportPage: showFileAttached()
-29. Consultant -> CreateReportPage: type report or attach a file, click "Finish the draft"
-30. CreateReportPage -> ReportController: saveDraft(session_id, report_content, report_file_uri)
-31. ReportController -> ReportModel: saveDraft(session_id, report_content, report_file_uri)
+  36. Consultant -> CreateReportPage: click "Attach"
+  37. CreateReportPage -> CreateReportPage: openFileExplorer()
+  38. Consultant -> CreateReportPage: choose file, click "Open"
+  39. CreateReportPage -> CreateReportPage: showFileAttached()
+40. Consultant -> CreateReportPage: type report or attach a file, choose treatment, click "Finish the draft"
+41. CreateReportPage -> ReportController: saveDraft(session_id, report_content or file, recommended_treatment)
+42. ReportController -> ReportModel: saveDraft(session_id, report_content or file, recommended_treatment)
+43. [file attached] ReportModel -> ReportModel: storeFile(session_id, file)
 - alt [Draft already saved]
-  32. ReportModel -> ReportRepository: updateDraft(report_id, report_content, report_file_uri) {QC2.5}
-  33. ReportRepository -> DB connector: performs query {QC2.5}
-  34. DB connector --> ReportRepository: rows affected
-  35. ReportRepository --> ReportModel: ok
-  36. ReportModel --> ReportController: ok
-  37. ReportController --> CreateReportPage: update text field
-38. ReportModel -> ReportRepository: insertDraft(session_id, report_content, report_file_uri) {QC2.4}
-39. ReportRepository -> DB connector: performs query {QC2.4}
-40. DB connector --> ReportRepository: report_id
-41. ReportRepository --> ReportModel: report_id
-42. ReportModel --> ReportController: report_id
-43. ReportController --> CreateReportPage: update text field
+  44. ReportModel -> ReportRepository: updateDraft(report_id, report_content, report_file_uri, recommended_treatment) {QC2.5}
+  45. ReportRepository -> DB connector: performs query {QC2.5}
+  46. DB connector --> ReportRepository: rows affected
+  47. ReportRepository --> ReportModel: session_id
+  48. ReportModel --> ReportController: ok
+  49. ReportController --> CreateReportPage: update text field
+50. ReportModel -> ReportRepository: insertDraft(session_id, report_content, report_file_uri, recommended_treatment) {QC2.4}
+51. ReportRepository -> DB connector: performs query {QC2.4}
+52. DB connector --> ReportRepository: rows affected
+53. ReportRepository --> ReportModel: report_id (0 rows from QC2.4 when a draft exists: use QC2.5)
+54. ReportModel --> ReportController: report_id
+55. ReportController --> CreateReportPage: update text field
 
 ## C2.2: Create Consultant Report (Sign the signature)
 
@@ -625,14 +642,15 @@ Participants: Consultant (actor), CreateReportPage (ui), ReportController (contr
   3. Consultant -> CreateReportPage: click "Delete"
   4. CreateReportPage -> CreateReportPage: clearSignature()
 5. Consultant -> CreateReportPage: sign, click "Confirm"
-6. CreateReportPage -> ReportController: signReport(report_id)
-7. ReportController -> ReportModel: signReport(report_id)
-8. ReportModel -> ReportRepository: updateSignedAt(report_id) {QC2.6}
-9. ReportRepository -> DB connector: performs query {QC2.6}
-10. DB connector --> ReportRepository: rows affected
-11. ReportRepository --> ReportModel: ok
-12. ReportModel --> ReportController: ok
-13. ReportController --> CreateReportPage: show status "Signed"
+6. CreateReportPage -> ReportController: signReport(report_id, signature)
+7. ReportController -> ReportModel: signReport(report_id, signature)
+8. ReportModel -> ReportModel: storeSignature(report_id, signature)
+9. ReportModel -> ReportRepository: updateSignedAt(report_id, signature_uri) {QC2.6}
+10. ReportRepository -> DB connector: performs query {QC2.6}
+11. DB connector --> ReportRepository: report_id
+12. ReportRepository --> ReportModel: report_id
+13. ReportModel --> ReportController: ok
+14. ReportController --> CreateReportPage: show "Signed" and the signature
 
 ## C2.3: Create Consultant Report (File the report)
 
@@ -644,10 +662,10 @@ Participants: Consultant (actor), CreateReportPage (ui), ReportController (contr
 3. ReportController -> ReportModel: fileReport(report_id)
 4. ReportModel -> ReportRepository: updateDeliveredAt(report_id) {QC2.7}
 5. ReportRepository -> DB connector: performs query {QC2.7}
-6. DB connector --> ReportRepository: report_id
+6. DB connector --> ReportRepository: cr.report_id
 7. ReportRepository --> ReportModel: report_id / no row
 - alt [Validation Failed]
-  8. ReportModel --> ReportController: error(not written or not signed)
+  8. ReportModel --> ReportController: error(missing report, signature or treatment)
   9. ReportController --> CreateReportPage: show validation message
 10. ReportModel --> ReportController: filed
-11. ReportController --> CreateReportPage: show "Report filed"
+11. ReportController --> CreateReportPage: show status "Filed"

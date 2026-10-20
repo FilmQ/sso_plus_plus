@@ -158,7 +158,7 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | schedule_date | วันนัดหมาย |  | Y | DATE | หลังวันปัจจุบัน เฉพาะวันจันทร์ถึงวันศุกร์ (QO4.2, QO4.3) |
 | schedule_time | เวลานัดหมาย |  | Y | TIME | 09:00 ถึง 15:00 ทุก 1 ชั่วโมง ยกเว้น 12:00 |
 | location | สถานที่นัดหมาย |  | Y | VARCHAR(160) | ไม่เกิน 160 ตัวอักษร |
-| appointment_status | สถานะนัดหมาย |  | Y | VARCHAR(30) | Pending, Confirmed, Rescheduled หรือ Cancelled |
+| appointment_status | สถานะนัดหมาย |  | Y | VARCHAR(30) | Pending, Confirmed, Rescheduled, Cancelled หรือ No show (ผู้ใช้งานไม่มาตามนัด QC2.8) |
 | confirm_deadline | กำหนดเวลายืนยันนัดหมาย |  | N | TIMESTAMP | 24 ชั่วโมงก่อนเวลานัดหมาย (QO4.3) |
 | created_at | วันและเวลาที่สร้างนัดหมาย |  | Y | TIMESTAMP | ระบบใส่ NOW() (QO4.3, Q3.5) |
 
@@ -192,31 +192,32 @@ Every table of the system with its attributes, keys, NOT NULL flag, type and the
 | Attribute | Description | Key | Not Null | Type | Range / validation |
 |---|---|---|---|---|---|
 | session_id | รหัสการให้คำปรึกษา | PK | Y | INT | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0 |
-| appointment_id | รหัสนัดหมาย | FK | Y | INT | ต้องมีใน Appointment.appointment_id นัดหมายละ 1 แถว (QC2.2) |
+| appointment_id | รหัสนัดหมาย | FK | Y | INT | ต้องมีใน Appointment.appointment_id ไม่ซ้ำ นัดหมายละ 1 แถว (QC2.2, QC2.8) |
 | consultant_id | รหัสที่ปรึกษา | FK | Y | INT | ต้องมีใน Consultant.consultant_id |
 | officer_id | รหัสเจ้าหน้าที่ประเมิน | FK | Y | INT | ต้องมีใน EvaluationOfficer.officer_id |
 | started_at | วันและเวลาเริ่ม |  | Y | TIMESTAMP | เท่ากับวันและเวลานัดหมาย (QC2.2) |
 | ended_at | วันและเวลาสิ้นสุด |  | N | TIMESTAMP | หลัง started_at |
-| attendance | การเข้าร่วมของผู้ใช้งาน |  | Y | VARCHAR(20) | Attended หรือ No show |
+| attendance | การเข้าร่วมของผู้ใช้งาน |  | Y | VARCHAR(20) | Attended (QC2.2) หรือ No show (QC2.8) |
 | findings | สิ่งที่ตรวจพบ |  | N | TEXT | ไม่เกิน 2,000 ตัวอักษร |
 | diagnosis | การวินิจฉัย |  | N | VARCHAR(255) | ไม่เกิน 255 ตัวอักษร |
-| recommended_treatment | การรักษาที่แนะนำ |  | N | TEXT | ไม่เกิน 2,000 ตัวอักษร |
-| session_status | สถานะการให้คำปรึกษา |  | Y | VARCHAR(20) | Completed หรือ Cancelled |
+| recommended_treatment | การรักษาที่แนะนำ |  | N | TEXT | Physiotherapy, Occupational therapy หรือ None ที่ปรึกษาเลือกใน C2.1 (QC2.4, QC2.5) ต้องมีก่อนยื่นรายงาน (QC2.7) |
+| session_status | สถานะการให้คำปรึกษา |  | Y | VARCHAR(20) | Completed (QC2.2) หรือ Cancelled เมื่อผู้ใช้งานไม่มาตามนัด (QC2.8) |
 
 ## ConsultationReport
 
 | Attribute | Description | Key | Not Null | Type | Range / validation |
 |---|---|---|---|---|---|
 | report_id | รหัสรายงาน | PK | Y | INT | เลขลำดับที่ระบบสร้าง ค่ามากกว่า 0 |
-| session_id | รหัสการให้คำปรึกษา | FK | Y | INT | ต้องมีใน ConsultationSession.session_id |
+| session_id | รหัสการให้คำปรึกษา | FK | Y | INT | ต้องมีใน ConsultationSession.session_id ไม่ซ้ำ การให้คำปรึกษาละ 1 รายงาน |
 | consultant_id | รหัสที่ปรึกษา | FK | Y | INT | ต้องมีใน Consultant.consultant_id และเป็นผู้แก้ไขรายงานได้ |
-| version_no | หมายเลขฉบับ |  | Y | INT | 1 ขึ้นไป |
+| version_no | หมายเลขฉบับ |  | Y | INT | 1 เสมอ รายงานมีฉบับเดียวและแก้ไขได้จนกว่าจะยื่น |
 | report_content | เนื้อหารายงาน |  | N | TEXT | มีเนื้อหาหรือไฟล์รายงานอย่างใดอย่างหนึ่ง ต้องมีก่อนลงลายมือชื่อ (QC2.6) |
 | report_file_uri | ไฟล์รายงานที่แนบ |  | N | VARCHAR(255) | ไม่เกิน 255 ตัวอักษร ใช้แทนเนื้อหารายงานได้ (C2.1 Attach, QC2.4, QC2.5) |
-| signed_at | วันและเวลาที่ลงลายมือชื่อ |  | N | TIMESTAMP | ค่าว่างคือยังไม่ลงลายมือชื่อ |
+| signature_uri | ไฟล์ภาพลายมือชื่อ |  | N | VARCHAR(255) | ไม่เกิน 255 ตัวอักษร บันทึกพร้อม signed_at (QC2.6) ล้างเมื่อแก้ไขฉบับร่าง (QC2.5) |
+| signed_at | วันและเวลาที่ลงลายมือชื่อ |  | N | TIMESTAMP | ค่าว่างคือยังไม่ลงลายมือชื่อ ว่างหรือมีค่าพร้อมกับ signature_uri (QC2.6) |
 | delivered_at | วันและเวลาที่ยื่นรายงาน |  | N | TIMESTAMP | ยื่นได้เมื่อ signed_at ไม่ว่าง (QC2.7) |
 | read_at | วันและเวลาที่เจ้าหน้าที่ประเมินเปิดดู |  | N | TIMESTAMP | หลัง delivered_at |
-| is_superseded | ถูกแทนที่ด้วยฉบับใหม่หรือไม่ |  | Y | BOOLEAN | TRUE หรือ FALSE เริ่มต้น FALSE |
+| is_superseded | ถูกแทนที่ด้วยฉบับใหม่หรือไม่ |  | Y | BOOLEAN | FALSE เสมอ (รายงานมีฉบับเดียว) |
 
 ## Treatment
 

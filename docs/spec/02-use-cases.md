@@ -18,7 +18,7 @@ Source: SA Documents, section 2.11 (use case list) and 2.13 (use case descriptio
 | O4 | สร้างนัดหมาย (Schedule Appointment) | เจ้าหน้าที่ประเมิน | นัดหมายผู้ใช้งานกับที่ปรึกษาหลังอนุมัติคำร้อง |
 | O5 | นัดหมายการรักษา (Schedule Treatment) | เจ้าหน้าที่ประเมิน | นัดหมายการรักษาจากรายงานการให้คำปรึกษา แยกเป็น O5.1 จองการรักษา และ O5.2 ไม่ต้องรับการรักษา |
 | O6 | ดูรายงานการให้คำปรึกษา (View Consultation Report) | เจ้าหน้าที่ประเมิน | ดูรายงานที่ที่ปรึกษายื่นมา |
-| C1 | ดูตารางนัดหมาย (View Appointment Schedule) | ที่ปรึกษา | ดูวันนัดหมายและข้อมูลผู้ใช้งานที่นัดไว้ |
+| C1 | ดูตารางนัดหมาย (View Appointment Schedule) | ที่ปรึกษา | ดูวันนัดหมายและข้อมูลผู้ใช้งานที่นัดไว้ และการเปลี่ยนแปลงนัดหมายล่าสุด |
 | C2 | สร้างรายงานการให้คำปรึกษา (Create Consultation Report) | ที่ปรึกษา | เขียนรายงานหลังการให้คำปรึกษา แยกเป็น C2.1 แก้ไขฉบับร่าง, C2.2 ลงลายมือชื่อ และ C2.3 ยื่นรายงาน |
 
 ## U1: ยื่นคำร้องกรณีประสบอันตราย (Submit Injury Application)
@@ -1429,7 +1429,7 @@ WHERE cr.claim_id = :claim_id
 2. ระบบแสดงหน้า Schedule Appointment Page ประกอบด้วย
 - ส่วนหัว: ข้อความ "Scheduling" และข้อความรอง Claim ID ชื่อและนามสกุลผู้ใช้งาน และวันที่ตรวจสอบสิทธิ์ (Verified date)
 - ช่องเลือกวันที่สำหรับนัดหมายกับที่ปรึกษา (เลือกได้เฉพาะวันจันทร์ถึงวันศุกร์)
-ระบบดึงคำร้องที่พร้อมนัดหมาย พร้อมข้อมูลส่วนหัว ตาม QO4.1
+ระบบดึงคำร้องที่พร้อมนัดหมาย (คำร้องที่ผ่านการตรวจสอบสิทธิ์และไม่มีนัดหมายที่ยัง Pending หรือ Confirmed รวมคำร้องที่ผู้ใช้งานไม่มาตามนัดใน C2.1 Alternate Case 3) พร้อมข้อมูลส่วนหัว ตาม QO4.1
 ```sql
 -- QO4.1
 SELECT ic.claim_id,
@@ -1608,7 +1608,7 @@ FROM appt;
 
 2. ระบบแสดงหน้า Schedule Treatment Page ประกอบด้วย
 - ส่วนหัว: ข้อความ "Treatment" และ Claim ID ข้อความรอง ชื่อและนามสกุลผู้ใช้งาน และวันที่ลงนามรายงาน
-- การ์ดทางลัดไปยังรายงานการให้คำปรึกษา: หัวข้อรายงาน สถานะการลงนาม (Signed หรือ Not Signed) การรักษาที่ที่ปรึกษาแนะนำ โดยหากรายงานยังไม่ลงนาม เจ้าหน้าที่ประเมินไม่สามารถจองการรักษาได้ และปุ่มไปยังหน้า View Consultant Report
+- การ์ดทางลัดไปยังรายงานการให้คำปรึกษา: หัวข้อรายงาน สถานะการลงนาม (Signed หรือ Not Signed) การรักษาที่ที่ปรึกษาแนะนำ (ที่ปรึกษาเลือกใน C2.1: Physiotherapy, Occupational therapy หรือ None) โดยหากรายงานยังไม่ลงนาม เจ้าหน้าที่ประเมินไม่สามารถจองการรักษาได้ และปุ่มไปยังหน้า View Consultant Report
 ระบบดึงคำร้องที่มีรายงานแล้วและยังไม่มีการรักษา ตาม QO5.1
 ```sql
 -- QO5.1
@@ -1617,7 +1617,6 @@ SELECT ic.claim_id,
   ip.title_name,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   cr.report_id,
-  cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS report_author,
@@ -1795,7 +1794,7 @@ WHERE claim_id = :claim_id;
 
 **System:**
 
-4. ระบบแสดงการ์ดยืนยัน ข้อความ "Do you confirm that no treatment require for user [คำนำหน้าชื่อ ชื่อ และนามสกุลผู้ใช้งาน]" (คำนำหน้าชื่อจาก QO5.1) และแสดงการรักษาที่ที่ปรึกษาแนะนำในรายงาน พร้อมปุ่ม "Confirm" และ "Cancel"
+4. ระบบแสดงการ์ดยืนยัน ข้อความ "Do you confirm that no treatment require for user [คำนำหน้าชื่อ ชื่อ และนามสกุลผู้ใช้งาน]" (คำนำหน้าชื่อจาก QO5.1) และแสดงการรักษาที่ที่ปรึกษาแนะนำในรายงาน (None หมายถึงไม่ต้องรับการรักษา) พร้อมปุ่ม "Confirm" และ "Cancel"
 
 **Actor:**
 
@@ -1864,13 +1863,12 @@ WHERE claim_id = :claim_id
 
 **System:**
 
-2. ระบบแสดงรายการรายงานการให้คำปรึกษา โดยรายงานที่ยังไม่เปิดดูแสดงก่อน ตาม QO6.1
+2. ระบบแสดงรายการรายงานการให้คำปรึกษา โดยรายงานที่ยังไม่เปิดดูแสดงก่อน ตาม QO6.1 รายงานที่ที่ปรึกษายื่นแล้ว (C2.3) แสดงในรายการนี้ทันทีโดยไม่มีข้อความแจ้งเตือน และแถบนำทางแสดงจำนวนรายงานที่ยังไม่เปิดดู
 ```sql
 -- QO6.1
 SELECT cr.report_id,
   ic.claim_no,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
-  cr.version_no,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
     AS view_status
@@ -1887,10 +1885,10 @@ ORDER BY cr.read_at IS NOT NULL, cr.delivered_at DESC;
 **System:**
 
 2.1 เมื่อเลือกรายงาน ระบบแสดงหน้ารายงานการให้คำปรึกษา (Consultation Report Page) ประกอบด้วย
-- ส่วนหัว: Claim ID ชื่อและนามสกุลผู้ใช้งาน วันที่ลงนามรายงาน และหมายเลขฉบับ (Version)
+- ส่วนหัว: Claim ID ชื่อและนามสกุลผู้ใช้งาน และวันที่ลงนามรายงาน
 - ส่วนที่ 1 ข้อมูลผู้ป่วย: ชื่อ นามสกุล อายุ วันและเวลาให้คำปรึกษา วันที่ยื่นรายงาน และคำนำหน้าชื่อ ชื่อ และนามสกุลของที่ปรึกษา
 - ส่วนที่ 2 รายงาน 2 รูปแบบ: ข้อความ (Text field) หรือไฟล์ (Files) พร้อมปุ่ม "View"
-- ส่วนที่ 3 สถานะการลงนาม: Signature pending หรือ Signature signed
+- ส่วนที่ 3 สถานะการลงนาม: Signature pending หรือ Signature signed พร้อมชื่อผู้ลงนาม (Signed by) และภาพลายมือชื่อจาก signature_uri
 - ส่วนที่ 4 สถานะการเปิดดู: Pending หรือ Viewed (Viewed แสดงวันและเวลาที่เปิดดู)
 ระบบดึงข้อมูลหน้ารายงาน ตาม QO6.2 (เฉพาะรายงานที่ยื่นแล้ว)
 ```sql
@@ -1898,7 +1896,6 @@ ORDER BY cr.read_at IS NOT NULL, cr.delivered_at DESC;
 SELECT ic.claim_no,
   CONCAT_WS(' ', ip.first_name, ip.last_name) AS user_name,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
-  cr.version_no,
   DATE_PART('year', AGE(ip.date_of_birth))::int AS user_age,
   TO_CHAR(cs.started_at, 'FMDD FMMonth YYYY" : "HH24:MI')
     AS consultation_datetime,
@@ -1907,6 +1904,7 @@ SELECT ic.claim_no,
     AS consultant_name,
   cr.report_content,
   cr.report_file_uri,
+  cr.signature_uri,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status,
   CASE WHEN cr.read_at IS NULL THEN 'Pending' ELSE 'Viewed' END
@@ -1943,7 +1941,7 @@ WHERE report_id = :report_id
 ## C1: ดูตารางนัดหมาย (View Appointment Schedule)
 
 **Use Case Name:** ดูตารางนัดหมาย (View Appointment Schedule)  
-**Use Case Description:** ที่ปรึกษาดูวันนัดหมายและข้อมูลผู้ใช้งานที่นัดไว้  
+**Use Case Description:** ที่ปรึกษาดูวันนัดหมายและข้อมูลผู้ใช้งานที่นัดไว้ และการเปลี่ยนแปลงนัดหมายล่าสุดจากผู้ใช้งาน  
 **Actor:** ที่ปรึกษา (Consultant)  
 **Preconditions:** ผู้ใช้งานยืนยันนัดหมายแล้ว (U3.1)  
 
@@ -1951,7 +1949,7 @@ WHERE report_id = :report_id
 
 **Actor:**
 
-1. ที่ปรึกษาคลิก "Schedule Page" ในแถบนำทาง (Navigation Bar) เพื่อดูตารางนัดหมาย
+1. ที่ปรึกษาคลิก "Schedule Page" ในแถบนำทาง (Navigation Bar) เพื่อดูตารางนัดหมาย (หลังเข้าสู่ระบบ ระบบเปิดหน้านี้ให้ที่ปรึกษาโดยอัตโนมัติ และแถบนำทางแสดงจำนวนนัดหมายตาม QC1.1 และจำนวนการให้คำปรึกษาที่รอรายงานตาม QC2.1)
 
 **System:**
 
@@ -1979,11 +1977,30 @@ WHERE a.consultant_id = :consultant_id
 ORDER BY a.schedule_date, a.schedule_time;
 ```
 
+**System:**
+
+2.1 ระบบแสดงการ์ด "Recent changes" เหนือรายการนัดหมาย แสดงข้อความแจ้งเตือนถึงที่ปรึกษาใน 14 วันล่าสุด (ผู้ใช้งานยืนยัน ขอเปลี่ยนวัน หรือยกเลิกนัดหมาย ใน U3.1 ถึง U3.3 ตาม QN.5) เรียงจากใหม่ไปเก่า แต่ละรายการประกอบด้วย
+- หัวข้อ: เช่น "Appointment confirmed"
+- ข้อความ: ชื่อผู้ใช้งาน Claim ID และวันนัดหมาย
+- วันและเวลาที่ส่ง: [วัน] [เดือน] [ปี] : [เวลา]
+หากไม่มีข้อความ การ์ดแสดง "No recent changes" ระบบดึงข้อความจากฐานข้อมูล ตาม QC1.2
+```sql
+-- QC1.2
+SELECT n.notification_id,
+  n.subject,
+  n.body,
+  TO_CHAR(n.sent_at, 'FMDD FMMonth YYYY" : "HH24:MI') AS sent_time
+FROM Notification n
+WHERE n.consultant_id = :consultant_id
+  AND n.sent_at >= NOW() - INTERVAL '14 days'
+ORDER BY n.sent_at DESC;
+```
+
 
 ## C2.1: สร้างรายงานการให้คำปรึกษา (Amend the Draft)
 
 **Use Case Name:** สร้างรายงานการให้คำปรึกษา (Create Consultation Report: Amend the Draft)  
-**Use Case Description:** ที่ปรึกษาเขียนรายงานการให้คำปรึกษา และยื่นรายงานให้เจ้าหน้าที่ประเมินเมื่อเสร็จสิ้น  
+**Use Case Description:** ที่ปรึกษาเขียนรายงานการให้คำปรึกษา เลือกการรักษาที่แนะนำ และยื่นรายงานให้เจ้าหน้าที่ประเมินเมื่อเสร็จสิ้น  
 **Actor:** ที่ปรึกษา (Consultant)  
 **Preconditions:** ผู้ใช้งานยืนยันนัดหมายแล้ว (U3.1) และการให้คำปรึกษากับผู้ใช้งานเสร็จสิ้นแล้ว  
 
@@ -1995,7 +2012,7 @@ ORDER BY a.schedule_date, a.schedule_time;
 
 **System:**
 
-2. ระบบตรวจสอบการให้คำปรึกษาที่ยังไม่มีรายงาน ตาม QC2.1
+2. ระบบตรวจสอบการให้คำปรึกษาที่ยังไม่มีรายงาน ตาม QC2.1 และเปิดการให้คำปรึกษารายการแรกให้โดยอัตโนมัติ ที่ปรึกษาเลือกรายการอื่นได้ และเปิดได้เฉพาะรายการที่ QC2.1 แสดงสำหรับที่ปรึกษาที่เข้าสู่ระบบ
 ```sql
 -- QC2.1
 SELECT a.appointment_id,
@@ -2028,20 +2045,19 @@ SELECT a.appointment_id, a.consultant_id, a.officer_id,
   a.schedule_date + a.schedule_time, 'Attended', 'Completed'
 FROM Appointment a
 WHERE a.appointment_id = :appointment_id
-  AND NOT EXISTS (
-        SELECT 1
-        FROM ConsultationSession cs
-        WHERE cs.appointment_id = a.appointment_id);
+  AND a.consultant_id = :consultant_id
+  AND a.appointment_status = 'Confirmed'
+ON CONFLICT (appointment_id) DO NOTHING;
 ```
 
 **System:**
 
 2.2 ระบบแสดงหน้ารายงาน ประกอบด้วย
-- ส่วนหัว: Claim ID ชื่อและนามสกุลผู้ใช้งาน วันที่ลงนามรายงาน และหมายเลขฉบับ (Version)
+- ส่วนหัว: Claim ID ชื่อและนามสกุลผู้ใช้งาน และวันที่ลงนามรายงาน
 - ส่วนที่ 1 ข้อมูลผู้ป่วย: ชื่อ นามสกุล อายุ วันและเวลาให้คำปรึกษา และคำนำหน้าชื่อ ชื่อ และนามสกุลของที่ปรึกษา
-- ส่วนที่ 2 รายงาน 2 รูปแบบ: ช่องพิมพ์ข้อความ และไฟล์รายงานแนบ
-- ส่วนที่ 3 สถานะการลงนาม: Signature pending หรือ Signature signed
-- ส่วนที่ 4 ปุ่ม 3 ปุ่ม: "Amend the draft", "Sign the signature" และ "File the report"
+- ส่วนที่ 2 รายงาน 2 รูปแบบ: ช่องพิมพ์ข้อความ และไฟล์รายงานแนบ และช่องเลือกการรักษาที่แนะนำ (Recommended treatment): Physiotherapy, Occupational therapy หรือ None
+- ส่วนที่ 3 สถานะการลงนาม: Signature pending หรือ Signature signed (ลงนามแล้วแสดงภาพลายมือชื่อ)
+- ส่วนที่ 4 ปุ่ม: "Amend the draft", "Sign the signature", "File the report" และ "User did not attend" (แสดงเมื่อยังไม่มีรายงานและถึงเวลานัดหมายแล้ว)
 ระบบดึงข้อมูลหน้ารายงาน ตาม QC2.3
 ```sql
 -- QC2.3
@@ -2053,10 +2069,11 @@ SELECT cs.session_id,
     AS consultation_datetime,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name)
     AS consultant_name,
+  cs.recommended_treatment,
   cr.report_id,
-  COALESCE(cr.version_no, 1) AS version_no,
   cr.report_content,
   cr.report_file_uri,
+  cr.signature_uri,
   TO_CHAR(cr.signed_at, 'FMDD FMMonth YYYY') AS signed_date,
   CASE WHEN cr.signed_at IS NULL THEN 'Signature pending'
        ELSE 'Signature signed' END AS signature_status
@@ -2077,48 +2094,124 @@ WHERE cs.appointment_id = :appointment_id;
 
 **System:**
 
-4. ระบบเปิดให้พิมพ์ในช่องข้อความ และแสดงปุ่ม "Attach" สำหรับแนบไฟล์ (เลือกได้อย่างใดอย่างหนึ่ง) ปุ่ม "Amend the draft" เปลี่ยนเป็น "Finish the draft"
+4. ระบบเปิดให้พิมพ์ในช่องข้อความ เปิดช่องเลือกการรักษาที่แนะนำ และแสดงปุ่ม "Attach" สำหรับแนบไฟล์ (เลือกได้อย่างใดอย่างหนึ่ง) ปุ่ม "Amend the draft" เปลี่ยนเป็น "Finish the draft"
 
 **Actor:**
 
 5.1 ที่ปรึกษาคลิก "Attach" (Alternate Case 1 [Attach file])
-5.2 ที่ปรึกษาพิมพ์รายงาน แล้วคลิก "Finish the draft"
+5.2 ที่ปรึกษาพิมพ์รายงาน เลือกการรักษาที่แนะนำ แล้วคลิก "Finish the draft"
 
 **System:**
 
 6.1 (Attach) ระบบเปิด File Explorer
-6.2 (Finish the draft) ระบบบันทึกฉบับร่าง
-- บันทึกครั้งแรก ตาม QC2.4
+6.2 (Finish the draft) ระบบบันทึกฉบับร่างพร้อมการรักษาที่แนะนำ (recommended_treatment ของ ConsultationSession)
+- บันทึกครั้งแรก ตาม QC2.4 (หากไม่มีแถวที่ถูกบันทึก แสดงว่ามีฉบับร่างแล้ว ระบบใช้ QC2.5)
 ```sql
 -- QC2.4
+WITH sess AS (
+  UPDATE ConsultationSession
+  SET recommended_treatment = NULLIF(:recommended_treatment::text, '')
+  WHERE session_id = :session_id
+    AND consultant_id = :consultant_id
+    AND (NULLIF(:recommended_treatment::text, '') IS NULL
+      OR :recommended_treatment::text IN
+           ('Physiotherapy', 'Occupational therapy', 'None'))
+  RETURNING session_id, consultant_id
+)
 INSERT INTO ConsultationReport
   (session_id, consultant_id, version_no, report_content,
    report_file_uri, is_superseded)
-VALUES (:session_id, :consultant_id, 1,
+SELECT session_id, consultant_id, 1,
   NULLIF(:report_content::text, ''),
-  NULLIF(:report_file_uri::varchar, ''), FALSE)
+  NULLIF(:report_file_uri::varchar, ''), FALSE
+FROM sess
+ON CONFLICT (session_id) DO NOTHING
 RETURNING report_id;
 ```
 
-- บันทึกครั้งถัดไป ตาม QC2.5 (Alternate Case 2 [Draft already saved])
+- บันทึกครั้งถัดไป ตาม QC2.5 (Alternate Case 2 [Draft already saved]) รายงานมีฉบับเดียวและแก้ไขได้จนกว่าจะยื่น การแก้ไขฉบับร่างล้างลายมือชื่อเดิม ที่ปรึกษาต้องลงลายมือชื่อใหม่ (C2.2)
 ```sql
 -- QC2.5
-UPDATE ConsultationReport
-SET report_content = NULLIF(:report_content::text, ''),
-    report_file_uri = NULLIF(:report_file_uri::varchar, ''),
-    signed_at = NULL
-WHERE report_id = :report_id
-  AND consultant_id = :consultant_id
-  AND delivered_at IS NULL;
+WITH rpt AS (
+  UPDATE ConsultationReport
+  SET report_content = NULLIF(:report_content::text, ''),
+      report_file_uri = NULLIF(:report_file_uri::varchar, ''),
+      signed_at = NULL,
+      signature_uri = NULL
+  WHERE report_id = :report_id
+    AND consultant_id = :consultant_id
+    AND delivered_at IS NULL
+    AND (NULLIF(:recommended_treatment::text, '') IS NULL
+      OR :recommended_treatment::text IN
+           ('Physiotherapy', 'Occupational therapy', 'None'))
+  RETURNING session_id
+)
+UPDATE ConsultationSession cs
+SET recommended_treatment = NULLIF(:recommended_treatment::text, '')
+FROM rpt
+WHERE cs.session_id = rpt.session_id
+RETURNING cs.session_id;
 ```
 
 **Actor:**
 
-7. (File Explorer) ที่ปรึกษาเลือกไฟล์ คลิก "Open" แล้วคลิก "Finish the draft"
+7. (File Explorer) ที่ปรึกษาเลือกไฟล์ (PDF, JPG หรือ PNG ขนาดไม่เกิน 10 MB) คลิก "Open" เลือกการรักษาที่แนะนำ แล้วคลิก "Finish the draft"
 
 **System:**
 
-8. ระบบเปลี่ยนข้อความในช่องเป็น "File Attached" และบันทึกข้อมูล ตาม QC2.4 หรือ QC2.5 โดยบันทึกที่อยู่ไฟล์ (report_file_uri) แทนเนื้อหารายงาน รายงานมีได้อย่างใดอย่างหนึ่ง ระหว่างข้อความหรือไฟล์ และลงลายมือชื่อ (C2.2) และยื่นรายงาน (C2.3) ได้ทั้งสองแบบ
+8. ระบบอัปโหลดไฟล์ไปเก็บที่ /reports/[session_id]/[ชื่อไฟล์] เปลี่ยนข้อความในช่องเป็น "File Attached" และบันทึกข้อมูล ตาม QC2.4 หรือ QC2.5 โดยบันทึกที่อยู่ไฟล์ (report_file_uri) แทนเนื้อหารายงาน (ไฟล์ที่เลือกแทนข้อความที่พิมพ์ไว้) รายงานมีได้อย่างใดอย่างหนึ่ง ระหว่างข้อความหรือไฟล์ และลงลายมือชื่อ (C2.2) และยื่นรายงาน (C2.3) ได้ทั้งสองแบบ
+
+**Actor:**
+
+9. (User did not attend) เมื่อผู้ใช้งานไม่มาตามนัด ที่ปรึกษาคลิก "User did not attend" แทนขั้นตอนที่ 3 (Alternate Case 3 [User did not attend])
+
+**System:**
+
+10. ระบบแสดงการ์ดยืนยัน ข้อความ "Do you confirm that [คำนำหน้าชื่อ ชื่อ และนามสกุลผู้ใช้งาน] did not attend the consultation on [วัน] [เดือน] [ปี] : [เวลา]" พร้อมปุ่ม "Confirm" และ "Cancel"
+
+**Actor:**
+
+11. ที่ปรึกษาคลิก "Confirm" หรือ "Cancel"
+
+**System:**
+
+12.1 คลิก "Confirm" ระบบบันทึกว่าผู้ใช้งานไม่มาตามนัด ตาม QC2.8 การให้คำปรึกษามีสถานะ No show (Cancelled) นัดหมายเปลี่ยนเป็น "No show" และคำร้อง (ยังเป็น Covered) กลับไปแสดงในรายการ Scheduling ของเจ้าหน้าที่ประเมิน (O4, QO4.1) เพื่อสร้างนัดหมายใหม่ ระบบบันทึกเฉพาะนัดหมายของที่ปรึกษาเองที่มีสถานะ "Confirmed" ถึงเวลานัดหมายแล้ว และยังไม่มีรายงาน หากไม่ผ่าน ไม่มีแถวที่ถูกบันทึก เมื่อบันทึกแล้วระบบแสดงการ์ด "Marked as no show" และนำการให้คำปรึกษาออกจากรายการที่รอรายงาน
+```sql
+-- QC2.8
+WITH appt AS (
+  SELECT a.appointment_id, a.consultant_id, a.officer_id,
+    a.schedule_date + a.schedule_time AS start_at
+  FROM Appointment a
+  WHERE a.appointment_id = :appointment_id
+    AND a.consultant_id = :consultant_id
+    AND a.appointment_status = 'Confirmed'
+    AND a.schedule_date + a.schedule_time <= NOW()
+    AND NOT EXISTS (
+          SELECT 1
+          FROM ConsultationSession cs
+          JOIN ConsultationReport cr ON cr.session_id = cs.session_id
+          WHERE cs.appointment_id = a.appointment_id)
+), sess AS (
+  INSERT INTO ConsultationSession
+    (appointment_id, consultant_id, officer_id, started_at,
+     ended_at, attendance, session_status)
+  SELECT appointment_id, consultant_id, officer_id, start_at,
+    NOW(), 'No show', 'Cancelled'
+  FROM appt
+  ON CONFLICT (appointment_id) DO UPDATE
+  SET attendance = 'No show',
+      session_status = 'Cancelled',
+      ended_at = NOW()
+  RETURNING appointment_id
+)
+UPDATE Appointment a
+SET appointment_status = 'No show'
+FROM sess
+WHERE a.appointment_id = sess.appointment_id
+RETURNING a.appointment_id, a.claim_id;
+```
+
+12.2 คลิก "Cancel" ระบบปิดการ์ดยืนยัน
 
 
 ## C2.2: สร้างรายงานการให้คำปรึกษา (Sign the Signature)
@@ -2148,15 +2241,18 @@ WHERE report_id = :report_id
 
 **System:**
 
-6. ระบบเปลี่ยนสถานะการลงนามจาก "Pending" เป็น "Signed" ตาม QC2.6
+6. ระบบบันทึกภาพลายมือชื่อเป็นไฟล์ภาพ (signature_uri) พร้อมวันและเวลาที่ลงนาม และเปลี่ยนสถานะการลงนามจาก "Pending" เป็น "Signed" ตาม QC2.6 ส่วนที่ 3 ของหน้ารายงานแสดงภาพลายมือชื่อ ระบบบันทึกเฉพาะรายงานที่มีข้อความหรือไฟล์และยังไม่ลงนาม หากที่ปรึกษาแก้ไขฉบับร่างภายหลัง (C2.1) ลายมือชื่อถูกล้างและต้องลงนามใหม่
 ```sql
 -- QC2.6
 UPDATE ConsultationReport
-SET signed_at = NOW()
+SET signed_at = NOW(),
+    signature_uri = :signature_uri::varchar
 WHERE report_id = :report_id
   AND consultant_id = :consultant_id
   AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
-  AND signed_at IS NULL;
+  AND NULLIF(:signature_uri::varchar, '') IS NOT NULL
+  AND signed_at IS NULL
+RETURNING report_id;
 ```
 
 
@@ -2175,22 +2271,26 @@ WHERE report_id = :report_id
 
 **Actor:**
 
-3. ที่ปรึกษาคลิก "File the report" โดยรายงานต้องเขียนหรือแนบไฟล์แล้ว และลงลายมือชื่อแล้ว
+3. ที่ปรึกษาคลิก "File the report" โดยรายงานต้องเขียนหรือแนบไฟล์แล้ว และลงลายมือชื่อแล้ว และเลือกการรักษาที่แนะนำแล้ว
 
 **System:**
 
 4. ระบบตรวจสอบข้อมูลดังนี้
 - มีรายงานที่เขียนหรือแนบไฟล์แล้ว
+- เลือกการรักษาที่แนะนำแล้ว (Physiotherapy, Occupational therapy หรือ None)
 - สถานะการลงนามเป็น "Signed"
-หากผ่านเงื่อนไข ระบบบันทึกการยื่นรายงานและแจ้งเจ้าหน้าที่ประเมิน ตาม QC2.7 หากไม่ผ่านเงื่อนไข (ไม่มีแถวที่ถูกบันทึก) ระบบแจ้งส่วนที่ยังขาด (Alternate Case 1 [Validation Failed])
+หากผ่านเงื่อนไข ระบบบันทึกการยื่นรายงาน ตาม QC2.7 และแสดงสถานะ "Filed" รายงานแสดงในรายการ Consultation Reports ของเจ้าหน้าที่ประเมิน (O6, QO6.1) โดยไม่มีข้อความแจ้งเตือน หากไม่ผ่านเงื่อนไข (ไม่มีแถวที่ถูกบันทึก) ระบบแจ้งส่วนที่ยังขาด ได้แก่ รายงาน ลายมือชื่อ หรือการรักษาที่แนะนำ หรือแจ้งว่ารายงานยื่นแล้ว (Alternate Case 1 [Validation Failed])
 ```sql
 -- QC2.7
-UPDATE ConsultationReport
+UPDATE ConsultationReport cr
 SET delivered_at = NOW()
-WHERE report_id = :report_id
-  AND consultant_id = :consultant_id
-  AND (report_content IS NOT NULL OR report_file_uri IS NOT NULL)
-  AND signed_at IS NOT NULL
-  AND delivered_at IS NULL
-RETURNING report_id;
+FROM ConsultationSession cs
+WHERE cr.report_id = :report_id
+  AND cr.consultant_id = :consultant_id
+  AND cs.session_id = cr.session_id
+  AND cs.recommended_treatment IS NOT NULL
+  AND (cr.report_content IS NOT NULL OR cr.report_file_uri IS NOT NULL)
+  AND cr.signed_at IS NOT NULL
+  AND cr.delivered_at IS NULL
+RETURNING cr.report_id;
 ```

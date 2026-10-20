@@ -57,7 +57,7 @@ Methods:
 
 Used in: O6
 
-Attributes: `- reportId: int`, `- report: ReportDetail`
+Attributes: `- reportId: int`, `- report: ReportDetail`, `- signatureImage: Image`
 
 Methods:
 
@@ -70,19 +70,22 @@ Methods:
 
 Used in: C2.1, C2.2, C2.3
 
-Attributes: `- appointmentId: int`, `- reportId: int`, `- reportContent: String`, `- attachment: File`, `- signature: Image`
+Attributes: `- appointmentId: int`, `- reportId: int`, `- reportContent: String`, `- attachment: File`, `- recommendedTreatment: String`, `- signature: Image`
 
 Methods:
 
 - `+ clickCreateReport()`
 - `+ selectConsultation(appointment_id)`
+- `+ clickUserDidNotAttend()`
+- `+ showNoShowConfirmation()`
+- `+ clickConfirm()`
 - `+ clickAmendDraft()`
 - `+ enableDraftEditing()`
 - `+ clickAttach()`
 - `+ openFileExplorer()`
 - `+ chooseFile(file)`
 - `+ showFileAttached()`
-- `+ finishDraft(report_content, report_file_uri)`
+- `+ finishDraft(report_content, file, recommended_treatment)`
 - `+ clickSign()`
 - `+ showSignatureCard()`
 - `+ clickDelete()`
@@ -182,7 +185,7 @@ Methods:
 
 Used in: U5, U6, C1
 
-Attributes: `- appointments: List<Appointment>`, `- treatments: List<Treatment>`, `- activeTab: String`
+Attributes: `- appointments: List<Appointment>`, `- recentChanges: List<Notification>` (C1), `- treatments: List<Treatment>`, `- activeTab: String`
 
 Methods:
 
@@ -297,8 +300,9 @@ Methods:
 - `+ viewReport(report_id)`
 - `+ getPendingConsultations(consultant_id)`
 - `+ openReport(appointment_id)`
-- `+ saveDraft(session_id, report_content, report_file_uri)`
-- `+ signReport(report_id)`
+- `+ markNoShow(appointment_id)`
+- `+ saveDraft(session_id, report_content or file, recommended_treatment)`
+- `+ signReport(report_id, signature)`
 - `+ fileReport(report_id)`
 
 ### TreatmentController
@@ -352,7 +356,7 @@ Methods:
 - `+ getClaimsToSchedule()`
 - `+ getConsultantSlots(slot_date)`
 - `+ createAppointment(claim_id, consultant_id, slot)`
-- `+ getConsultantSchedule(consultant_id)`
+- `+ getConsultantSchedule(consultant_id)` (QC1.1 and QC1.2)
 
 ### ClaimModel
 
@@ -401,7 +405,7 @@ Methods:
 
 Used in: O6, C2.1, C2.2, C2.3
 
-Attributes: `- reportId: int`, `- sessionId: int`, `- versionNo: int`, `- reportContent: String`, `- reportFileUri: String`, `- signedAt: DateTime`, `- deliveredAt: DateTime`
+Attributes: `- reportId: int`, `- sessionId: int`, `- reportContent: String`, `- reportFileUri: String`, `- recommendedTreatment: String` (from ConsultationSession), `- signatureUri: String`, `- signedAt: DateTime`, `- deliveredAt: DateTime`
 
 Methods:
 
@@ -410,8 +414,11 @@ Methods:
 - `+ markViewed(report_id)`
 - `+ getPendingConsultations(consultant_id)`
 - `+ openReport(appointment_id)`
-- `+ saveDraft(session_id, report_content, report_file_uri)`
-- `+ signReport(report_id)`
+- `+ markNoShow(appointment_id, consultant_id)`
+- `+ saveDraft(session_id, report_content or file, recommended_treatment)`
+- `+ storeFile(session_id, file)` (when a file is attached: keeps it as `/reports/<session_id>/<file name>`)
+- `+ signReport(report_id, signature)`
+- `+ storeSignature(report_id, signature)` (keeps the drawing as `/reports/<session_id>/signature.png`)
 - `+ fileReport(report_id)`
 
 ### TreatmentModel
@@ -452,6 +459,7 @@ Methods:
 - `+ findConsultantSlots(slot_date, officer_id) {QO4.2}`
 - `+ insertAppointment(appointment) {QO4.3}`
 - `+ findConfirmedAppointments(consultant_id) {QC1.1}`
+- `+ findRecentChanges(consultant_id) {QC1.2}` (the consultant's QN.5 messages of the last 14 days)
 
 ### ClaimRepository
 
@@ -523,9 +531,10 @@ Methods:
 - `+ findConsultationsAwaitingReport(consultant_id) {QC2.1}`
 - `+ insertSessionIfMissing(appointment_id) {QC2.2}`
 - `+ findReportPage(appointment_id) {QC2.3}`
-- `+ updateDraft(report_id, report_content, report_file_uri) {QC2.5}`
-- `+ insertDraft(session_id, report_content, report_file_uri) {QC2.4}`
-- `+ updateSignedAt(report_id) {QC2.6}`
+- `+ updateNoShow(appointment_id, consultant_id) {QC2.8}`
+- `+ updateDraft(report_id, report_content, report_file_uri, recommended_treatment) {QC2.5}`
+- `+ insertDraft(session_id, report_content, report_file_uri, recommended_treatment) {QC2.4}`
+- `+ updateSignedAt(report_id, signature_uri) {QC2.6}`
 - `+ updateDeliveredAt(report_id) {QC2.7}`
 
 ### TreatmentRepository

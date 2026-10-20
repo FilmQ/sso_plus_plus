@@ -2,7 +2,7 @@
 
 - User app (phone, 390 x 844 frames): Figma page `03 · Use-case screens · User app`, https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=125-2
 - Evaluation Officer and Consultant console (desktop, 1440 x 900 frames): Figma page `04 · Use-case screens · Officer & Consultant console`, https://www.figma.com/design/yGZrD3LH6RRn8MVXo1LAwv/SSO-Plus-Plus?node-id=125-3
-- Each Figma frame is named `<screen code> · <screen name>` (for example `U1-2 · Fill in Injury Forms Page`), 23 on the user app page and 29 on the console page, and has a label above it naming the use case step and the SQL it shows. Both pages also hold infrastructure frames that are not use case screens: `L-1 · Login Page` and `P-1 · Profile Page` on the user app page, `L-2 · Console Login Page` on the console page (see the last table).
+- Each Figma frame is named `<screen code> · <screen name>` (for example `U1-2 · Fill in Injury Forms Page`), 23 on the user app page and 31 on the console page, and has a label above it naming the use case step and the SQL it shows. Both pages also hold infrastructure frames that are not use case screens: `L-1 · Login Page` and `P-1 · Profile Page` on the user app page, `L-2 · Console Login Page` on the console page (see the last table).
 - Older September draft pages (0:1 phone M1 to M9, 6:2 console D1 to D8) are superseded; use pages 125:2 and 125:3.
 - Site map: `diagrams/sitemap-user.png`, `diagrams/sitemap-officer.png`, `diagrams/sitemap-consultant.png`. Login is the root; solid boxes are pages, dashed boxes are pop-ups, confirmation cards and result messages.
 - Sample data used on the screens: claim SST-2026-000143, นาย สมชาย ประเสริฐ, officer กัญญา วงศ์ศิริ, consultant นพ. ธนา ศรีสุข.
@@ -55,6 +55,22 @@
     show the text case; O6 Alternate Case 1 [File] opens the file instead.
   - C2.1-4 shows the file case (the draft holds only the file); C2.2-1 to C2.3-2 show the text case.
 
+- Screen rules from the C1 and C2 decisions (2026-10-19):
+  - C1-1 Schedule Page: a "Recent changes" card lists the consultant's messages (QN.5: rescheduled or cancelled
+    appointments) of the last 14 days, newest first, from QC1.2 (R-052). No new page; the schedule itself still
+    comes from QC1.1.
+  - C2.1-1 to C2.3-2: the Report card has a required "Recommended treatment" field (Figma component
+    `Field · Recommended treatment`) with the choices Physiotherapy, Occupational therapy and None. It is saved to
+    `ConsultationSession.recommended_treatment` by QC2.4 and QC2.5; O5.1 and O5.2 show it (R-050).
+  - C2.1-1 to C2.1-3: a "User did not attend" button shows while the appointment is `Confirmed`, its start time has
+    passed and there is no report. C2.1-5 is its confirmation card; Confirm runs QC2.8 and C2.1-6 shows
+    "Marked as no show". The claim goes back to the officer's Scheduling list (QO4.1, R-051).
+  - No version line anywhere (one report, one version, R-055): C2.1 to C2.3 and O6-1 to O6-3 show no "Version".
+  - C2.2-1: the consultant draws the signature; the image is stored (`signature_uri`, QC2.6) and O6-2 and O6-3 show it
+    in the report footer (R-048).
+  - C2.3-2: the status chip says "Filed" (R-049); no message is sent to the officer, who sees the report in the O6-1
+    list.
+
 | Code | Screen (use case: page or state) | User | Report figure |
 |---|---|---|---|
 | U1-1 | ยื่นคำร้องกรณีประสบอันตราย (Submit Injury Application): Register Page | ผู้ใช้งาน | 2-9 |
@@ -101,18 +117,20 @@
 | O6-2 | ดูรายงานการให้คำปรึกษา (View Consultation Report): Consultation Report Page | เจ้าหน้าที่ประเมิน | 2-91 |
 | O6-3 | ดูรายงานการให้คำปรึกษา (View Consultation Report): Report opened (View) | เจ้าหน้าที่ประเมิน | 2-92 |
 | C1-1 | ดูตารางนัดหมาย (View Appointment Schedule): Schedule Page | ที่ปรึกษา | 2-95 |
-| C2.1-1 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Report page | ที่ปรึกษา | 2-100 |
-| C2.1-2 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Amend the draft | ที่ปรึกษา | 2-101 |
-| C2.1-3 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Attach: file explorer | ที่ปรึกษา | 2-102 |
-| C2.1-4 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Draft finished, File Attached | ที่ปรึกษา | 2-103 |
-| C2.2-1 | สร้างรายงานการให้คำปรึกษา (Sign the Signature): Sign the signature | ที่ปรึกษา | 2-107 |
-| C2.2-2 | สร้างรายงานการให้คำปรึกษา (Sign the Signature): Signed | ที่ปรึกษา | 2-108 |
-| C2.3-1 | สร้างรายงานการให้คำปรึกษา (File the Report): File the report [Validation failed] | ที่ปรึกษา | 2-112 |
-| C2.3-2 | สร้างรายงานการให้คำปรึกษา (File the Report): Report filed [Validation passed] | ที่ปรึกษา | 2-113 |
+| C2.1-1 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Report page | ที่ปรึกษา | 2-101 |
+| C2.1-2 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Amend the draft | ที่ปรึกษา | 2-102 |
+| C2.1-3 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Attach: file explorer | ที่ปรึกษา | 2-103 |
+| C2.1-4 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Draft finished, File Attached | ที่ปรึกษา | 2-104 |
+| C2.1-5 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): User did not attend | ที่ปรึกษา | 2-105 |
+| C2.1-6 | สร้างรายงานการให้คำปรึกษา (Amend the Draft): Marked as no show | ที่ปรึกษา | 2-106 |
+| C2.2-1 | สร้างรายงานการให้คำปรึกษา (Sign the Signature): Sign the signature | ที่ปรึกษา | 2-110 |
+| C2.2-2 | สร้างรายงานการให้คำปรึกษา (Sign the Signature): Signed | ที่ปรึกษา | 2-111 |
+| C2.3-1 | สร้างรายงานการให้คำปรึกษา (File the Report): File the report [Validation failed] | ที่ปรึกษา | 2-115 |
+| C2.3-2 | สร้างรายงานการให้คำปรึกษา (File the Report): Report filed [Validation passed] | ที่ปรึกษา | 2-116 |
 
 ## Infrastructure screens (not use cases)
 
-Login and sign-out are platform infrastructure (report 2.20 and 2.21): no use case, no report query, not counted in the 52 screens and no figure in 2.13. Accounts live outside the 19 report tables (`UserAccount`, decision D-003).
+Login and sign-out are platform infrastructure (report 2.20 and 2.21): no use case, no report query, not counted in the 54 screens and no figure in 2.13. Accounts live outside the 19 report tables (`UserAccount`, decision D-003).
 
 | Code | Screen | User | Figma |
 |---|---|---|---|
@@ -136,9 +154,9 @@ Login and sign-out are platform infrastructure (report 2.20 and 2.21): no use ca
 | หัวรายงาน | ชื่อผู้ใช้งาน และอายุ | InsuredPerson.first_name, last_name, date_of_birth | U1 (Q1.3) |
 | หัวรายงาน | วันและเวลาที่ให้คำปรึกษา | ConsultationSession.started_at | C2.1 (QC2.2) |
 | หัวรายงาน | ชื่อที่ปรึกษา | Consultant.title_name, first_name, last_name | ข้อมูลหลัก |
-| เนื้อหา | ผลการให้คำปรึกษาและการรักษาที่แนะนำ | ConsultationReport.report_content | C2.1 (QC2.4, QC2.5) |
-| ท้ายรายงาน | ฉบับที่ | ConsultationReport.version_no | C2.1 (QC2.4) |
-| ท้ายรายงาน | สถานะและวันที่ลงลายมือชื่อ | ConsultationReport.signed_at | C2.2 (QC2.6) |
+| เนื้อหา | ผลการให้คำปรึกษา | ConsultationReport.report_content | C2.1 (QC2.4, QC2.5) |
+| เนื้อหา | การรักษาที่แนะนำ (Recommended treatment) | ConsultationSession.recommended_treatment | C2.1 (QC2.4, QC2.5) |
+| ท้ายรายงาน | ภาพลายมือชื่อ สถานะและวันที่ลงลายมือชื่อ | ConsultationReport.signature_uri, signed_at | C2.2 (QC2.6) |
 | ท้ายรายงาน | วันที่ยื่นรายงาน | ConsultationReport.delivered_at | C2.3 (QC2.7) |
 | ท้ายรายงาน | สถานะการเปิดดู | ConsultationReport.read_at | O6 (QO6.3) |
 
@@ -151,8 +169,8 @@ Login and sign-out are platform infrastructure (report 2.20 and 2.21): no use ca
 | วันและเวลาที่ให้คำปรึกษา | 16 October 2026 : 10:00 |
 | ที่ปรึกษา | นพ. ธนา ศรีสุข |
 | ผลการให้คำปรึกษา | Closed fracture of the distal radius, right wrist. Physiotherapy twice a week for 6 weeks. |
-| ฉบับที่ | 1 |
-| ลายมือชื่อ | Signature signed (16 October 2026) |
+| การรักษาที่แนะนำ | Physiotherapy |
+| ลายมือชื่อ | Signature signed (16 October 2026) พร้อมภาพลายมือชื่อ |
 | วันที่ยื่นรายงาน | 16 October 2026 |
 | สถานะการเปิดดู | Pending |
 

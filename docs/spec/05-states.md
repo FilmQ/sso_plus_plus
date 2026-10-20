@@ -23,7 +23,7 @@ States: `Awaiting verification`, `Register unavailable`, `Covered`, `Not covered
 
 ## Appointment
 
-States: `Pending`, `Confirmed`, `Rescheduled`, `Cancelled`
+States: `Pending`, `Confirmed`, `Rescheduled`, `Cancelled`, `No show`
 
 | From | To | Condition | Event | Use case | SQL |
 |---|---|---|---|---|---|
@@ -34,6 +34,9 @@ States: `Pending`, `Confirmed`, `Rescheduled`, `Cancelled`
 | Confirmed | Rescheduled | new slot is free | reschedule | U3.2 Request Another Date | Q3.5: `UPDATE Appointment SET appointment_status = 'Rescheduled'` |
 | Pending | Cancelled | user confirms the cancel | cancelAppointment | U3.3 I cannot attend | Q3.6: `UPDATE Appointment SET appointment_status = 'Cancelled'` |
 | Confirmed | Cancelled | user confirms the cancel | cancelAppointment | U3.3 I cannot attend | Q3.6: `UPDATE Appointment SET appointment_status = 'Cancelled'` |
+| Confirmed | No show | start time passed and no report | markNoShow | C2.1 Alternate Case 3 [User did not attend] | QC2.8: `UPDATE Appointment SET appointment_status = 'No show'` (in the same statement as the session's `attendance = 'No show'`, `session_status = 'Cancelled'`) |
+
+`Rescheduled`, `Cancelled` and `No show` are final for the row. After `No show` the claim stays `Covered` with no open appointment, so QO4.1 lists it on the Scheduling list again and the officer schedules a new appointment (R-051).
 
 ## Treatment
 
@@ -55,8 +58,10 @@ States: `Draft`, `Signed`, `Filed`, `Viewed`
 | From | To | Condition | Event | Use case | SQL |
 |---|---|---|---|---|---|
 | (start) | Draft | no report for the session | saveDraft | C2.1 Amend the Draft | QC2.4: `INSERT ConsultationReport (signed_at = NULL)` |
-| Draft | Draft | delivered_at IS NULL | saveDraft | C2.1 Amend the Draft | QC2.5: `UPDATE ConsultationReport SET report_content = :report_content` |
-| Draft | Signed | report_content IS NOT NULL | signReport | C2.2 Sign the Signature | QC2.6: `UPDATE ConsultationReport SET signed_at = NOW()` |
-| Signed | Draft | delivered_at IS NULL | saveDraft | C2.1 Amend the Draft | QC2.5: `UPDATE ConsultationReport SET signed_at = NULL` |
-| Signed | Filed | signed_at IS NOT NULL | fileReport | C2.3 File the Report | QC2.7: `UPDATE ConsultationReport SET delivered_at = NOW()` |
+| Draft | Draft | delivered_at IS NULL | saveDraft | C2.1 Amend the Draft | QC2.5: `UPDATE ConsultationReport SET report_content, report_file_uri` (and `ConsultationSession.recommended_treatment`) |
+| Draft | Signed | report_content or report_file_uri IS NOT NULL | signReport | C2.2 Sign the Signature | QC2.6: `UPDATE ConsultationReport SET signed_at = NOW(), signature_uri = :signature_uri` |
+| Signed | Draft | delivered_at IS NULL | saveDraft | C2.1 Amend the Draft | QC2.5: `UPDATE ConsultationReport SET signed_at = NULL, signature_uri = NULL` |
+| Signed | Filed | signed_at IS NOT NULL and recommended_treatment IS NOT NULL | fileReport | C2.3 File the Report | QC2.7: `UPDATE ConsultationReport SET delivered_at = NOW()` |
 | Filed | Viewed | read_at IS NULL | viewReport | O6 View Consultation Report | QO6.3: `UPDATE ConsultationReport SET read_at = NOW()` |
+
+A session has one report and one version (`version_no` is always 1, R-055); amending a signed draft clears the signature, so the consultant signs again. `signed_at` and `signature_uri` are set and cleared together (CHECK in schema.sql). QC2.4 does nothing (ON CONFLICT) when a draft already exists: the page then uses QC2.5. Filing needs the session's `recommended_treatment` (Physiotherapy, Occupational therapy or None, R-050); QC2.7 returns 0 rows without it and the page shows the error card (C2.3-1).

@@ -2,7 +2,7 @@
 
 Extract of the SA report **SA Documents** for building the SST Injury Claim & Treatment Application
 (ระบบยื่นคำร้องและนัดหมายการรักษากรณีประสบอันตราย, ศูนย์ฟื้นฟูผู้ป่วย สำนักงานประกันสังคม).
-Generated on 2026-10-18 (O1 to O6 round) from the report as it stood that day. The report is the source of truth: if this pack
+Generated on 2026-10-19 (C1 and C2 round) from the report as it stood that day. The report is the source of truth: if this pack
 and the report disagree, the report wins, and the difference should be raised with the team.
 
 Report: https://docs.google.com/document/d/1qg-tSl0xflyYIMIpSg_7QGSjlLTMwYC9Z2lKpnLsHHk/edit
@@ -14,29 +14,74 @@ Report: https://docs.google.com/document/d/1qg-tSl0xflyYIMIpSg_7QGSjlLTMwYC9Z2lK
 | `03-sequence-flows.md` | Every sequence diagram as a numbered message list (participants, methods, Query IDs, alternate cases) | 2.13 |
 | `04-classes.md` | MVC classes: abstract bases, pages, controllers, models, repositories, DBConnector, with attributes and methods | 2.18 |
 | `05-states.md` | State machines of InjuryClaim, Appointment, Treatment and ConsultationReport, with the SQL of every transition | 2.19 |
-| `06-screens.md` | The 52 screens (codes U1-1 ... C2.3-2), the login and profile frames, Figma links, site map notes, the two output reports | 2.20 to 2.23 |
+| `06-screens.md` | The 54 screens (codes U1-1 ... C2.3-2), the login and profile frames, Figma links, site map notes, the two output reports | 2.20 to 2.23 |
 | `07-open-questions.md` | Gaps the report leaves open (login, file storage, signatures, ...) and how the seed data was cleaned | n/a |
 | `database/schema.sql` | PostgreSQL 16 DDL for the 19 tables, plus a stub of the external SSO register (`master_table`) | 2.17 |
 | `database/seed.sql` | The report's sample rows (5 per table, minus 13 rows whose parents are not among the samples), plus a marked block of development rows | 2.17 |
-| `database/queries.sql` | All 60 SQL statements with Query ID, use case ID and name | 2.16 |
+| `database/queries.sql` | All 62 SQL statements with Query ID, use case ID and name | 2.16 |
 | `database/data-dictionary.md` | Every attribute with key, NOT NULL, type and range / validation rule (Thai) | 2.17 |
 | `diagrams/` | Use case diagram, CRUD table, business process, ER with queries, class, state, sequence and site map diagrams | various |
 
-Checked on 2026-10-18 against PostgreSQL 16.15: `schema.sql` and `seed.sql` load without errors, every
-statement in `queries.sql` prepares against that schema with untyped parameters, and the officer flows were run
-against the seed inside rolled-back transactions: QO2.1 and QO3.1 refuse a decision that differs from the automatic
-check without a reason and accept it with one; QO4.2 offers weekdays only; QO4.3 refuses a past date, a weekend,
-12:00, a claim that is not Covered and a busy consultant, and saves `Onsite` at the consultant's office; QO5.2 marks
-an hour busy when the chosen duration would overlap or end after 12:00 or 17:00; QO5.3 refuses those hours; QU4.2
-and QU4.5 apply the same overlap rule; QC2.4 and QC2.5 save text or a file and the CHECK refuses both; QO6.2 reads
-only a delivered report.
+Checked on 2026-10-19 against PostgreSQL 16.15: `schema.sql` and `seed.sql` load without errors, every
+statement in `queries.sql` (62) prepares against that schema with untyped parameters, and the consultant flows were
+run against the seed inside rolled-back transactions: QC1.2 returns the consultant's own QN.5 messages; QC2.2 and
+QC2.4 do nothing on a second session or a second draft (ON CONFLICT); QC2.4 refuses a recommendation outside
+Physiotherapy, Occupational therapy and None and another consultant's session; QC2.5 on a signed draft clears
+`signed_at` and `signature_uri`; QC2.6 refuses an empty signature file; QC2.7 refuses an unsigned report and a
+session without `recommended_treatment`; QC2.8 marks a past `Confirmed` appointment `No show` (and its session
+`No show` / `Cancelled`) and refuses a future one, one with a draft and another consultant's; after a no-show QO4.1
+lists the claim again and QC2.1 no longer lists the appointment; the schema refuses a second session for one
+appointment and a signed report without a signature file. The officer checks of 2026-10-18 still pass.
 
 ## Naming that ties code to the report
 
 - **Use case IDs:** U1 to U6 (User), O1 to O6 (Evaluation Officer), C1 and C2 (Consultant). Sub-cases such as U3.1 to U3.3 are separate use case descriptions.
-- **Query IDs:** Q1.1 to Q1.10 (U1), Q2.1 to Q2.4 (U2), Q3.1 to Q3.7 (U3), QU4.1 to QU4.5 (U4), QU5.1 (U5), Q6.1 (U6), QO1.1 to QO6.3 (officer), QC1.1 and QC2.1 to QC2.7 (consultant), QN.1 to QN.5 (notifications: QN.1 to QN.4 written by officer use cases, QN.5 by U3.1 to U3.3). Mixed prefixes (Q6.1 vs QU5.1) are as in the report; keep them.
+- **Query IDs:** Q1.1 to Q1.10 (U1), Q2.1 to Q2.4 (U2), Q3.1 to Q3.7 (U3), QU4.1 to QU4.5 (U4), QU5.1 (U5), Q6.1 (U6), QO1.1 to QO6.3 (officer), QC1.1 and QC1.2, QC2.1 to QC2.8 (consultant), QN.1 to QN.5 (notifications: QN.1 to QN.4 written by officer use cases, QN.5 by U3.1 to U3.3). Mixed prefixes (Q6.1 vs QU5.1) are as in the report; keep them.
 - **Screen codes:** `<use case>-<n>`, for example U1-2 or O4-3, matching the Figma frame names.
 - **Class names** come from the sequence diagrams (`InjuryFormPage`, `InsuredFormController`, `InsuredPersonModel`, `InsuredPersonRepository`, `DBConnector`, ...).
+
+## Changes since the 2026-10-18 pack (report-back 5, C1 and C2)
+
+Business decisions from the team (R-048 to R-052, R-055) and documentation decisions on the rest; the full list is
+in `07-open-questions.md`, "Settled on 2026-10-19 (C1 and C2)".
+
+- **SQL (62 statements):**
+  - **QC1.2 (new):** the consultant's QN.5 messages of the last 14 days, newest first, for the "Recent changes" card
+    on the Schedule Page (R-052).
+  - **QC2.2 and QC2.4** use `ON CONFLICT DO NOTHING` (one session per appointment, one report per session, R-053);
+    0 rows from QC2.4 means a draft exists, so the page uses QC2.5.
+  - **QC2.4 and QC2.5** also write `ConsultationSession.recommended_treatment` (Physiotherapy, Occupational therapy
+    or None) in one guarded WITH statement; **QC2.7** needs it; **QC2.3** returns it (R-050).
+  - **QC2.6** takes `:signature_uri` and saves it with `signed_at`; **QC2.5** clears both; **QC2.3** and **QO6.2**
+    return `signature_uri` (R-048).
+  - **QC2.8 (new):** "User did not attend": for the consultant's own `Confirmed` appointment whose start time has
+    passed and that has no report, it saves the session as `No show` / `Cancelled` and the appointment as `No show`
+    (R-051). The claim stays `Covered`, so QO4.1 lists it again.
+  - **QC2.3, QO6.1 and QO6.2** no longer return `version_no` (R-055).
+- **Schema and data dictionary:** `UNIQUE (appointment_id)` on ConsultationSession and `UNIQUE (session_id)` on
+  ConsultationReport; new column `ConsultationReport.signature_uri varchar(255)` with
+  `CHECK ((signed_at IS NULL) = (signature_uri IS NULL))`; `Appointment.appointment_status` adds `No show`;
+  `version_no` is always 1.
+- **Seed (dev block):** persons 109 and 110; `Covered` claims 163 and 164; `Confirmed` appointments 512 (in the future,
+  for C1) and 513 (in the past without a session, for C2 and the no-show case) with consultant 1; QN.5 message 909
+  for the Recent changes card (R-047).
+- **Use cases (02):** C1 shows the Recent changes card; C2.1 has the Recommended treatment field, the upload step
+  (D-057) and Alternate Case 3 [User did not attend]; C2.2 saves the signature image; C2.3 says "Filed" and needs
+  the recommendation; O5 shows the recommendation; O6 shows the signature and no version.
+- **Classes (04):** SchedulePage `recentChanges`; AppointmentRepository `findRecentChanges` {QC1.2};
+  CreateReportPage `clickUserDidNotAttend`, `showNoShowConfirmation`, `clickConfirm`,
+  `finishDraft(report_content, file, recommended_treatment)`; ReportController and ReportModel `markNoShow`,
+  `saveDraft(..., recommended_treatment)`, `signReport(report_id, signature)`; ReportModel `storeFile`,
+  `storeSignature`, `recommendedTreatment`, `signatureUri` (no `versionNo`); ReportRepository `updateNoShow` {QC2.8},
+  `updateSignedAt(report_id, signature_uri)`; ConsultationReportPage `signatureImage`.
+- **States (05):** Appointment `Confirmed` to `No show` (QC2.8); ConsultationReport transitions with the file,
+  signature and recommendation conditions.
+- **Sequence flows (03) and diagrams:** C1, C2.1 (with Alternate Case 3), C2.2 and C2.3 redrawn; class diagrams of
+  O4, O6 and C2; the Appointment and ConsultationReport state diagrams; the CRUD table (C2 updates Appointment);
+  the ER diagram with queries.
+- **Screens (06):** 54 screens: new C2.1-5 "User did not attend" and C2.1-6 "Marked as no show"; see "Screen rules
+  from the C1 and C2 decisions" there. The output report (2.23) shows the recommendation and the signature image and
+  no version.
 
 ## Changes since the 2026-10-17 pack (report-back 4, O1 to O6)
 
