@@ -31,9 +31,11 @@ void main() {
         expect(page['view_status'], 'Pending');
         expect(page['report_content'], startsWith('Closed fracture of the distal radius'));
         expect(page['user_age'], isA<int>());
+        expect(page['recommended_treatment'], 'Physiotherapy', reason: 'Table 2-66 (D-063)');
 
         final viewed = (await c.post('/o6/reports/87/view')).json['report'] as Map; // QO6.3
         expect(viewed['view_status'], 'Viewed');
+        expect(viewed['recommended_treatment'], 'Physiotherapy', reason: 'the page keeps the row after View');
         final again = await c.post('/o6/reports/87/view');
         expect(again.status, 200, reason: 'a second view changes nothing');
         expect(viewed['viewed_at'], matches(RegExp(r'^\d{1,2} [A-Z][a-z]+ \d{4} : \d{2}:\d{2}$')));

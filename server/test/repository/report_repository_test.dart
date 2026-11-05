@@ -51,6 +51,11 @@ void main() {
     expect(row, containsPair('signature_status', 'Signature signed'));
   });
 
+  test('findRecommendedTreatment (D-063): the value of the session, null for no report', () async {
+    expect(await repo.findRecommendedTreatment(87), 'Physiotherapy');
+    expect(await repo.findRecommendedTreatment(999), isNull);
+  });
+
   test('QO6.3 updateReadAt: only the first time', () => inRollback(db, () async {
         expect(await repo.updateReadAt(87), 1);
         expect(await repo.updateReadAt(87), 0);

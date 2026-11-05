@@ -102,6 +102,8 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
           ),
           TextButton.icon(onPressed: clickView, icon: const Icon(Icons.visibility), label: const Text('View')),
         ]),
+        // Table 2-66 (D-063).
+        if (r['recommended_treatment'] != null) LabelValue('Recommended treatment', '${r['recommended_treatment']}'),
       ]),
     ]);
     final Widget right = Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 16, children: <Widget>[

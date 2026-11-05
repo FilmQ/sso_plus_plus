@@ -35,4 +35,13 @@ SELECT national_id,
 FROM InsuredPerson
 WHERE insured_id = :insured_id
 ''';
+
+  // D-063, R-062: Table 2-66 shows the recommended treatment, but QO6.2 does
+  // not give it.
+  static const findRecommendedTreatment = r'''
+SELECT cs.recommended_treatment
+FROM ConsultationReport cr
+JOIN ConsultationSession cs ON cs.session_id = cr.session_id
+WHERE cr.report_id = :report_id
+''';
 }

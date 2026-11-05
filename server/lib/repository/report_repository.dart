@@ -1,4 +1,5 @@
 import 'repository.dart';
+import 'sql/infrastructure_sql.dart';
 import 'sql/report_sql.dart';
 
 /// Table ConsultationReport and ConsultationSession (O6, C2).
@@ -13,6 +14,11 @@ class ReportRepository extends Repository {
   // QO6.2 [O6]
   Future<Row?> findReport(int reportId) async =>
       (await query(ReportSql.qO6_2, {'report_id': reportId})).firstOrNull;
+
+  // Not a report query (D-063, R-062): the recommended treatment of Table 2-66.
+  Future<String?> findRecommendedTreatment(int reportId) async =>
+      (await query(InfrastructureSql.findRecommendedTreatment, {'report_id': reportId}))
+          .firstOrNull?['recommended_treatment'] as String?;
 
   // QO6.3 [O6] Gives 0 when the report was already read.
   Future<int> updateReadAt(int reportId) => execute(ReportSql.qO6_3, {'report_id': reportId});

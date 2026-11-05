@@ -17,8 +17,13 @@ class ReportModel extends Model {
   /// QO6.1 (O6 step 2): the filed reports, the reports not viewed first.
   Future<List<Map<String, Object?>>> getReportList() => reports.findFiledReports();
 
-  /// QO6.2 (O6 step 2.1): one filed report, or null.
-  Future<Map<String, Object?>?> getReport(int reportId) => reports.findReport(reportId);
+  /// QO6.2 (O6 step 2.1): one filed report, or null. It also has the
+  /// recommended treatment of Table 2-66, which QO6.2 does not give (D-063).
+  Future<Map<String, Object?>?> getReport(int reportId) async {
+    final report = await reports.findReport(reportId);
+    if (report == null) return null;
+    return {...report, 'recommended_treatment': await reports.findRecommendedTreatment(reportId)};
+  }
 
   /// QO6.3 (O6 step 4): the first view sets read_at; a later view changes
   /// nothing.
