@@ -15,7 +15,8 @@ Map<String, Object?> _message(int id, String subject, String body, {bool read = 
     };
 
 /// A fake server for U2. [messages] is the Q2.2 list; opening one marks it read.
-FakeServer _server(List<Map<String, Object?>> messages, {String status = 'Covered'}) {
+FakeServer _server(List<Map<String, Object?>> messages,
+    {String status = 'Covered', String? treatment, String? pastAppointment}) {
   final FakeServer s = FakeServer()..json('POST /auth/login', FakeServer.session());
   s.on('GET /u2/unread-count', (_) async =>
       FakeServer.reply(<String, int>{'unread': messages.where((Map<String, Object?> m) => m['is_read'] == false).length}));
@@ -30,10 +31,10 @@ FakeServer _server(List<Map<String, Object?>> messages, {String status = 'Covere
           'submitted_time': '2 October 2026 : 14:32',
           'officer_checked_time': '5 October 2026 : 09:15',
           'appointment_status': status == 'Covered' ? 'Pending' : null,
-          'appointment_time': status == 'Covered' ? '16 October 2026 : 10:00' : null,
+          'appointment_time': status == 'Covered' ? '16 October 2026 : 10:00' : pastAppointment,
           'consultant_name': status == 'Covered' ? 'นพ. ธนา ศรีสุข' : null,
           'office_location': status == 'Covered' ? 'Building A, Floor 3, Room 305' : null,
-          'treatment_status': null,
+          'treatment_status': treatment,
         },
       }));
   for (final Map<String, Object?> m in messages) {
@@ -127,6 +128,19 @@ void main() {
     expect(find.text('Withdrawn'), findsOneWidget);
     expect(find.text('You could not attend; the claim is withdrawn'), findsOneWidget);
     expect(find.text('Treatment'), findsNothing);
+    expect(find.text('Next appointment'), findsNothing);
+  });
+
+  testWidgets('U2-1 Home after U4.3: the stopped treatment step and no past appointment (D-064)',
+      (WidgetTester tester) async {
+    await _signIn(
+        tester,
+        _server(<Map<String, Object?>>[],
+            status: 'Withdrawn', treatment: 'Cancelled', pastAppointment: '16 October 2026 : 13:00'));
+    expect(find.text('Withdrawn'), findsOneWidget);
+    expect(find.text('Consultation finished'), findsOneWidget);
+    expect(find.text('You did not accept the date in time; the claim is withdrawn'), findsOneWidget);
+    expect(find.text('You could not attend; the claim is withdrawn'), findsNothing);
     expect(find.text('Next appointment'), findsNothing);
   });
 }

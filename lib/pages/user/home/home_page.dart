@@ -58,7 +58,8 @@ class _HomeBody extends ConsumerWidget {
           Text('Claim ${claim['claim_no']} · ${claim['injury']}',
               style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ClaimProgressCard(claim: claim),
-          if (claim['appointment_time'] != null)
+          // After U4.3 a past Confirmed appointment is still in Q2.4 (D-064).
+          if (claim['appointment_time'] != null && claim['claim_status'] != 'Withdrawn')
             InfoCard(
               icon: Icons.event,
               title: 'Next appointment',

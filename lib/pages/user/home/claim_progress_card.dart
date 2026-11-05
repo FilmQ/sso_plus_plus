@@ -22,7 +22,6 @@ class ClaimProgressCard extends StatelessWidget {
     final bool waiting = status == 'Awaiting verification' || status == 'Register unavailable';
     final bool rejected = status == 'Rejected' || status == 'Not covered';
     final bool closed = status == 'No treatment required';
-    // U3.3 "I cannot attend" (Q3.6): the claim ends at the consultation step.
     final bool withdrawn = status == 'Withdrawn';
     final String? treatment = _s('treatment_status');
     return InfoCard(
@@ -36,7 +35,13 @@ class ClaimProgressCard extends StatelessWidget {
         else
           _StepRow(_Step.done, rejected ? 'Checked by the officer' : 'Eligibility confirmed by the officer',
               _s('officer_checked_time') ?? ''),
-        if (withdrawn)
+        // U4.3 (QU4.3): the claim ends at the treatment step (D-064).
+        if (withdrawn && treatment == 'Cancelled') ...<Widget>[
+          const _StepRow(_Step.done, 'Consultation with a consultant', 'Consultation finished'),
+          const _StepRow(_Step.stopped, 'Treatment', 'You did not accept the date in time; the claim is withdrawn'),
+        ]
+        // U3.3 "I cannot attend" (Q3.6): the claim ends at the consultation step.
+        else if (withdrawn)
           const _StepRow(_Step.stopped, 'Consultation with a consultant', 'You could not attend; the claim is withdrawn')
         else if (!rejected) ...<Widget>[
           _consultation(waiting: waiting, finished: closed || treatment != null),
