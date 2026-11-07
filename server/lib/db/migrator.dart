@@ -30,6 +30,17 @@ class Migrator {
     }
   }
 
+  /// The extra demo rows of `server/db/demo-seeds/*.sql` (D-066). Only
+  /// `make db-demo` loads them, because the tests expect the exact seed rows.
+  List<File> get demoFiles => _sqlIn(p.join(root, 'server/db/demo-seeds'));
+
+  /// Loads the demo rows. Call this after [reset].
+  Future<void> loadDemoData() async {
+    for (final file in demoFiles) {
+      await db.runScript(await file.readAsString());
+    }
+  }
+
   static List<File> _sqlIn(String dir) {
     final d = Directory(dir);
     if (!d.existsSync()) return const [];

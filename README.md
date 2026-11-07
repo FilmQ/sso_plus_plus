@@ -38,6 +38,196 @@ To use a phone emulator, run Flutter with the server address of the host compute
 The environment variables of the server are in `.env.example`. The default values agree with
 `docker-compose.yml`, so you do not need to set them for development.
 
+## Demo guide
+
+This guide shows the full process: claim, verification, appointment, report and treatment. You need the user app and
+the console. Do the parts in order. The passwords and the other accounts are in [Seed accounts](#seed-accounts).
+
+### 1. Seed the data and start the application
+
+Seed the data **on the day of the demo**. The seed calculates the appointment and treatment dates from the day that
+you load it, so old data can show no future appointments.
+
+> **Caution:** `make db-demo` deletes all data in the dev database.
+
+Start Docker Desktop, then load the data:
+
+```sh
+make db-up          # start PostgreSQL 16
+make db-demo        # load the schema, the seed, 86 extra demo claims and the demo files
+```
+
+The output must show `Loaded 4 files`, `Loaded 1 demo data file` and `Copied 7 demo files`.
+[Demo data](#demo-data) lists the extra claims. For the tests in `SPEC-TEST-PROCESS.md`, use `make db-reset`, because
+those tests expect only the seed rows.
+
+Start each part in its own terminal:
+
+```sh
+make server         # terminal 1: the API server on http://localhost:8080
+make app            # terminal 2: the user app in Chrome
+make console        # terminal 3: the officer and consultant console in Chrome
+```
+
+Keep the two Chrome windows side by side. They have different ports, so each window keeps its own sign-in.
+
+To show the user app on the Android emulator, use this command for terminal 2 and copy the demo files to the emulator:
+
+```sh
+flutter run -t lib/main.dart --dart-define=API_BASE_URL=http://10.0.2.2:8080
+adb push server/db/demo-files/claims/161/. /sdcard/Download/
+```
+
+### 2. Do the demo
+
+#### Part 1: the user submits a claim (U1, user app)
+
+The app opens on the Register Page. Click "Register" and enter these values:
+
+| Field | Value |
+|---|---|
+| Title, first name, last name | นาย ธีรพงษ์ ทดลองดี |
+| National ID | `1555500011122` |
+| Birth date, gender | 18 March 1994, Male |
+| Phone number | `0891234567` |
+| Address | 99/9 ถ.รังสิต-นครนายก ต.ประชาธิปัตย์ อ.ธัญบุรี จ.ปทุมธานี 12130 |
+| Injury date and time | Two days before the demo, 10:30 |
+| Place | Assembly line 2, Rangsit, Pathum Thani |
+| Cause | Slipped on an oily floor |
+| Body part, category | right ankle, Sprain |
+| Files, from `server/db/demo-files/claims/161/` | `id_card.jpg`, `medical_record_bangphli.pdf`, `injury_form_kt16.pdf` |
+| Password | `Sst2026pass` |
+
+1. Leave "Place" empty and click "Submit Injury Forms". The app shows "Validation failed" and saves nothing.
+2. Enter "Place" and click "Submit Injury Forms" again. The app shows the claim number, normally `SST-2026-000251`.
+
+#### Part 2: the officer checks and schedules (O1 to O4, console)
+
+Sign in as `kanya.w@sso.go.th`.
+
+1. Click "Verification". The list shows 17 claims. SST-2026-000161 is at the top and the new claim is at the bottom.
+2. **Approve (O1, O2):** click "Open" on the new claim, then "View" on a document. Choose "Confirm", click
+   "Confirm Result", then "Confirm". The claim status changes to `Covered`.
+3. **Reject (O3):** open SST-2026-000161. Choose "Not Covered" and reason R02, then type a message and an override
+   reason. Click "Confirm Result", then "Confirm". The claim status changes to `Rejected`.
+4. **Schedule (O4):** click "Scheduling" and select the new claim, the last one in the list. Select consultant นพ. ธนา ศรีสุข, because only this
+   consultant has a seed account. Select a weekday and a free hour. Click "Offer to the Consultant", then "Confirm".
+
+#### Part 3: the user confirms the appointment (U2, U3.1, U5, user app)
+
+Click "Go to Home". If the app shows the Sign in page, sign in as `1555500011122` with the password `Sst2026pass`.
+
+1. The bell icon on the Home Page has a red dot. Click the bell and open "Appointment scheduled".
+2. Click "Confirm Appointment". The status changes to `Confirmed`.
+3. Click "Schedule", then "Appointments". The appointment is in the list.
+
+#### Part 4: the consultant files a report (C1, C2, console)
+
+Sign out of the console and sign in as `thana.s@ssorehab.go.th`.
+
+1. **Schedule (C1):** the Schedule Page shows the "Recent changes" card. Scroll down to "Upcoming appointments". This
+   list has the appointment from Part 3 and seed appointment 512.
+2. **Draft (C2.1):** click "Create Consultation Report" and select claim SST-2026-000164 (seed appointment 513), the
+   last one in the list. The appointment from Part 3 is not in this list, because the list shows only appointments
+   that have started. Click
+   "Amend the draft", type a report and choose "Physiotherapy". Click "Finish the draft".
+3. **No signature (C2.3):** click "File the report". The console shows "Validation failed".
+4. **Sign (C2.2):** click "Sign the signature", draw a signature, then click "Confirm".
+5. **File (C2.3):** click "File the report". The status changes to "Filed".
+
+#### Part 5: the officer reads the report and books treatment (O6, O5.1, console)
+
+Sign out of the console and sign in as `kanya.w@sso.go.th`.
+
+1. Click "Consultation Reports", then "View" on the report of SST-2026-000164. The report shows the signature image,
+   and its status changes to viewed.
+2. Click "Treatment" and select SST-2026-000164. Choose Physiotherapy, 60 minutes, SSO Rehabilitation Center and a free
+   time. Click "Book treatment", then "Confirm".
+
+#### Part 6: the user accepts treatment (U6, U4.1, user app)
+
+Sign out of the user app and sign in as `2730100778893`, the person of claim SST-2026-000164.
+
+1. Click "Schedule", then "Treatments". The treatment from Part 5 has the status `Pending`.
+2. Open the treatment and click "Accept". The status changes to `Accepted`.
+
+### 3. Show other cases (optional)
+
+These cases change the same rows as the main demo. [Reset the data](#4-reset-the-demo) before you do each case that
+says "after a reset".
+
+| Case | How to show it |
+|---|---|
+| U1, national ID already registered | Register with `1103700123456`. |
+| U1, no Section 33 coverage | Register with `1909900111222`. This person is INACTIVE. |
+| U2, rejection message | In the user app, sign in as `1209800456789`. This person has a rejected claim. |
+| U3.2, another date | Sign in as `1350100678904`, open appointment 510 and click "Request Another Date". |
+| U3.3, cannot attend | On the same appointment, click "I cannot attend", then "Confirm Cancel Appointment". The claim changes to `Withdrawn`. |
+| U4.2, another treatment date | After a reset, sign in as `1100800345672`, open treatment 403 and click "Request Another Date". |
+| U4.3, automatic cancel | After a reset, stop the server and run the first command below. Start the server, then sign in as `1100800345672`. The bell shows "Treatment cancelled". |
+| O5.2, no treatment | After a reset, run the second command below. In the console, click "Treatment", select SST-2026-000162, click "No treatment require", then "Confirm". |
+| C2.1, user did not attend | After a reset, open appointment 513 in the console, click "User did not attend", then "Confirm". The claim goes back to the "Scheduling" list. |
+
+```sh
+# U4.3: make today the date of treatment 403.
+docker exec sst-db psql -U sst -d sst -c "UPDATE Treatment SET scheduled_date = CURRENT_DATE WHERE treatment_id = 403 AND treatment_status = 'Pending';"
+
+# O5.2: make the report of claim SST-2026-000162 recommend no treatment.
+docker exec sst-db psql -U sst -d sst -c "UPDATE ConsultationSession SET recommended_treatment = 'None' WHERE session_id = 306;"
+```
+
+### 4. Reset the demo
+
+1. Sign out of the user app and the console.
+2. Stop the server (Ctrl+C in terminal 1).
+3. Run `make db-demo`. The new user and all changes go away, and the dates start from today.
+4. Run `make server`.
+
+### 5. Solve problems
+
+| Problem | Solution |
+|---|---|
+| `failed to connect to the docker API` | Start Docker Desktop, then run `make db-up` again. |
+| `make db-up` cannot use port 5432 | Stop the other service that uses port 5432. |
+| A list has no appointments or treatments | The data is old. [Reset the demo](#4-reset-the-demo). |
+| The app cannot connect to the server | Make sure that `make server` runs. On the Android emulator, use `http://10.0.2.2:8080`. |
+| A date or time is incorrect | Set the computer and the emulator to Asia/Bangkok. |
+
+### Demo data
+
+`make db-demo` adds the rows of `server/db/demo-seeds/001_demo_data.sql` to the seed. All people are made up. The
+password of each account is `Password123`.
+
+To sign in as the person of a claim, use `17777` and then the claim number minus 164, as 8 digits. For example, the
+login name for claim SST-2026-000190 is `1777700000026`.
+
+| Claims (SST-2026-000...) | Quantity | Status | Where it shows |
+|---|---|---|---|
+| 165 to 176 | 12 | Awaiting verification | O1 to O3: Verification |
+| 177 to 179 | 3 | Register unavailable | O1 to O3: Verification |
+| 180 to 189 | 10 | Covered, no appointment | O4: Scheduling |
+| 190 to 197 | 8 | Appointment `Pending` | U3: Appointment Page, U5 |
+| 198 to 207 | 10 | Appointment `Confirmed`, in the future | U5, C1: Schedule |
+| 208 to 213 | 6 | Consultation finished, no report | C2: Create Consultation Report |
+| 214 to 216 | 3 | Draft report, no signature | C2: Create Consultation Report |
+| 217 to 218 | 2 | Appointment `No show` | O4: Scheduling |
+| 219 to 226 | 8 | Report filed, no treatment | O5: Treatment, O6: Consultation Reports |
+| 227 to 232 | 6 | Treatment `Pending` | U4, U6 |
+| 233 to 238 | 6 | Treatment `Accepted` | U6 |
+| 239 to 240 | 2 | Treatment `Cancelled`, claim `Withdrawn` | U2: message "Treatment cancelled" |
+| 241 to 243 | 3 | No treatment required | U2: message "No treatment required" |
+| 244 to 248 | 5 | Rejected | U2: message "Application rejected" |
+| 249 to 250 | 2 | Appointment `Cancelled`, claim `Withdrawn` | U2: Home Page |
+
+`make db-demo` also gives an account to:
+
+- The seed people 107 to 110, with the national ID as the login name.
+- All officers and consultants that have an e-mail address, with the e-mail address as the login name. Consultant
+  นพ. กิตติ พงษ์ไพบูลย์ has no e-mail address, so this consultant has no account.
+
+To change the quantity of claims, change the numbers in the "stage" list of the SQL file. The claim numbers in the table
+above and the test `server/test/db/demo_seed_test.dart` must then change too.
+
 ## Seed accounts
 
 The password of every seed account is `Password123` (`server/db/seeds/001_user_accounts.sql`).
@@ -113,4 +303,5 @@ and each test runs in a transaction that rolls back.
 ## Reset the database
 
 `make db-reset` deletes all data in the dev database and loads the schema and the seed again.
+`make db-demo` does the same and also loads the [demo data](#demo-data).
 `docker compose down -v` deletes the Docker volume. The next `make db-up` makes a new, empty server.

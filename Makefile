@@ -3,7 +3,7 @@
 
 API_BASE_URL ?= http://localhost:8080
 
-.PHONY: db-up db-down db-reset db-reset-test server app console lint test test-server test-app
+.PHONY: db-up db-down db-reset db-demo db-reset-test server app console lint test test-server test-app
 
 db-up:            ## Start PostgreSQL 16 (Docker Compose).
 	docker compose up -d --wait
@@ -13,6 +13,9 @@ db-down:          ## Stop PostgreSQL. The data stays in the Docker volume.
 
 db-reset:         ## Load the schema and the seed into the dev database again.
 	cd server && dart run bin/migrate.dart
+
+db-demo:          ## Load the schema, the seed and the extra demo data into the dev database again.
+	cd server && dart run bin/migrate.dart --demo
 
 db-reset-test:    ## Load the schema and the seed into the test database again.
 	cd server && dart run bin/migrate.dart --test
