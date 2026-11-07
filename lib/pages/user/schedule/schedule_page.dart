@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/centered_body.dart';
 import '../notifications/notification_providers.dart';
 import 'schedule_cards.dart';
@@ -33,7 +34,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
         ref.watch(appointments ? appointmentScheduleProvider : treatmentScheduleProvider);
     final List<Map<String, Object?>> items = rows.value ?? const <Map<String, Object?>>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('Schedule')),
+      appBar: AppBar(title: Text(context.tr('Schedule'))),
       body: RefreshIndicator(
         onRefresh: () async {
           refreshUserData(ref);
@@ -48,18 +49,18 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
                 spacing: 12,
                 children: <Widget>[
                   SegmentedButton<String>(
-                    segments: const <ButtonSegment<String>>[
-                      ButtonSegment<String>(value: 'Appointments', label: Text('Appointments')),
-                      ButtonSegment<String>(value: 'Treatments', label: Text('Treatments')),
+                    segments: <ButtonSegment<String>>[
+                      ButtonSegment<String>(value: 'Appointments', label: Text(context.tr('Appointments'))),
+                      ButtonSegment<String>(value: 'Treatments', label: Text(context.tr('Treatments'))),
                     ],
                     selected: <String>{activeTab},
                     onSelectionChanged: (Set<String> s) => setState(() => activeTab = s.single),
                   ),
-                  Text('Upcoming', style: Theme.of(context).textTheme.titleSmall),
+                  Text(context.tr('Upcoming'), style: Theme.of(context).textTheme.titleSmall),
                   if (rows.isLoading) const Center(child: CircularProgressIndicator()),
-                  if (rows.hasError) const Text('The schedule cannot be shown now. Pull down to try again.'),
+                  if (rows.hasError) Text(context.tr('The schedule cannot be shown now. Pull down to try again.')),
                   if (rows.hasValue && items.isEmpty)
-                    Text(appointments ? 'You have no upcoming appointments.' : 'You have no upcoming treatments.'),
+                    Text(context.tr(appointments ? 'You have no upcoming appointments.' : 'You have no upcoming treatments.')),
                   for (final Map<String, Object?> row in items)
                     appointments
                         ? AppointmentScheduleCard(row: row, onTap: () => _open('/appointment/${row['claim_id']}'))

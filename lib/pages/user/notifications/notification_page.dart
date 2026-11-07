@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/notification_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/centered_body.dart';
 import '../home/home_providers.dart';
 import '../home/notification_detail_sheet.dart';
@@ -31,7 +32,7 @@ class NotificationPage extends ConsumerWidget {
         await showNotificationDetail(context, opened, onOpen: () => openTreatmentOfClaim(context, ref, opened.claimId));
       }
     } on ApiException catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(e.message))));
     }
   }
 
@@ -40,7 +41,7 @@ class NotificationPage extends ConsumerWidget {
     final AsyncValue<List<NotificationItem>> list = ref.watch(notificationsProvider);
     final List<NotificationItem> items = list.value ?? const <NotificationItem>[];
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: Text(context.tr('Notifications'))),
       body: RefreshIndicator(
         onRefresh: () async {
           refreshUserData(ref);
@@ -53,8 +54,8 @@ class NotificationPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   if (list.isLoading) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())),
-                  if (list.hasError) const Padding(padding: EdgeInsets.all(24), child: Text('The messages cannot be shown now.')),
-                  if (list.hasValue && items.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('You have no messages.')),
+                  if (list.hasError) Padding(padding: const EdgeInsets.all(24), child: Text(context.tr('The messages cannot be shown now.'))),
+                  if (list.hasValue && items.isEmpty) Padding(padding: const EdgeInsets.all(24), child: Text(context.tr('You have no messages.'))),
                   for (final NotificationItem item in items) ...<Widget>[
                     NotificationTile(item: item, onTap: () => clickNotification(context, ref, item)),
                     const Divider(height: 1),

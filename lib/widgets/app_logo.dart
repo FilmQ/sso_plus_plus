@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
+
 /// The app logo of the Figma frames: a white cross on a primary square.
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key, this.size = 72});
@@ -18,7 +20,7 @@ class AppLogo extends StatelessWidget {
   }
 }
 
-/// The logo, the app name and the Thai name of the centre (U1-1, login).
+/// The logo, the app name and the name of the centre (U1-1, login).
 class AppHeader extends StatelessWidget {
   const AppHeader({super.key, required this.title});
 
@@ -32,10 +34,10 @@ class AppHeader extends StatelessWidget {
       children: <Widget>[
         const AppLogo(),
         const SizedBox(height: 24),
-        Text(title, style: text.headlineSmall, textAlign: TextAlign.center),
+        Text(context.tr(title), style: text.headlineSmall, textAlign: TextAlign.center),
         const SizedBox(height: 24),
         Text(
-          'ศูนย์ฟื้นฟูผู้ป่วย (ประกันสังคม)',
+          context.tr('Patient Rehabilitation Center (Social Security)'),
           style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
           textAlign: TextAlign.center,
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../widgets/app_logo.dart';
+import '../../widgets/language_toggle.dart';
 import '../shared/login_form.dart';
 
 /// L-2 Console Login Page (Figma node 146:125): staff e-mail and password in a
@@ -31,10 +32,14 @@ class ConsoleLoginPage extends StatelessWidget {
                     Row(children: <Widget>[
                       const AppLogo(size: 40),
                       const SizedBox(width: 12),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                        Text('SST Console', style: text.titleMedium),
-                        Text('Social Security Office', style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
-                      ]),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                          Text('SST Console', style: text.titleMedium),
+                          Text('Social Security Office',
+                              style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+                        ]),
+                      ),
+                      const LanguageToggle(),
                     ]),
                     const SizedBox(height: 28),
                     Text('Sign in', style: text.headlineMedium),

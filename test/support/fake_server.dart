@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sso_plus_plus/api/api_client.dart';
+import 'package:sso_plus_plus/l10n/language_provider.dart';
 import 'package:sso_plus_plus/session/session_providers.dart';
 import 'package:sso_plus_plus/sst_app.dart';
 
@@ -50,9 +51,11 @@ class FakeServer {
       };
 }
 
-/// Starts an app with the fake server and no kept token.
-Widget testApp(FakeServer server, Provider<GoRouter> router, {String app = 'user', List<Object> extra = const <Object>[]}) {
-  SharedPreferences.setMockInitialValues(<String, Object>{});
+/// Starts an app with the fake server and no kept token. [language] is the
+/// kept UI language, or null for a first launch.
+Widget testApp(FakeServer server, Provider<GoRouter> router,
+    {String app = 'user', String? language, List<Object> extra = const <Object>[]}) {
+  SharedPreferences.setMockInitialValues(<String, Object>{LanguageNotifier.storeKey: ?language});
   return ProviderScope(
     overrides: [
       apiClientProvider.overrideWithValue(server.client()),

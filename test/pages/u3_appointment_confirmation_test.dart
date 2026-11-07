@@ -7,6 +7,8 @@ import 'package:sso_plus_plus/routing/user_router.dart';
 import 'package:sso_plus_plus/widgets/date_text.dart';
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
+import '../support/user_app.dart';
 
 const String _base = '/u3/claims/143/appointment';
 
@@ -93,8 +95,8 @@ void main() {
 
     await _tap(tester, 'Confirm Appointment');
     expect(_body(server, '$_base/confirm')['notification_id'], 902);
-    expect(find.text('สิ่งที่ต้องเตรียม'), findsOneWidget);
-    expect(find.text('บัตรประชาชนตัวจริง'), findsOneWidget);
+    expect(find.text('What to bring'), findsOneWidget);
+    expect(find.text('Your original national ID card'), findsOneWidget);
     await _tap(tester, 'OK');
     expect(find.text('Confirmed'), findsOneWidget);
     expect(find.text('Confirm Appointment'), findsNothing);
@@ -123,7 +125,7 @@ void main() {
     final Map<String, Object?> sent = _body(server, '$_base/reschedule');
     expect(sent, containsPair('new_date', DateText.iso(today)));
     expect(sent, containsPair('new_time', '13:00'));
-    expect(find.text('เวลานัดหมายถูกเปลี่ยนเป็น ${DateText.long(today)} : 13:00'), findsOneWidget);
+    expect(find.text('The appointment time changed to ${DateText.long(today)} : 13:00'), findsOneWidget);
   });
 
   testWidgets('U3.2 Alternate Case 1 [Cancel]: back to the page without a change', (WidgetTester tester) async {
@@ -139,12 +141,12 @@ void main() {
     final FakeServer server = _server();
     await _openAppointment(tester, server);
     await _tap(tester, 'I cannot attend');
-    expect(find.text('คุณแน่ใจที่จะยกเลิกการนัดหมายหรือไม่'), findsOneWidget);
+    expect(find.text('Are you sure that you want to cancel the appointment?'), findsOneWidget);
     expect(find.text('If you cancel, your claim will be withdrawn and the consultant will be informed.'), findsOneWidget);
     await _tap(tester, 'Confirm Cancel Appointment');
     expect(_body(server, '$_base/cancel')['notification_id'], 902);
     expect(find.text('Cancelled'), findsOneWidget);
-    expect(find.text('เวลานัดหมายถูกยกเลิกแล้ว'), findsOneWidget);
+    expect(find.text('The appointment is cancelled.'), findsOneWidget);
     expect(find.text('I cannot attend'), findsNothing);
   });
 
@@ -163,6 +165,55 @@ void main() {
     await _openAppointment(tester, server);
     await _tap(tester, 'Confirm Appointment');
     expect(find.text('The data changed. Open the page again.'), findsOneWidget);
-    expect(find.text('สิ่งที่ต้องเตรียม'), findsNothing);
+    expect(find.text('What to bring'), findsNothing);
+  });
+
+  group('U3 in Thai', () {
+    const List<String> data = <String>['right wrist'];
+
+    Future<void> openInThai(WidgetTester tester, FakeServer server) async {
+      await signInToUserApp(tester, server, language: 'th');
+      await tapText(tester, th('Notifications'));
+      await tapText(tester, th('Appointment scheduled'));
+      expect(find.text('รอการยืนยันจากคุณ'), findsOneWidget);
+      expect(find.text('กัญญา วงศ์ศิริ (เจ้าหน้าที่ประเมิน)'), findsOneWidget);
+      expect(find.text('ห้องทำงาน: อาคาร A ชั้น 3 ห้อง 305'), findsOneWidget);
+      expectNoEnglishLabels(tester, data: data);
+    }
+
+    testWidgets('U3.1: the reminder shows the Thai text of the report', (WidgetTester tester) async {
+      await openInThai(tester, _server());
+      await tapText(tester, th('Confirm Appointment'));
+      expect(find.text('สิ่งที่ต้องเตรียม'), findsOneWidget);
+      expect(find.text('บัตรประชาชนตัวจริง'), findsOneWidget);
+      expectNoEnglishLabels(tester, data: data);
+    });
+
+    testWidgets('U3.2: the dialog, the Thai date picker and the Thai message', (WidgetTester tester) async {
+      final FakeServer server = _server()
+        ..json('POST $_base/reschedule', <String, Object?>{'appointment': _appointment('Confirmed')});
+      await openInThai(tester, server);
+      await tapText(tester, th('Request Another Date'));
+      expectNoEnglishLabels(tester, data: data);
+      await tester.tap(find.byKey(const ValueKey<String>('new_date')));
+      await tester.pumpAndSettle();
+      expectNoEnglishLabels(tester, data: data);
+      await tester.tap(find.text(th('OK')));
+      await tester.pumpAndSettle();
+      expectNoEnglishLabels(tester, data: data);
+      await tester.tap(find.byKey(const ValueKey<String>('slot:13:00')));
+      await tester.pumpAndSettle();
+      await tapText(tester, th('Confirm Date'));
+      expect(find.text('เวลานัดหมายถูกเปลี่ยนเป็น ${th(DateText.long(DateTime.now()))} : 13:00'), findsOneWidget);
+    });
+
+    testWidgets('U3.3: the warning and the message show the Thai text of the report', (WidgetTester tester) async {
+      await openInThai(tester, _server());
+      await tapText(tester, th('I cannot attend'));
+      expect(find.text('คุณแน่ใจที่จะยกเลิกการนัดหมายหรือไม่'), findsOneWidget);
+      expectNoEnglishLabels(tester, data: data);
+      await tapText(tester, th('Confirm Cancel Appointment'));
+      expect(find.text('เวลานัดหมายถูกยกเลิกแล้ว'), findsOneWidget);
+    });
   });
 }

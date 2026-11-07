@@ -8,6 +8,7 @@ import 'package:sso_plus_plus/pages/user/injury_form/upload_section.dart';
 import 'package:sso_plus_plus/routing/user_router.dart';
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 
 /// Opens U1-1, clicks Register, attaches one file and submits U1-2.
 Future<void> _submit(WidgetTester tester, FakeServer server) async {
@@ -97,5 +98,81 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('New here? Register'), findsOneWidget);
+  });
+
+  group('U1 in Thai', () {
+    /// Opens U1-1 and U1-2 in the Figma phone frame and submits an empty form.
+    Future<void> submitEmpty(WidgetTester tester, FakeServer server) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(testApp(server, userRouterProvider, language: 'th'));
+      await tester.pumpAndSettle();
+      expectNoEnglishLabels(tester);
+      await tester.tap(find.text(th('Register')));
+      await tester.pumpAndSettle();
+      expectNoEnglishLabels(tester);
+      await tester.ensureVisible(find.text(th('Submit Injury Forms')));
+      await tester.tap(find.text(th('Submit Injury Forms')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('U1-3: the banner and the field errors of the server', (WidgetTester tester) async {
+      await submitEmpty(
+        tester,
+        FakeServer()
+          ..json('POST /u1/injury-forms', <String, Object?>{
+            'error': 'validation_failed',
+            'already_registered': false,
+            'fields': <String, String>{
+              'title_name': 'Choose one of the provided titles: นาย, นาง, นางสาว',
+              'first_name': 'Use Thai characters only, as on your national ID card',
+              'date_of_birth': 'Enter a correct birth date. You must be 15 years old or older',
+              'gender': 'Choose Male, Female or Others',
+              'injury_category': 'Fill in this field',
+              'id_card': 'Attach this file',
+              'confirm_password': 'Passwords do not match',
+            },
+          }, status: 422),
+      );
+      expect(find.text('มี 7 ช่องที่ต้องแก้ไข กรุณาแก้ไขแล้วกด ยื่นแบบฟอร์มการประสบอันตราย อีกครั้ง'), findsOneWidget);
+      expect(find.text('รหัสผ่านไม่ตรงกัน'), findsOneWidget);
+      expectNoEnglishLabels(tester);
+    });
+
+    testWidgets('U1-4: the National ID already registered window', (WidgetTester tester) async {
+      await submitEmpty(
+        tester,
+        FakeServer()
+          ..json('POST /u1/injury-forms', <String, Object?>{
+            'error': 'validation_failed',
+            'already_registered': true,
+            'fields': <String, String>{'national_id': 'This national ID is already registered'},
+          }, status: 422),
+      );
+      expect(find.text(th('Edit form')), findsOneWidget);
+      expectNoEnglishLabels(tester);
+    });
+
+    testWidgets('U1-5: the Injury forms submitted page', (WidgetTester tester) async {
+      await submitEmpty(
+        tester,
+        FakeServer()
+          ..json('POST /u1/injury-forms', <String, Object?>{
+            ...FakeServer.session(),
+            'claim': <String, Object?>{
+              'claim_no': 'SST-2026-000156',
+              'claim_status': 'Awaiting verification',
+              'submitted_time': '14 October 2026 : 19:30',
+              'claimant_name': 'นาย สมชาย ประเสริฐ',
+              'files_received': <int>[1, 2, 3],
+            },
+          }, status: 201),
+      );
+      expect(find.text('คำร้อง SST-2026-000156'), findsOneWidget);
+      expect(find.text('รอการตรวจสอบ'), findsOneWidget);
+      expect(find.text('14 ตุลาคม 2026 : 19:30'), findsOneWidget);
+      expectNoEnglishLabels(tester);
+    });
   });
 }

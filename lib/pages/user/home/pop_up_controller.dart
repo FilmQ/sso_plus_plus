@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/notification_api.dart';
+import '../../../l10n/tr.dart';
 import '../notifications/notification_tile.dart';
 
 /// U2-2 Notification pop-up (SA report figure 2-18, class PopUpController).
@@ -46,13 +47,13 @@ class _NotificationPopUp extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   child: Row(
                     children: <Widget>[
-                      Expanded(child: Text('Notifications', style: text.titleMedium)),
-                      Text('$unread unread', style: text.labelMedium?.copyWith(color: colors.primary)),
+                      Expanded(child: Text(context.tr('Notifications'), style: text.titleMedium)),
+                      Text(context.tr('{n} unread', {'n': unread}), style: text.labelMedium?.copyWith(color: colors.primary)),
                     ],
                   ),
                 ),
                 if (items.isEmpty)
-                  const Padding(padding: EdgeInsets.all(24), child: Text('You have no messages.')),
+                  Padding(padding: const EdgeInsets.all(24), child: Text(context.tr('You have no messages.'))),
                 Flexible(
                   child: ListView.separated(
                     shrinkWrap: true,

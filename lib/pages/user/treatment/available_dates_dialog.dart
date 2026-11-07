@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
+
 /// U4-3 Available dates window (SA report figure 2-42, U4.2 steps 2 and 3).
 /// [loadDates] gives the QU4.5 rows (slot_date, date_label). Gives the chosen
 /// row for "Save date", or null for "Cancel".
@@ -30,7 +32,7 @@ class _AvailableDatesDialogState extends State<_AvailableDatesDialog> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return AlertDialog(
       icon: Icon(Icons.edit_calendar, color: colors.primary),
-      title: const Text('Choose another date'),
+      title: Text(context.tr('Choose another date')),
       content: SizedBox(
         width: 320,
         child: FutureBuilder<List<Map<String, Object?>>>(
@@ -43,12 +45,14 @@ class _AvailableDatesDialogState extends State<_AvailableDatesDialog> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: 8,
                 children: <Widget>[
-                  Text('Free weekdays at the same facility, up to 7 days after the booked date. '
-                      'The time stays ${widget.time}.'),
+                  Text(context.tr(
+                      'Free weekdays at the same facility, up to 7 days after the booked date. '
+                      'The time stays {time}.',
+                      {'time': widget.time})),
                   const SizedBox(height: 4),
-                  if (snap.hasError) const Text('The dates cannot be shown now. Try again later.'),
+                  if (snap.hasError) Text(context.tr('The dates cannot be shown now. Try again later.')),
                   if (dates == null && !snap.hasError) const Center(child: CircularProgressIndicator()),
-                  if (dates != null && dates.isEmpty) const Text('There are no free dates. Try again later.'),
+                  if (dates != null && dates.isEmpty) Text(context.tr('There are no free dates. Try again later.')),
                   if (dates != null && dates.isNotEmpty)
                     RadioGroup<String>(
                       groupValue: _chosen,
@@ -64,10 +68,10 @@ class _AvailableDatesDialogState extends State<_AvailableDatesDialog> {
         ),
       ),
       actions: <Widget>[
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: _chosen == null ? null : () => _save(context),
-          child: const Text('Save date'),
+          child: Text(context.tr('Save date')),
         ),
       ],
     );
@@ -95,7 +99,7 @@ class _AvailableDatesDialogState extends State<_AvailableDatesDialog> {
         key: ValueKey<String>('date:$date'),
         value: date,
         dense: true,
-        title: Text(row['date_label']! as String, style: Theme.of(context).textTheme.bodyLarge),
+        title: Text(context.tr(row['date_label']! as String), style: Theme.of(context).textTheme.bodyLarge),
       ),
     );
   }

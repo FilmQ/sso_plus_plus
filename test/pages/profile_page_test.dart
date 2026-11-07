@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sso_plus_plus/routing/user_router.dart';
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
+import '../support/user_app.dart';
 
 void main() {
   testWidgets('P-1 Profile Page: name, national ID, phone, address, then Sign out', (WidgetTester tester) async {
@@ -37,5 +39,24 @@ void main() {
     await tester.tap(find.text('Sign out'));
     await tester.pumpAndSettle();
     expect(find.text('Before you start'), findsOneWidget);
+  });
+
+  testWidgets('P-1 in Thai: the page has no English labels', (WidgetTester tester) async {
+    final FakeServer server = FakeServer()
+      ..json('POST /auth/login', FakeServer.session())
+      ..json('GET /u2/unread-count', <String, int>{'unread': 0})
+      ..json('GET /u2/home-claim', <String, Object?>{'claim': null})
+      ..json('GET /auth/profile', <String, Object?>{
+        'profile': <String, Object?>{
+          'national_id': '1103700123456',
+          'full_name': 'นาย สมชาย ประเสริฐ',
+          'phone_no': '0812345678',
+          'address': '88/5 ถ.เทพารักษ์ ต.บางพลีใหญ่ อ.บางพลี จ.สมุทรปราการ 10540',
+        },
+      });
+    await signInToUserApp(tester, server, language: 'th');
+    await tapText(tester, th('Profile'));
+    expect(find.text('เข้าสู่ระบบด้วยเลขประจำตัวประชาชน 1103700123456'), findsOneWidget);
+    expectNoEnglishLabels(tester);
   });
 }

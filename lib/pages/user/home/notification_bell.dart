@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/notification_api.dart';
+import '../../../l10n/tr.dart';
 import '../notifications/notification_providers.dart';
 import '../treatment/open_treatment.dart';
 import 'home_providers.dart';
@@ -24,7 +25,7 @@ class NotificationBell extends ConsumerWidget {
       final NotificationItem? chosen = await PopUpController.showPopup(context, items);
       if (chosen != null && context.mounted) await selectNotification(context, ref, chosen.id);
     } on ApiException catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(e.message))));
     }
   }
 
@@ -45,7 +46,7 @@ class NotificationBell extends ConsumerWidget {
     final int unread = ref.watch(unreadCountProvider).value ?? 0;
     return IconButton(
       key: const Key('bell'),
-      tooltip: unread > 0 ? 'Notifications, $unread unread' : 'Notifications',
+      tooltip: unread > 0 ? context.tr('Notifications, {n} unread', {'n': unread}) : context.tr('Notifications'),
       onPressed: () => clickBellIcon(context, ref),
       icon: Badge(isLabelVisible: unread > 0, smallSize: 10, child: const Icon(Icons.notifications)),
     );

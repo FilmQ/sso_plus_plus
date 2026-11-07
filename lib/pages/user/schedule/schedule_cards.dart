@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/person_avatar.dart';
 import '../../../widgets/side_key_value.dart';
 import '../../../widgets/status_chip.dart';
@@ -35,7 +36,7 @@ class _ScheduleCard extends StatelessWidget {
               header,
               Row(spacing: 8, children: <Widget>[
                 Icon(Icons.calendar_month, color: colors.primary),
-                Expanded(child: Text(date, style: Theme.of(context).textTheme.titleMedium)),
+                Expanded(child: Text(context.tr(date), style: Theme.of(context).textTheme.titleMedium)),
                 ?chip,
               ]),
               const Divider(height: 1),
@@ -72,7 +73,7 @@ class AppointmentScheduleCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
             Text(name, style: text.titleSmall),
-            Text((row['office_location'] as String?) ?? '',
+            Text(context.tr((row['office_location'] as String?) ?? ''),
                 style: text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ]),
         ),
@@ -106,8 +107,8 @@ class TreatmentScheduleCard extends StatelessWidget {
         ),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-            Text((row['facility_name'] as String?) ?? '', style: text.titleSmall),
-            Text('${(row['treatment_type'] as String?) ?? ''} · ${TreatmentText.duration(row['duration_minutes'])}',
+            Text(context.tr((row['facility_name'] as String?) ?? ''), style: text.titleSmall),
+            Text('${context.tr((row['treatment_type'] as String?) ?? '')} · ${TreatmentText.duration(context, row['duration_minutes'])}',
                 style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
           ]),
         ),

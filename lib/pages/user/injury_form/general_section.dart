@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/form_text_field.dart';
 import '../../../widgets/picker_field.dart';
 import '../../../widgets/section_header.dart';
@@ -22,7 +23,7 @@ class GeneralSection extends StatelessWidget {
       initialDate: data.birthDate ?? DateTime(now.year - 30),
       firstDate: DateTime(1900),
       lastDate: now,
-      helpText: 'Birth date',
+      helpText: context.tr('Birth date'),
     );
     if (d != null) {
       data.birthDate = d;
@@ -40,9 +41,9 @@ class GeneralSection extends StatelessWidget {
         DropdownButtonFormField<String>(
           initialValue: data.title,
           decoration: InputDecoration(
-            labelText: 'Title',
-            helperText: 'Choose one of the provided titles: นาย, นาง, นางสาว',
-            errorText: errors['title_name'],
+            labelText: context.tr('Title'),
+            helperText: context.tr('Choose one of the provided titles: นาย, นาง, นางสาว'),
+            errorText: context.trMaybe(errors['title_name']),
           ),
           items: <DropdownMenuItem<String>>[
             for (final String t in InjuryFormData.titles) DropdownMenuItem<String>(value: t, child: Text(t)),
@@ -103,7 +104,7 @@ class _GenderField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text('Gender', style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
+        Text(context.tr('Gender'), style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
         RadioGroup<String>(
           groupValue: data.gender,
           onChanged: (String? v) {
@@ -114,11 +115,11 @@ class _GenderField extends StatelessWidget {
             spacing: 12,
             children: <Widget>[
               for (final (String value, String label) in _options)
-                Row(mainAxisSize: MainAxisSize.min, children: <Widget>[Radio<String>(value: value), Text(label)]),
+                Row(mainAxisSize: MainAxisSize.min, children: <Widget>[Radio<String>(value: value), Text(context.tr(label))]),
             ],
           ),
         ),
-        if (error != null) Text(error!, style: text.bodySmall?.copyWith(color: colors.error)),
+        if (error != null) Text(context.tr(error!), style: text.bodySmall?.copyWith(color: colors.error)),
       ],
     );
   }

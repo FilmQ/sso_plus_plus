@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../session/session_providers.dart';
 import '../../../widgets/centered_body.dart';
 import '../../../widgets/info_card.dart';
@@ -20,7 +21,7 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text(context.tr('Home')),
         actions: const <Widget>[NotificationBell(), SizedBox(width: 4)],
       ),
       body: RefreshIndicator(
@@ -51,11 +52,11 @@ class _HomeBody extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 16,
       children: <Widget>[
-        Text('สวัสดี คุณ$firstName', style: text.headlineSmall),
-        if (home.hasError) Text('The claim cannot be shown now. Pull down to try again.', style: text.bodyMedium),
+        Text(context.tr('Hello, {name}', {'name': firstName}), style: text.headlineSmall),
+        if (home.hasError) Text(context.tr('The claim cannot be shown now. Pull down to try again.'), style: text.bodyMedium),
         if (home.isLoading) const Center(child: CircularProgressIndicator()),
         if (claim != null) ...<Widget>[
-          Text('Claim ${claim['claim_no']} · ${claim['injury']}',
+          Text(context.tr('Claim {no} · {injury}', {'no': claim['claim_no'], 'injury': claim['injury']}),
               style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ClaimProgressCard(claim: claim),
           // After U4.3 a past Confirmed appointment is still in Q2.4 (D-064).
@@ -66,12 +67,12 @@ class _HomeBody extends ConsumerWidget {
               tonal: true,
               children: <Widget>[
                 KeyValue('Date', claim['appointment_time']! as String, large: true),
-                KeyValue('Consultant', '${claim['consultant_name']} · ${claim['office_location']}'),
+                KeyValue('Consultant', '${claim['consultant_name']} · ${context.tr('${claim['office_location']}')}'),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: FilledButton.tonal(
                     onPressed: () => context.push('/appointment/${claim['claim_id']}'),
-                    child: const Text('View appointment'),
+                    child: Text(context.tr('View appointment')),
                   ),
                 ),
               ],
@@ -82,7 +83,7 @@ class _HomeBody extends ConsumerWidget {
               alignment: Alignment.centerLeft,
               child: FilledButton.tonal(
                 onPressed: () => openTreatmentOfClaim(context, ref, claim['claim_id']! as int),
-                child: const Text('View treatment'),
+                child: Text(context.tr('View treatment')),
               ),
             ),
         ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
 import '../theme/status_colors.dart';
 
 /// The small status pill of the Figma frames: an icon and a label, or only a
@@ -26,7 +27,7 @@ class StatusPill extends StatelessWidget {
             const SizedBox(width: 6),
           ],
           Flexible(
-            child: Text(label,
+            child: Text(context.tr(label),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(color: foreground)),

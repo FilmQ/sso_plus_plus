@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/person_avatar.dart';
 import '../../../widgets/side_key_value.dart';
@@ -25,7 +26,7 @@ class AppointmentCards extends StatelessWidget {
       children: <Widget>[
         InfoCard(icon: Icons.event, title: 'Consultation appointment', children: <Widget>[
           SideKeyValue('Date', _s('appointment_date'), strong: true),
-          SideKeyValue('Scheduled by', '${_s('scheduled_by')} (Evaluation Officer)'),
+          SideKeyValue('Scheduled by', context.tr('{name} (Evaluation Officer)', {'name': _s('scheduled_by')})),
           SideKeyValue('Type', _type),
         ]),
         InfoCard(icon: Icons.medical_services, title: 'Consultant', children: <Widget>[
@@ -38,7 +39,7 @@ class AppointmentCards extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(_s('consultant_name'), style: text.titleSmall),
-                    Text('Office: ${_s('office_location')}',
+                    Text(context.tr('Office: {place}', {'place': _s('office_location')}),
                         style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
                   ],
                 ),

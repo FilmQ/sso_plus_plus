@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sso_plus_plus/l10n/tr.dart';
 import 'package:sso_plus_plus/routing/user_router.dart';
 
 import 'fake_server.dart';
 
 /// Starts the user app in the Figma phone frame (390 x 844) and signs in.
-Future<void> signInToUserApp(WidgetTester tester, FakeServer server) async {
+Future<void> signInToUserApp(WidgetTester tester, FakeServer server, {String language = 'en'}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(390, 844);
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(testApp(server, userRouterProvider));
+  await tester.pumpWidget(testApp(server, userRouterProvider, language: language));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Already registered? Sign in'));
+  await tester.tap(find.text(translate(language, 'Already registered? Sign in')));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('login_name')), '1103700123456');
   await tester.enterText(find.byKey(const Key('password')), 'Password123');

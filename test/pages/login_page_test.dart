@@ -6,6 +6,8 @@ import 'package:sso_plus_plus/routing/console_router.dart';
 import 'package:sso_plus_plus/routing/user_router.dart';
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
+import '../support/user_app.dart';
 
 void main() {
   testWidgets('Login: a wrong password shows the server message', (WidgetTester tester) async {
@@ -23,6 +25,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('The login name or the password is not correct.'), findsOneWidget);
+  });
+
+  testWidgets('L-1 in Thai: the labels and the server message', (WidgetTester tester) async {
+    final FakeServer server = FakeServer()
+      ..json('POST /auth/login', <String, String>{'error': 'The login name or the password is not correct.'},
+          status: 401);
+    await signInToUserApp(tester, server, language: 'th');
+    expect(find.text('ชื่อเข้าสู่ระบบหรือรหัสผ่านไม่ถูกต้อง'), findsOneWidget);
+    expectNoEnglishLabels(tester);
   });
 
   testWidgets('Login: the user app sends app=user and opens Home', (WidgetTester tester) async {

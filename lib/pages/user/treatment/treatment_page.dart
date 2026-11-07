@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/treatment_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/centered_body.dart';
 import '../../../widgets/status_chip.dart';
 import '../notifications/notification_providers.dart';
@@ -66,8 +67,8 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
     }
   }
 
-  void _snack(String text) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text, [Map<String, Object?> args = const <String, Object?>{}]) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(text, args))));
   }
 
   /// U4.1: QU4.1, then the pop-up (U4-2).
@@ -92,7 +93,7 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
   /// U4.2 step 4 (QU4.2), then the U4-4 snackbar.
   Future<void> saveDate(Map<String, Object?> chosen, String time) async {
     if (await _change(() => _api.changeDate(widget.treatmentId, chosen['slot_date']! as String))) {
-      _snack(TreatmentText.dateChanged(chosen['date_label']! as String, time));
+      _snack('Treatment date changed to {date}', {'date': TreatmentText.changedDate(chosen['date_label']! as String, time)});
     }
   }
 
@@ -104,7 +105,7 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
       bottomNavigationBar: t?['treatment_status'] == 'Pending' ? _buttons() : null,
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/schedule')),
-        title: const Text('Confirm Treatment'),
+        title: Text(context.tr('Confirm Treatment')),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -113,7 +114,7 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
             child: t == null
                 ? Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Center(child: _error == null ? const CircularProgressIndicator() : Text(_error!)),
+                    child: Center(child: _error == null ? const CircularProgressIndicator() : Text(context.tr(_error!))),
                   )
                 : _body(t),
           ),
@@ -129,7 +130,7 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
       spacing: 12,
       children: <Widget>[
         Row(children: <Widget>[
-          Expanded(child: Text('Status', style: Theme.of(context).textTheme.titleSmall)),
+          Expanded(child: Text(context.tr('Status'), style: Theme.of(context).textTheme.titleSmall)),
           Flexible(flex: 3, child: TreatmentStatusChip(t['treatment_status']! as String)),
         ]),
         TreatmentCards(treatment: t),
@@ -156,12 +157,12 @@ class _TreatmentPageState extends ConsumerState<TreatmentPage> {
                 FilledButton.icon(
                   onPressed: _busy ? null : clickAccept,
                   icon: const Icon(Icons.check),
-                  label: const Text('Accept'),
+                  label: Text(context.tr('Accept')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy ? null : clickRequestAnotherDate,
                   icon: const Icon(Icons.edit_calendar),
-                  label: const Text('Request Another Date'),
+                  label: Text(context.tr('Request Another Date')),
                 ),
               ],
             ),

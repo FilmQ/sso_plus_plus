@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../session/session_providers.dart';
 import '../../../session/user_session.dart';
 import '../../../widgets/app_logo.dart';
+import '../../../widgets/language_toggle.dart';
 import '../../../widgets/person_avatar.dart';
 import '../consultant/consultant_providers.dart';
 import '../reports/report_providers.dart';
@@ -96,6 +97,7 @@ class ConsoleNav extends ConsumerWidget {
                 count: navCounts[d.path],
               ),
             const Spacer(),
+            const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 0), child: LanguageToggle()),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(spacing: 12, children: <Widget>[

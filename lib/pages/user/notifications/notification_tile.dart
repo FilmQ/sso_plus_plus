@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/notification_api.dart';
+import '../../../l10n/tr.dart';
 import '../home/notification_style.dart';
 
 /// One message row: U2-2 pop-up and U3-1 Notification Page. An unread
@@ -31,9 +32,9 @@ class NotificationTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 2,
                 children: <Widget>[
-                  Text(item.subject, style: item.isRead ? text.bodyLarge : text.titleSmall),
-                  Text(item.body, maxLines: 3, overflow: TextOverflow.ellipsis, style: text.bodyMedium?.copyWith(color: muted)),
-                  Text(item.sentTime, style: text.bodySmall?.copyWith(color: muted)),
+                  Text(context.tr(item.subject), style: item.isRead ? text.bodyLarge : text.titleSmall),
+                  Text(context.tr(item.body), maxLines: 3, overflow: TextOverflow.ellipsis, style: text.bodyMedium?.copyWith(color: muted)),
+                  Text(context.tr(item.sentTime), style: text.bodySmall?.copyWith(color: muted)),
                 ],
               ),
             ),

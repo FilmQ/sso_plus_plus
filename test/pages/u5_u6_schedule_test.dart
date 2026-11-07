@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 FakeServer _server({List<Object> appointments = const <Object>[], List<Object> treatments = const <Object>[]}) =>
@@ -127,5 +128,42 @@ void main() {
     await tapText(tester, 'Schedule');
     await tapText(tester, 'Treatments');
     expect(find.text('You have no upcoming treatments.'), findsOneWidget);
+  });
+
+  testWidgets('U5 and U6 in Thai: both tabs have no English labels', (WidgetTester tester) async {
+    const List<String> data = <String>['right wrist'];
+    await signInToUserApp(
+        tester,
+        _server(appointments: <Object>[
+          <String, Object?>{
+            'consultant_name': 'นพ. ธนา ศรีสุข',
+            'office_location': 'Building A, Floor 3, Room 305',
+            'appointment_date': '16 October 2026 : 10:00',
+            'appointment_status': 'Pending',
+            'claim_id': 143,
+            ..._claim,
+          },
+        ], treatments: <Object>[
+          <String, Object?>{
+            'treatment_id': 401,
+            'facility_name': 'SSO Rehabilitation Center',
+            'treatment_type': 'Occupational therapy',
+            'duration_minutes': 60,
+            'treatment_date': '23 October 2026 : 13:00',
+            'treatment_status': 'Accepted',
+            'claim_id': 143,
+            ..._claim,
+          },
+        ]),
+        language: 'th');
+    await tapText(tester, th('Schedule'));
+    expect(find.text('16 ตุลาคม 2026 : 10:00'), findsOneWidget);
+    expect(find.text('รอคุณตอบ'), findsOneWidget);
+    expect(find.text('กระดูกหัก, right wrist'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
+    await tapText(tester, th('Treatments'));
+    expect(find.text('กิจกรรมบำบัด · 60 นาที'), findsOneWidget);
+    expect(find.text('ยอมรับแล้ว'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/side_key_value.dart';
@@ -22,15 +23,15 @@ class TreatmentCards extends StatelessWidget {
         InfoCard(icon: Icons.healing, title: 'Treatment', children: <Widget>[
           SideKeyValue('Date', _s('treatment_date'), strong: true),
           SideKeyValue('Type', _s('treatment_type')),
-          SideKeyValue('Duration', TreatmentText.duration(treatment['duration_minutes'])),
+          SideKeyValue('Duration', TreatmentText.duration(context, treatment['duration_minutes'])),
           SideKeyValue('Facility', _s('facility_name')),
           // QU4.4 booked_by is an EvaluationOfficer name (Figma U4-1).
-          SideKeyValue('Booked by', '${_s('booked_by')} (Evaluation Officer)'),
+          SideKeyValue('Booked by', context.tr('{name} (Evaluation Officer)', {'name': _s('booked_by')})),
         ]),
         InfoCard(icon: Icons.assignment, title: 'Claim', children: <Widget>[
           SideKeyValue('Claim ID', _s('claim_no')),
           SideKeyValue('Injury', _s('injury')),
-          SideKeyValue('Report', 'Signed ${_s('report_signed_date')} by ${_s('report_author')}'),
+          SideKeyValue('Report', context.tr('Signed {date} by {name}', {'date': _s('report_signed_date'), 'name': _s('report_author')})),
         ]),
       ],
     );
@@ -54,8 +55,8 @@ class AnswerBeforeNote extends StatelessWidget {
           Icon(Icons.info, color: s.warning),
           Expanded(
             child: Text(
-              'Please answer before the treatment date. If you do not answer, the booking is cancelled '
-              'automatically and your claim is closed.',
+              context.tr('Please answer before the treatment date. If you do not answer, the booking is cancelled '
+                  'automatically and your claim is closed.'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: s.warning),
             ),
           ),

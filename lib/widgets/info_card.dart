@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
+
 /// A card with an icon and a title in the header (U1-1 "Before you start",
 /// U1-5 claim card, U2-1 "Your claim" and "Next appointment").
 class InfoCard extends StatelessWidget {
@@ -38,7 +40,7 @@ class InfoCard extends StatelessWidget {
             children: <Widget>[
               Icon(icon, size: 22, color: colors.primary),
               const SizedBox(width: 8),
-              Expanded(child: Text(title, style: Theme.of(context).textTheme.titleMedium)),
+              Expanded(child: Text(context.tr(title), style: Theme.of(context).textTheme.titleMedium)),
               ?trailing,
             ],
           ),
@@ -60,7 +62,7 @@ class CheckLine extends StatelessWidget {
         children: <Widget>[
           Icon(Icons.check, size: 18, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
-          Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
+          Expanded(child: Text(context.tr(text), style: Theme.of(context).textTheme.bodyMedium)),
         ],
       );
 }

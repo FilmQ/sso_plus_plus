@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:sso_plus_plus/routing/user_router.dart';
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
+import '../support/user_app.dart';
 
 Map<String, Object?> _message(int id, String subject, String body, {bool read = false}) => <String, Object?>{
       'notification_id': id,
@@ -70,7 +72,7 @@ void main() {
     await _signIn(tester, server);
 
     // U2-1: home page with the claim card and a red dot.
-    expect(find.text('สวัสดี คุณสมชาย'), findsOneWidget);
+    expect(find.text('Hello, สมชาย'), findsOneWidget);
     expect(find.text('Claim SST-2026-000143 · Fracture, right wrist'), findsOneWidget);
     expect(find.text('Covered'), findsOneWidget);
     expect(find.text('Next appointment'), findsOneWidget);
@@ -118,7 +120,7 @@ void main() {
     await tester.tap(find.text('Application rejected'));
     await tester.pumpAndSettle();
     expect(find.text('Reason'), findsOneWidget);
-    expect(find.text('การส่งเงินสมทบไม่ครอบคลุมวันที่ประสบอันตรายตามเงื่อนไขมาตรา 33'), findsOneWidget);
+    expect(find.text('The contributions do not cover the date of the injury under the conditions of Section 33'), findsOneWidget);
     expect(find.text('Message from the officer'), findsOneWidget);
     expect(find.text('The register shows your contributions ended in May 2026.'), findsOneWidget);
   });
@@ -142,5 +144,49 @@ void main() {
     expect(find.text('You did not accept the date in time; the claim is withdrawn'), findsOneWidget);
     expect(find.text('You could not attend; the claim is withdrawn'), findsNothing);
     expect(find.text('Next appointment'), findsNothing);
+  });
+
+  testWidgets('U2 in Thai: the Home page, the pop-up and the messages have no English labels', (WidgetTester tester) async {
+    await signInToUserApp(
+      tester,
+      _server(<Map<String, Object?>>[
+        _message(
+            902,
+            'Appointment scheduled',
+            'Your appointment with นพ. ธนา ศรีสุข is on 16 October 2026 : 10:00 at Building A, Floor 3, Room 305. '
+                'Please confirm it in the application by 14 October 2026 : 10:00.'),
+        _message(904, 'Application rejected',
+            'การส่งเงินสมทบไม่ครอบคลุมวันที่ประสบอันตรายตามเงื่อนไขมาตรา 33\n\nสัญญาจ้างสิ้นสุดแล้ว'),
+      ]),
+      language: 'th',
+    );
+    expect(find.text('สวัสดี คุณสมชาย'), findsOneWidget);
+    expect(find.text('ได้รับความคุ้มครอง'), findsOneWidget);
+    expect(find.text('นพ. ธนา ศรีสุข · อาคาร A ชั้น 3 ห้อง 305'), findsOneWidget);
+    expect(find.text('2 ตุลาคม 2026 : 14:32'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['right wrist']);
+
+    await tester.tap(find.byKey(const Key('bell')));
+    await tester.pumpAndSettle();
+    expect(find.text('ยังไม่อ่าน 2 รายการ'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['right wrist']);
+
+    await tester.tap(find.text('สร้างนัดหมายแล้ว'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('คุณมีนัดหมายกับ นพ. ธนา ศรีสุข วันที่ 16 ตุลาคม 2026 : 10:00 ที่ อาคาร A ชั้น 3 ห้อง 305 '
+            'กรุณายืนยันในแอปพลิเคชันภายใน 14 ตุลาคม 2026 : 10:00'),
+        findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['right wrist']);
+    await tester.tap(find.text(th('Close')).last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('bell')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('คำร้องถูกปฏิเสธ'));
+    await tester.pumpAndSettle();
+    expect(find.text('การส่งเงินสมทบไม่ครอบคลุมวันที่ประสบอันตรายตามเงื่อนไขมาตรา 33'), findsOneWidget);
+    expect(find.text('สัญญาจ้างสิ้นสุดแล้ว'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['right wrist']);
   });
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/tr.dart';
 import '../../session/session_providers.dart';
 import '../../widgets/centered_body.dart';
 import '../../widgets/info_card.dart';
 import '../../widgets/key_value.dart';
+import '../../widgets/language_toggle.dart';
 import 'home/home_providers.dart';
 import 'home/notification_bell.dart';
 
@@ -27,7 +29,7 @@ class ProfilePage extends ConsumerWidget {
     final Map<String, Object?>? p = profile.value;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(context.tr('Profile')),
         actions: const <Widget>[NotificationBell(), SizedBox(width: 4)],
       ),
       body: ListView(
@@ -39,10 +41,10 @@ class ProfilePage extends ConsumerWidget {
               spacing: 16,
               children: <Widget>[
                 if (profile.isLoading) const Center(child: CircularProgressIndicator()),
-                if (profile.hasError) Text('The profile cannot be shown now.', style: text.bodyMedium),
+                if (profile.hasError) Text(context.tr('The profile cannot be shown now.'), style: text.bodyMedium),
                 if (p != null) ...<Widget>[
                   Text(p['full_name']! as String, style: text.headlineSmall),
-                  Text('Signed in with national ID ${p['national_id']}',
+                  Text(context.tr('Signed in with national ID {id}', {'id': p['national_id']}),
                       style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 ],
                 InfoCard(
@@ -54,11 +56,15 @@ class ProfilePage extends ConsumerWidget {
                       KeyValue('Phone number', showPhone(p['phone_no']! as String), large: true),
                       KeyValue('Address', p['address']! as String),
                     ],
+                    Row(children: <Widget>[
+                      Expanded(child: Text(context.tr('Language'), style: text.bodyMedium)),
+                      const LanguageToggle(),
+                    ]),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: FilledButton.tonal(
                         onPressed: () => ref.read(sessionProvider.notifier).logout(),
-                        child: const Text('Sign out'),
+                        child: Text(context.tr('Sign out')),
                       ),
                     ),
                   ],

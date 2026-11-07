@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
+
 /// An image that the server keeps (for example the signature of a report,
 /// R-048). [load] gets the bytes once; a new [cacheKey] gets them again.
 class StoredImage extends StatefulWidget {
@@ -46,7 +48,7 @@ class _StoredImageState extends State<StoredImage> {
           AsyncSnapshot<Uint8List>(hasData: true, :final Uint8List data) =>
             Image.memory(data, fit: BoxFit.contain, semanticLabel: widget.label),
           AsyncSnapshot<Uint8List>(hasError: true) =>
-            Center(child: Text('The image cannot be shown now.', style: Theme.of(context).textTheme.bodySmall)),
+            Center(child: Text(context.tr('The image cannot be shown now.'), style: Theme.of(context).textTheme.bodySmall)),
           _ => const Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))),
         },
       ),

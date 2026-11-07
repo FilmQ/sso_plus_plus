@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
+import '../../../l10n/tr.dart';
 import '../notifications/notification_providers.dart';
 import '../schedule/schedule_providers.dart';
 
@@ -18,12 +19,12 @@ Future<void> openTreatmentOfClaim(BuildContext context, WidgetRef ref, int claim
     if (!context.mounted) return;
     if (treatment == null) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('There is no upcoming treatment for this claim.')));
+          .showSnackBar(SnackBar(content: Text(context.tr('There is no upcoming treatment for this claim.'))));
       return;
     }
     await context.push('/treatment/${treatment['treatment_id']}');
     refreshUserData(ref);
   } on ApiException catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(e.message))));
   }
 }

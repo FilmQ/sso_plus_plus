@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
+
 /// A field that opens a picker (date, time) when the user taps it.
 class PickerField extends StatelessWidget {
   const PickerField({super.key, required this.label, required this.icon, required this.onTap, this.value, this.error});
@@ -18,11 +20,11 @@ class PickerField extends StatelessWidget {
       child: InputDecorator(
         isEmpty: value == null,
         decoration: InputDecoration(
-          labelText: label,
-          errorText: error,
+          labelText: context.tr(label),
+          errorText: context.trMaybe(error),
           suffixIcon: Icon(error != null ? Icons.error : icon, color: error != null ? Theme.of(context).colorScheme.error : null),
         ),
-        child: Text(value ?? '', style: Theme.of(context).textTheme.bodyLarge),
+        child: Text(context.tr(value ?? ''), style: Theme.of(context).textTheme.bodyLarge),
       ),
     );
   }

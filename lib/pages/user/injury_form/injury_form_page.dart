@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/insured_form_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../session/session_providers.dart';
 import '../../../widgets/centered_body.dart';
 import '../../../widgets/error_banner.dart';
@@ -51,7 +52,7 @@ class _InjuryFormPageState extends ConsumerState<InjuryFormPage> {
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.status != 422) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(e.message))));
         return;
       }
       setState(() {
@@ -69,8 +70,9 @@ class _InjuryFormPageState extends ConsumerState<InjuryFormPage> {
 
   String get _bannerText {
     final int n = _errors.length;
-    final String fields = n == 1 ? '1 field needs' : '$n fields need';
-    return '$fields your attention. Correct them and press Submit Injury Forms again.';
+    return n == 1
+        ? context.tr('1 field needs your attention. Correct them and press Submit Injury Forms again.')
+        : context.tr('{n} fields need your attention. Correct them and press Submit Injury Forms again.', {'n': n});
   }
 
   @override
@@ -78,7 +80,7 @@ class _InjuryFormPageState extends ConsumerState<InjuryFormPage> {
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.go('/register')),
-        title: const Text('Fill in Injury Forms'),
+        title: Text(context.tr('Fill in Injury Forms')),
       ),
       body: SingleChildScrollView(
         controller: _scroll,
@@ -100,7 +102,7 @@ class _InjuryFormPageState extends ConsumerState<InjuryFormPage> {
                 onPressed: _busy ? null : submitForms,
                 child: _busy
                     ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Submit Injury Forms'),
+                    : Text(context.tr('Submit Injury Forms')),
               ),
             ],
           ),

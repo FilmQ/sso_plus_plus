@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/api_exception.dart';
+import '../../l10n/tr.dart';
 import '../../session/session_providers.dart';
 
 /// The login name, the password and "Sign in" of L-1 and L-2 (D-003).
@@ -57,7 +58,10 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             key: const Key('login_name'),
             controller: _login,
             autofillHints: const <String>[AutofillHints.username],
-            decoration: InputDecoration(labelText: widget.loginLabel, helperText: widget.loginHelper),
+            decoration: InputDecoration(
+              labelText: context.tr(widget.loginLabel),
+              helperText: context.trMaybe(widget.loginHelper),
+            ),
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 20),
@@ -68,11 +72,11 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             autofillHints: const <String>[AutofillHints.password],
             onSubmitted: (_) => _signIn(),
             decoration: InputDecoration(
-              labelText: 'Password',
-              errorText: _error,
+              labelText: context.tr('Password'),
+              errorText: context.trMaybe(_error),
               errorMaxLines: 2,
               suffixIcon: IconButton(
-                tooltip: _hidden ? 'Show password' : 'Hide password',
+                tooltip: context.tr(_hidden ? 'Show password' : 'Hide password'),
                 icon: Icon(_hidden ? Icons.visibility_off : Icons.visibility),
                 onPressed: () => setState(() => _hidden = !_hidden),
               ),
@@ -85,7 +89,7 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             onPressed: _busy ? null : _signIn,
             child: _busy
                 ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Sign in'),
+                : Text(context.tr('Sign in')),
           ),
         ],
       ),

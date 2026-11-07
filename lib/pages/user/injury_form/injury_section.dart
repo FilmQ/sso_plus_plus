@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/form_text_field.dart';
 import '../../../widgets/picker_field.dart';
 import '../../../widgets/section_header.dart';
@@ -21,13 +22,13 @@ class InjurySection extends StatelessWidget {
       initialDate: data.injuryDateTime ?? now,
       firstDate: DateTime(now.year - 2),
       lastDate: now,
-      helpText: 'Date of the injury',
+      helpText: context.tr('Date of the injury'),
     );
     if (day == null || !context.mounted) return;
     final TimeOfDay? time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(data.injuryDateTime ?? now),
-      helpText: 'Time of the injury',
+      helpText: context.tr('Time of the injury'),
     );
     if (time == null) return;
     data.injuryDateTime = DateTime(day.year, day.month, day.day, time.hour, time.minute);
@@ -53,10 +54,14 @@ class InjurySection extends StatelessWidget {
         _text('injury_cause', 'Cause of the injury', data.injuryCause, maxLines: 2),
         _text('body_part', 'Injured body part', data.bodyPart),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: data.injuryCategory,
-          decoration: InputDecoration(labelText: 'Injury category', errorText: errors['injury_category']),
+          decoration: InputDecoration(
+            labelText: context.tr('Injury category'),
+            errorText: context.trMaybe(errors['injury_category']),
+          ),
           items: <DropdownMenuItem<String>>[
-            for (final String c in InjuryFormData.categories) DropdownMenuItem<String>(value: c, child: Text(c)),
+            for (final String c in InjuryFormData.categories) DropdownMenuItem<String>(value: c, child: Text(context.tr(c))),
           ],
           onChanged: (String? v) {
             data.injuryCategory = v;

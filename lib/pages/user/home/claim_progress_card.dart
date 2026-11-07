@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/status_chip.dart';
@@ -44,7 +45,7 @@ class ClaimProgressCard extends StatelessWidget {
         else if (withdrawn)
           const _StepRow(_Step.stopped, 'Consultation with a consultant', 'You could not attend; the claim is withdrawn')
         else if (!rejected) ...<Widget>[
-          _consultation(waiting: waiting, finished: closed || treatment != null),
+          _consultation(context, waiting: waiting, finished: closed || treatment != null),
           _treatment(closed: closed, treatment: treatment),
         ],
       ],
@@ -52,13 +53,13 @@ class ClaimProgressCard extends StatelessWidget {
   }
 
   /// The consultation step, from the status of the next appointment (Q2.4).
-  Widget _consultation({required bool waiting, required bool finished}) {
+  Widget _consultation(BuildContext context, {required bool waiting, required bool finished}) {
     const String title = 'Consultation with a consultant';
     if (finished) return const _StepRow(_Step.done, title, 'Consultation finished');
     if (waiting) return const _StepRow(_Step.later, title, 'After the officer confirms your claim');
     return switch (_s('appointment_status')) {
       'Pending' => const _StepRow(_Step.current, title, 'Waiting for your confirmation'),
-      'Confirmed' => _StepRow(_Step.current, title, 'Confirmed for ${_s('appointment_time')}'),
+      'Confirmed' => _StepRow(_Step.current, title, context.tr('Confirmed for {time}', {'time': _s('appointment_time')})),
       _ => const _StepRow(_Step.current, title, 'The officer books an appointment'),
     };
   }
@@ -102,10 +103,10 @@ class _StepRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(title,
+              Text(context.tr(title),
                   style: (step == _Step.current ? text.titleSmall : text.bodyMedium)
                       ?.copyWith(color: step == _Step.later ? c.onSurfaceVariant : null)),
-              if (subtitle.isNotEmpty) Text(subtitle, style: text.bodySmall?.copyWith(color: c.onSurfaceVariant)),
+              if (subtitle.isNotEmpty) Text(context.tr(subtitle), style: text.bodySmall?.copyWith(color: c.onSurfaceVariant)),
             ],
           ),
         ),

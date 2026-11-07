@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/appointment_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/centered_body.dart';
 import '../../../widgets/date_text.dart';
 import '../../../widgets/status_chip.dart';
@@ -68,8 +69,8 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
     }
   }
 
-  void _snack(String text) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text, [Map<String, Object?> args = const <String, Object?>{}]) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(text, args))));
   }
 
   /// U3.1 steps 4.1 to 6: Q3.3, Q3.7, then the reminder pop-up (U3-3).
@@ -89,7 +90,7 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
     if (choice == null) return; // backToAppointmentPage()
     final (DateTime date, String time) = choice;
     if (await _change(() => _api.reschedule(widget.claimId, DateText.iso(date), time, widget.notificationId))) {
-      _snack('เวลานัดหมายถูกเปลี่ยนเป็น ${DateText.long(date)} : $time'); // U3-5
+      _snack('The appointment time changed to {date} : {time}', {'date': DateText.long(date), 'time': time}); // U3-5
     }
   }
 
@@ -98,7 +99,7 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
   Future<void> clickCannotAttend() async {
     if (!await showCancelWarning(context)) return;
     if (await _change(() => _api.cancelAppointment(widget.claimId, widget.notificationId))) {
-      _snack('เวลานัดหมายถูกยกเลิกแล้ว'); // U3-7
+      _snack('The appointment is cancelled.'); // U3-7
     }
   }
 
@@ -108,7 +109,7 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
     return Scaffold(
       appBar: AppBar(
         leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/notifications')),
-        title: const Text('Appointment'),
+        title: Text(context.tr('Appointment')),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -117,7 +118,7 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
             child: a == null
                 ? Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Center(child: _error == null ? const CircularProgressIndicator() : Text(_error!)),
+                    child: Center(child: _error == null ? const CircularProgressIndicator() : Text(context.tr(_error!))),
                   )
                 : _body(a),
           ),
@@ -134,7 +135,7 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
       spacing: 12,
       children: <Widget>[
         Row(children: <Widget>[
-          Expanded(child: Text('Status', style: Theme.of(context).textTheme.titleSmall)),
+          Expanded(child: Text(context.tr('Status'), style: Theme.of(context).textTheme.titleSmall)),
           Flexible(flex: 3, child: AppointmentStatusChip(status)),
         ]),
         AppointmentCards(appointment: a),
@@ -145,19 +146,19 @@ class _AppointmentPageState extends ConsumerState<AppointmentPage> {
           FilledButton.icon(
             onPressed: _busy ? null : clickConfirmAppointment,
             icon: const Icon(Icons.check),
-            label: const Text('Confirm Appointment'),
+            label: Text(context.tr('Confirm Appointment')),
           ),
         if (status == 'Pending' || status == 'Confirmed') ...<Widget>[
           OutlinedButton.icon(
             onPressed: _busy ? null : clickRequestAnotherDate,
             icon: const Icon(Icons.edit_calendar),
-            label: const Text('Request Another Date'),
+            label: Text(context.tr('Request Another Date')),
           ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(foregroundColor: colors.error, side: BorderSide(color: colors.error)),
             onPressed: _busy ? null : clickCannotAttend,
             icon: const Icon(Icons.event_busy),
-            label: const Text('I cannot attend'),
+            label: Text(context.tr('I cannot attend')),
           ),
         ],
       ],

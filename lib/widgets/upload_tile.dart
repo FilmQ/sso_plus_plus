@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
 import '../theme/status_colors.dart';
 import 'dashed_border.dart';
 
@@ -47,9 +48,9 @@ class UploadTile extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(title, style: text.titleSmall),
+              Text(context.tr(title), style: text.titleSmall),
               Text(
-                _attached ? '$fileName · ${formatBytes(fileSize ?? 0)}' : 'PDF, JPG or PNG, up to 10 MB',
+                _attached ? '$fileName · ${formatBytes(fileSize ?? 0)}' : context.tr('PDF, JPG or PNG, up to 10 MB'),
                 style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -59,12 +60,12 @@ class UploadTile extends StatelessWidget {
         const SizedBox(width: 12),
         if (_attached)
           IconButton(
-            tooltip: 'Change file',
+            tooltip: context.tr('Change file'),
             onPressed: onUpload,
             icon: Icon(Icons.check_circle, color: StatusColors.of(context).success),
           )
         else
-          FilledButton.tonal(onPressed: onUpload, child: const Text('Upload')),
+          FilledButton.tonal(onPressed: onUpload, child: Text(context.tr('Upload'))),
       ],
     );
     return Column(
@@ -86,7 +87,7 @@ class UploadTile extends StatelessWidget {
         if (errorText != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: Text(errorText!, style: text.bodySmall?.copyWith(color: colors.error)),
+            child: Text(context.tr(errorText!), style: text.bodySmall?.copyWith(color: colors.error)),
           ),
       ],
     );

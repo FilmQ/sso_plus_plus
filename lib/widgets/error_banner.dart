@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
+
 /// The red banner on top of a form (U1-3).
 class ErrorBanner extends StatelessWidget {
   const ErrorBanner(this.message, {super.key});
@@ -19,7 +21,7 @@ class ErrorBanner extends StatelessWidget {
           Icon(Icons.error, size: 22, color: colors.error),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(message, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.onErrorContainer)),
+            child: Text(context.tr(message), style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.onErrorContainer)),
           ),
         ],
       ),

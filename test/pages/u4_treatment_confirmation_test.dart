@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 const String _base = '/u4/treatments/401';
@@ -160,5 +161,34 @@ void main() {
     await tapText(tester, 'Open treatment');
     expect(find.text('Confirm Treatment'), findsOneWidget);
     expect(find.text('Waiting for your answer'), findsOneWidget);
+  });
+
+  testWidgets('U4 in Thai: the page, the note and the two windows have no English labels', (WidgetTester tester) async {
+    const List<String> data = <String>['right wrist'];
+    await signInToUserApp(tester, _server(), language: 'th');
+    await tapText(tester, th('Schedule'));
+    await tapText(tester, th('Treatments'));
+    expect(find.text('กายภาพบำบัด · 60 นาที'), findsOneWidget);
+    await tapText(tester, th('SSO Rehabilitation Center'));
+    expect(find.text('ลงนามวันที่ 15 ตุลาคม 2026 โดย นพ. ธนา ศรีสุข'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
+
+    await tapText(tester, th('Request Another Date'));
+    expect(find.text('อ. 27 ตุลาคม 2026'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
+    await tapText(tester, 'อ. 27 ตุลาคม 2026');
+    await tapText(tester, th('Save date'));
+    expect(find.text('เปลี่ยนวันรักษาเป็น 27 ตุลาคม 2026 : 13:00'), findsOneWidget);
+  });
+
+  testWidgets('U4.1 in Thai: the Treatment accepted window', (WidgetTester tester) async {
+    await signInToUserApp(tester, _server(), language: 'th');
+    await tapText(tester, th('Schedule'));
+    await tapText(tester, th('Treatments'));
+    await tapText(tester, th('SSO Rehabilitation Center'));
+    await tapText(tester, th('Accept'));
+    expect(find.text('นัดหมายกายภาพบำบัดที่ ศูนย์ฟื้นฟูผู้ป่วย สำนักงานประกันสังคม วันที่ 23 / 10 / 2026 : 13:00 แล้ว ดูได้ในหน้าตารางนัด'),
+        findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['right wrist']);
   });
 }

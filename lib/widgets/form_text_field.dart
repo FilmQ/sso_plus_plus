@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/tr.dart';
+
 /// An outlined Material 3 text field with a help line and an error line
 /// (U1-2, U1-3). When the error is set, the field shows the error icon.
 class FormTextField extends StatefulWidget {
@@ -45,7 +47,7 @@ class _FormTextFieldState extends State<FormTextField> {
   Widget build(BuildContext context) {
     final Widget? suffix = widget.secret
         ? IconButton(
-            tooltip: _hidden ? 'Show password' : 'Hide password',
+            tooltip: context.tr(_hidden ? 'Show password' : 'Hide password'),
             icon: Icon(_hidden ? Icons.visibility_off : Icons.visibility),
             onPressed: () => setState(() => _hidden = !_hidden),
           )
@@ -64,10 +66,10 @@ class _FormTextFieldState extends State<FormTextField> {
       onTap: widget.onTap,
       onChanged: widget.onChanged,
       decoration: InputDecoration(
-        labelText: widget.label,
-        helperText: widget.helper,
+        labelText: context.tr(widget.label),
+        helperText: context.trMaybe(widget.helper),
         helperMaxLines: 2,
-        errorText: widget.error,
+        errorText: context.trMaybe(widget.error),
         errorMaxLines: 2,
         prefixIcon: widget.prefixIcon == null ? null : Icon(widget.prefixIcon),
         suffixIcon: suffix,

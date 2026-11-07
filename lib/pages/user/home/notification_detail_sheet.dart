@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../api/notification_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/info_card.dart';
 
 /// U2-3 Message opened (marked as read) and U2-4 Rejection message
@@ -34,16 +35,16 @@ class _Detail extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           ),
-          child: Text(item.body, style: Theme.of(context).textTheme.bodyLarge),
+          child: Text(context.tr(item.body), style: Theme.of(context).textTheme.bodyLarge),
         ),
         if (item.isAppointment)
-          Text('Please confirm, change or decline this appointment on the appointment page.',
+          Text(context.tr('Please confirm, change or decline this appointment on the appointment page.'),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
       ];
     }
     final List<String> parts = item.body.split('\n\n');
     return <Widget>[
-      _textCard(Icons.info, 'Reason', parts.first),
+      _textCard(Icons.info, 'Reason', context.tr(parts.first)),
       if (parts.length > 1) _textCard(Icons.message, 'Message from the officer', parts.skip(1).join('\n\n')),
     ];
   }
@@ -64,8 +65,8 @@ class _Detail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: 16,
               children: <Widget>[
-                Text(item.subject, style: text.headlineSmall),
-                Text(item.sentTime, style: text.bodySmall),
+                Text(context.tr(item.subject), style: text.headlineSmall),
+                Text(context.tr(item.sentTime), style: text.bodySmall),
                 ..._cards(context),
                 if ((item.isAppointment || item.isTreatment) && onOpen != null) ...<Widget>[
                   FilledButton(
@@ -73,11 +74,11 @@ class _Detail extends StatelessWidget {
                       Navigator.of(context).pop();
                       onOpen!();
                     },
-                    child: Text(item.isAppointment ? 'Open appointment' : 'Open treatment'),
+                    child: Text(context.tr(item.isAppointment ? 'Open appointment' : 'Open treatment')),
                   ),
-                  TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                  TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('Close'))),
                 ] else
-                  FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+                  FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('Close'))),
               ],
             ),
           ),

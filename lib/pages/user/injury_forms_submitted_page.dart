@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/tr.dart';
 import '../../theme/status_colors.dart';
 import '../../widgets/centered_body.dart';
 import '../../widgets/info_card.dart';
@@ -22,7 +23,7 @@ class InjuryFormsSubmittedPage extends ConsumerWidget {
     final TextTheme text = Theme.of(context).textTheme;
     final StatusColors ok = StatusColors.of(context);
     final List<Object?> files = (claim['files_received'] as List<Object?>?) ?? const <Object?>[];
-    final String received = files.map((Object? id) => _fileNames[id]).join(', ');
+    final String received = files.map((Object? id) => context.tr('${_fileNames[id]}')).join(', ');
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -36,19 +37,19 @@ class InjuryFormsSubmittedPage extends ConsumerWidget {
                   backgroundColor: ok.successContainer,
                   child: Icon(Icons.check_circle, size: 48, color: ok.success),
                 ),
-                Text('Injury forms submitted', style: text.headlineSmall, textAlign: TextAlign.center),
+                Text(context.tr('Injury forms submitted'), style: text.headlineSmall, textAlign: TextAlign.center),
                 Text(
-                  'Your claim has been sent to an evaluation officer. We will notify you when it has been checked.',
+                  context.tr('Your claim has been sent to an evaluation officer. We will notify you when it has been checked.'),
                   style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
                 InfoCard(
                   icon: Icons.assignment,
-                  title: 'Claim ${claim['claim_no'] ?? ''}',
+                  title: context.tr('Claim {no}', {'no': claim['claim_no'] ?? ''}),
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        Expanded(child: Text('Status', style: text.bodyMedium)),
+                        Expanded(child: Text(context.tr('Status'), style: text.bodyMedium)),
                         ClaimStatusChip((claim['claim_status'] as String?) ?? ''),
                       ],
                     ),
@@ -61,7 +62,7 @@ class InjuryFormsSubmittedPage extends ConsumerWidget {
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton(onPressed: () => context.go('/home'), child: const Text('Go to Home')),
+                  child: FilledButton(onPressed: () => context.go('/home'), child: Text(context.tr('Go to Home'))),
                 ),
               ],
             ),

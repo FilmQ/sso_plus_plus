@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/date_text.dart';
 import '../../../widgets/picker_field.dart';
 
@@ -43,7 +44,7 @@ class _RequestDateDialogState extends State<_RequestDateDialog> {
       initialDate: _date ?? now,
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: now.add(const Duration(days: 90)),
-      helpText: 'New date',
+      helpText: context.tr('New date'),
     );
     if (d == null) return;
     setState(() {
@@ -61,7 +62,7 @@ class _RequestDateDialogState extends State<_RequestDateDialog> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return AlertDialog(
       icon: Icon(Icons.edit_calendar, color: colors.primary),
-      title: const Text('Request another date'),
+      title: Text(context.tr('Request another date')),
       content: SizedBox(
         width: 320,
         child: SingleChildScrollView(
@@ -70,7 +71,7 @@ class _RequestDateDialogState extends State<_RequestDateDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 16,
             children: <Widget>[
-              Text('Choose a new date and time with ${widget.consultantName}.'),
+              Text(context.tr('Choose a new date and time with {name}.', {'name': widget.consultantName})),
               PickerField(
                 key: const ValueKey<String>('new_date'),
                 label: 'New date',
@@ -79,24 +80,24 @@ class _RequestDateDialogState extends State<_RequestDateDialog> {
                 onTap: _pickDate,
               ),
               if (_date != null) ...<Widget>[
-                Text('Free times on this date', style: text.titleSmall?.copyWith(color: colors.onSurfaceVariant)),
+                Text(context.tr('Free times on this date'), style: text.titleSmall?.copyWith(color: colors.onSurfaceVariant)),
                 if (_free == null)
                   const Center(child: CircularProgressIndicator())
                 else if (_free!.isEmpty)
-                  const Text('There are no free times on this date. Choose another date.')
+                  Text(context.tr('There are no free times on this date. Choose another date.'))
                 else
                   _slotGrid(),
-                Text('Grey: taken     Purple: your choice', style: text.bodySmall),
+                Text(context.tr('Grey: taken     Purple: your choice'), style: text.bodySmall),
               ],
             ],
           ),
         ),
       ),
       actions: <Widget>[
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: _time == null ? null : () => Navigator.of(context).pop((_date!, _time!)),
-          child: const Text('Confirm Date'),
+          child: Text(context.tr('Confirm Date')),
         ),
       ],
     );
