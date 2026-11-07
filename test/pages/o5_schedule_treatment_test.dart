@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -45,6 +47,16 @@ Future<void> _choose(WidgetTester tester, String menu, String option) async {
   await tester.tap(find.widgetWithText(MenuItemButton, option).last);
   await tester.pumpAndSettle();
 }
+
+/// The fonts of the theme. The test font gives each Thai mark a full width, so it cannot show a cut-off name.
+Future<void> _loadAppFonts(WidgetTester tester) => tester.runAsync(() async {
+      for (final (String family, String file) in <(String, String)>[
+        ('Roboto', 'assets/fonts/roboto/Roboto-Regular.ttf'),
+        ('NotoSansThai', 'assets/fonts/noto_sans_thai/NotoSansThai-Regular.ttf'),
+      ]) {
+        await (FontLoader(family)..addFont(rootBundle.load(file))).load();
+      }
+    });
 
 Future<void> _openTreatment(WidgetTester tester, FakeServer server) async {
   await signInToConsole(tester, server);
@@ -149,12 +161,19 @@ void main() {
   });
 
   testWidgets('O5.1 in Thai: the menus, a free time and Treatment Booked', (WidgetTester tester) async {
+    await _loadAppFonts(tester);
     await signInToConsole(tester, _server(), language: 'th');
     await tapText(tester, th('Treatment'));
     expect(find.text(th('Treatment · {claim}', <String, Object?>{'claim': 'SST-2026-000143'})), findsOneWidget);
     await _choose(tester, 'treatment_type', th('Physiotherapy'));
     await _choose(tester, 'duration', th('{n} minutes', <String, Object?>{'n': 90}));
     await _choose(tester, 'facility', th('SSO Rehabilitation Center'));
+    final RenderEditable facility = tester
+        .state<EditableTextState>(
+            find.descendant(of: find.byKey(const Key('facility')), matching: find.byType(EditableText)))
+        .renderEditable;
+    expect(facility.size.width, greaterThanOrEqualTo(facility.getMaxIntrinsicWidth(double.infinity)),
+        reason: 'the Thai facility name must not be cut off');
     await tester.tap(find.text('ศ. 23 ต.ค. - 13:00'));
     await tester.pumpAndSettle();
     expect(find.text('วันศุกร์ 23 ตุลาคม 2026'), findsOneWidget);

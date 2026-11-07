@@ -41,11 +41,12 @@ class TreatmentForm extends StatelessWidget {
       children: <Widget>[
         Wrap(spacing: 12, runSpacing: 12, children: <Widget>[
           _menu<String>(context, const Key('treatment_type'), 'Treatment type', type, TreatmentOptions.types,
-              (String t) => context.tr(t), onType),
+              (String t) => context.tr(t), onType, width: 190),
           _menu<int>(context, const Key('duration'), 'Duration', duration, TreatmentOptions.durations,
-              (int m) => context.tr('{n} minutes', <String, Object?>{'n': m}), onDuration),
+              (int m) => context.tr('{n} minutes', <String, Object?>{'n': m}), onDuration, width: 190),
+          // No fixed width: the menu fills the row, because the facility name is much longer in Thai.
           _menu<String>(context, const Key('facility'), 'Facility', facility, TreatmentOptions.facilities,
-              (String f) => context.tr(f), onFacility, width: 300),
+              (String f) => context.tr(f), onFacility),
         ]),
         Text(context.tr('Available Times'), style: Theme.of(context).textTheme.titleSmall),
         _times(context),
@@ -55,13 +56,14 @@ class TreatmentForm extends StatelessWidget {
   }
 
   Widget _menu<T>(BuildContext context, Key key, String label, T? value, List<T> options, String Function(T) text,
-          ValueChanged<T?> onChanged, {double width = 190}) =>
+          ValueChanged<T?> onChanged, {double? width}) =>
       // A new language makes a new menu, so the field shows the label in that language.
       KeyedSubtree(
         key: ValueKey<(Key, Locale)>((key, Localizations.localeOf(context))),
         child: DropdownMenu<T>(
           key: key,
           width: width,
+          expandedInsets: width == null ? EdgeInsets.zero : null,
           label: Text(context.tr(label)),
           initialSelection: value,
           dropdownMenuEntries: <DropdownMenuEntry<T>>[
