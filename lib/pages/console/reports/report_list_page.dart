@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/tr.dart';
 import '../shell/console_shell.dart';
 import '../treatment/report_card.dart';
 import 'report_providers.dart';
@@ -39,15 +40,15 @@ class ReportListPage extends ConsumerWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(spacing: 8, children: <Widget>[
                   Icon(Icons.description, color: colors.primary),
-                  Expanded(child: Text('Reports', style: text.titleMedium)),
-                  Text('$notViewed not viewed', style: text.bodySmall),
+                  Expanded(child: Text(context.tr('Reports'), style: text.titleMedium)),
+                  Text(context.tr('{n} not viewed', <String, Object?>{'n': notViewed}), style: text.bodySmall),
                 ]),
               ),
               if (list.isLoading) const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
               if (list.hasError)
-                const Padding(padding: EdgeInsets.all(16), child: Text('The reports cannot be shown now.')),
+                Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('The reports cannot be shown now.'))),
               if (list.hasValue && rows.isEmpty)
-                const Padding(padding: EdgeInsets.all(16), child: Text('There are no filed reports.')),
+                Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('There are no filed reports.'))),
               if (rows.isNotEmpty)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -55,13 +56,13 @@ class ReportListPage extends ConsumerWidget {
                     headingRowColor: WidgetStatePropertyAll<Color>(colors.surfaceContainerLow),
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 64,
-                    columns: const <DataColumn>[
-                      DataColumn(label: Text('Report')),
-                      DataColumn(label: Text('Claim ID')),
-                      DataColumn(label: Text('User')),
-                      DataColumn(label: Text('Signed')),
-                      DataColumn(label: Text('View status')),
-                      DataColumn(label: SizedBox.shrink()),
+                    columns: <DataColumn>[
+                      DataColumn(label: Text(context.tr('Report'))),
+                      DataColumn(label: Text(context.tr('Claim ID'))),
+                      DataColumn(label: Text(context.tr('User'))),
+                      DataColumn(label: Text(context.tr('Signed'))),
+                      DataColumn(label: Text(context.tr('View status'))),
+                      const DataColumn(label: SizedBox.shrink()),
                     ],
                     rows: <DataRow>[
                       for (final Map<String, Object?> r in rows)
@@ -69,11 +70,11 @@ class ReportListPage extends ConsumerWidget {
                           DataCell(Text(ReportShortcutCard.reportNo(r['report_id']), style: text.titleSmall)),
                           DataCell(Text('${r['claim_no']}')),
                           DataCell(Text('${r['user_name']}')),
-                          DataCell(Text('${r['signed_date']}')),
+                          DataCell(Text(context.tr('${r['signed_date']}'))),
                           DataCell(ViewStatusChip('${r['view_status']}')),
                           DataCell(FilledButton.tonal(
                             onPressed: () => selectReport(context, r['report_id']),
-                            child: const Text('Open'),
+                            child: Text(context.tr('Open')),
                           )),
                         ]),
                     ],

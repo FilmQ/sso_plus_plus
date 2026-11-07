@@ -1,11 +1,12 @@
 import 'package:flutter/widgets.dart';
 
 import 'en_from_thai.dart';
+import 'th_console.dart';
 import 'th_dates.dart';
 import 'th_server.dart';
 import 'th_user.dart';
 
-const Map<String, String> _thai = <String, String>{...thUser, ...thServer};
+const Map<String, String> _thai = <String, String>{...thUser, ...thServer, ...thConsole};
 
 final RegExp _placeholder = RegExp(r'\{(\w+)\}');
 

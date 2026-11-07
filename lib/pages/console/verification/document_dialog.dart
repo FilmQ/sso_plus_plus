@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../api/api_exception.dart';
+import '../../../l10n/tr.dart';
 import '../../../platform/save_file.dart';
 import 'claim_cards.dart';
 
@@ -38,7 +39,7 @@ class _DocumentDialogState extends State<_DocumentDialog> {
     final bool saved = saveFile(file.bytes, _name, file.mimeType ?? 'application/octet-stream');
     if (!saved && mounted) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Download is not available on this device.')));
+          .showSnackBar(SnackBar(content: Text(context.tr('Download is not available on this device.'))));
     }
   }
 
@@ -52,10 +53,11 @@ class _DocumentDialogState extends State<_DocumentDialog> {
         width: 600,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12,
             children: <Widget>[
-          Text(<Object?>[
-            widget.document['file_size'],
-            if (widget.document['uploaded_at'] != null) 'uploaded ${widget.document['uploaded_at']}',
-          ].whereType<Object>().join(' · ')),
+          Text(<String>[
+            if (widget.document['file_size'] != null) context.tr('${widget.document['file_size']}'),
+            if (widget.document['uploaded_at'] != null)
+              context.tr('uploaded {date}', <String, Object?>{'date': widget.document['uploaded_at']}),
+          ].join(' · ')),
           Container(
             height: 360,
             width: double.infinity,
@@ -69,21 +71,22 @@ class _DocumentDialogState extends State<_DocumentDialog> {
               builder: (BuildContext context, AsyncSnapshot<({Uint8List bytes, String? mimeType})> snap) {
                 if (snap.hasError) {
                   final Object? e = snap.error;
-                  return Center(child: Text(e is ApiException ? e.message : 'The file cannot be opened.'));
+                  return Center(child: Text(context.tr(e is ApiException ? e.message : 'The file cannot be opened.')));
                 }
                 if (!snap.hasData) return const Center(child: CircularProgressIndicator());
                 return DocumentsCard.isImage(_name)
                     ? InteractiveViewer(child: Image.memory(snap.data!.bytes, fit: BoxFit.contain))
-                    : const Center(
-                        child: Text('The app cannot show a preview of this file type. Use Download to open it.'));
+                    : Center(
+                        child: Text(
+                            context.tr('The app cannot show a preview of this file type. Use Download to open it.')));
               },
             ),
           ),
         ]),
       ),
       actions: <Widget>[
-        TextButton.icon(onPressed: _download, icon: const Icon(Icons.download), label: const Text('Download')),
-        FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+        TextButton.icon(onPressed: _download, icon: const Icon(Icons.download), label: Text(context.tr('Download'))),
+        FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('Close'))),
       ],
     );
   }

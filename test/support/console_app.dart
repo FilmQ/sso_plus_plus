@@ -31,14 +31,16 @@ const Map<String, Object?> consultantSession = <String, Object?>{
 };
 
 /// Starts the console in the Figma desktop frame (1440 x 900) and signs in
-/// as officer 1, or with [session].
+/// as officer 1, or with [session], in [language].
 Future<void> signInToConsole(WidgetTester tester, FakeServer server,
-    {Map<String, Object?> session = officerSession, List<Object> extra = const <Object>[]}) async {
+    {Map<String, Object?> session = officerSession,
+    List<Object> extra = const <Object>[],
+    String language = 'en'}) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(1440, 900);
   addTearDown(tester.view.reset);
   server.json('POST /auth/login', session);
-  await tester.pumpWidget(testApp(server, consoleRouterProvider, app: 'console', extra: extra));
+  await tester.pumpWidget(testApp(server, consoleRouterProvider, app: 'console', extra: extra, language: language));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const Key('login_name')), 'kanya.w@sso.go.th');
   await tester.enterText(find.byKey(const Key('password')), 'Password123');

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 /// One QO4.2 row of 16 October 2026.
@@ -122,5 +123,27 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
     expect(find.text('This time is not free any more. Choose another time.'), findsOneWidget);
+  });
+
+  testWidgets('O4 in Thai: the Scheduling page, the offer and Appointment Scheduled', (WidgetTester tester) async {
+    await signInToConsole(tester, _server(), language: 'th');
+    await tapText(tester, th('Scheduling'));
+    expect(find.text('SST-2026-000143 · สมชาย ประเสริฐ · ตรวจสอบวันที่ 5 ตุลาคม 2026'), findsOneWidget);
+    expect(find.text('ศ. 10:00'), findsOneWidget);
+    expectNoEnglishLabels(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('slot:1:10:00')));
+    await tester.pumpAndSettle();
+    expect(find.text('ศ. 16 ตุลาคม 2026'), findsWidgets);
+    expect(find.text('ห้องทำงานของที่ปรึกษา อาคาร A ชั้น 3 ห้อง 305'), findsOneWidget);
+    expectNoEnglishLabels(tester);
+
+    await tapText(tester, th('Offer to the Consultant'));
+    expect(find.text('คุณยืนยันการนัดหมายวันที่ 16 ตุลาคม 2026 เวลา 10:00 - 11:00 หรือไม่'), findsOneWidget);
+    expectNoEnglishLabels(tester);
+    await tester.tap(find.widgetWithText(FilledButton, th('Confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text(th('Appointment Scheduled')), findsOneWidget);
+    expectNoEnglishLabels(tester);
   });
 }

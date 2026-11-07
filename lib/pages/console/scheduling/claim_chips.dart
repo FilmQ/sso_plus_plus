@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../verification/claim_cards.dart';
 
 /// "Claims ready to schedule" (Figma O4-1, QO4.1), "Claims with a filed
@@ -12,7 +13,7 @@ class ClaimChips extends StatelessWidget {
     this.empty = 'There are no claims to schedule.',
     this.idKey = 'claim_id',
     this.labelOf,
-    this.countLabel = 'claims',
+    this.countLabel = '{n} claims',
     required this.claims,
     required this.selectedId,
     required this.loading,
@@ -28,7 +29,7 @@ class ClaimChips extends StatelessWidget {
   /// The chip text; by default 'claim_no · user_name'.
   final String Function(Map<String, Object?> row)? labelOf;
 
-  /// The word after the number in the title row, for example 'claims'.
+  /// The count text of the title row; {n} is the number.
   final String countLabel;
   final List<Map<String, Object?>> claims;
   final int? selectedId;
@@ -39,14 +40,14 @@ class ClaimChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConsoleCard(
       title: title,
-      trailing: Text('${claims.length} $countLabel', style: Theme.of(context).textTheme.bodySmall),
+      trailing: Text(context.tr(countLabel, <String, Object?>{'n': claims.length}), style: Theme.of(context).textTheme.bodySmall),
       children: <Widget>[
         if (loading) const Center(child: CircularProgressIndicator()),
-        if (!loading && claims.isEmpty) Text(empty),
+        if (!loading && claims.isEmpty) Text(context.tr(empty)),
         Wrap(spacing: 8, runSpacing: 8, children: <Widget>[
           for (final Map<String, Object?> c in claims)
             ChoiceChip(
-              label: Text(labelOf?.call(c) ?? '${c['claim_no']} · ${c['user_name']}'),
+              label: Text(context.tr(labelOf?.call(c) ?? '${c['claim_no']} · ${c['user_name']}')),
               selected: c[idKey] == selectedId,
               onSelected: (_) => onSelect(c[idKey]! as int),
             ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/verification_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../session/session_providers.dart';
 import '../scheduling/scheduling_providers.dart';
 import '../shell/console_shell.dart';
@@ -47,14 +48,7 @@ class _EligibilityDecisionPageState extends ConsumerState<EligibilityDecisionPag
   /// QO3.1, QO3.2 and QN.2.
   Future<void> confirmResult(Map<String, Object?> summary) async {
     final bool covered = _decision.result == 'Covered';
-    final List<Map<String, Object?>> reasons =
-        ref.read(rejectionReasonsProvider).value ?? const <Map<String, Object?>>[];
-    final String? reason = covered
-        ? null
-        : reasons
-            .where((Map<String, Object?> r) => r['reason_code'] == _decision.reasonCode)
-            .map(DecisionForm.reasonLabel)
-            .firstOrNull;
+    final String? reason = covered ? null : _reason(_decision.reasonCode);
     final String name = '${summary['user_name']}';
     final bool? ok = await showConfirmResultDialog(context,
         claim: '${summary['claim_no']} · $name', covered: covered, reason: reason);
@@ -68,12 +62,14 @@ class _EligibilityDecisionPageState extends ConsumerState<EligibilityDecisionPag
               reasonCode: _decision.reasonCode!,
               officerMessage: text(_decision.message),
               overrideReason: text(_decision.overrideReason));
-      setState(() => _saved = <String, Object?>{...r, 'reason': reason});
+      setState(() => _saved = <String, Object?>{...r, 'reason_code': covered ? null : _decision.reasonCode});
       ref.invalidate(verificationListProvider);
       ref.invalidate(claimsToScheduleProvider); // O2: the claim moves to scheduling
-      _snack(covered
-          ? 'Result saved. $name has been notified.'
-          : 'Claim rejected. $name has been sent the reason and your message.');
+      _snack(
+          covered
+              ? 'Result saved. {name} has been notified.'
+              : 'Claim rejected. {name} has been sent the reason and your message.',
+          <String, Object?>{'name': name});
     } on ApiException catch (e) {
       setState(() => _errors = (e.body['fields'] as Map<String, Object?>?) ?? const <String, Object?>{});
       if (_errors.isEmpty) _snack(e.message);
@@ -82,9 +78,15 @@ class _EligibilityDecisionPageState extends ConsumerState<EligibilityDecisionPag
     }
   }
 
-  void _snack(String text) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(text));
+  void _snack(String text, [Map<String, Object?> args = const <String, Object?>{}]) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(context.tr(text, args)));
   }
+
+  /// The label of a rejection reason code (QO1.6) in the language of the app, or null.
+  String? _reason(Object? code) => (ref.read(rejectionReasonsProvider).value ?? const <Map<String, Object?>>[])
+      .where((Map<String, Object?> r) => r['reason_code'] == code)
+      .map((Map<String, Object?> r) => DecisionForm.reasonLabel(context, r))
+      .firstOrNull;
 
   @override
   Widget build(BuildContext context) {
@@ -92,11 +94,13 @@ class _EligibilityDecisionPageState extends ConsumerState<EligibilityDecisionPag
     final Map<String, Object?>? summary = detail.value?['summary'] as Map<String, Object?>?;
     return ConsolePage(
       title: summary == null ? 'Claim' : '${summary['claim_no']} · ${summary['user_name']}',
-      subtitle: summary == null ? 'Verification' : 'Verification · submitted ${summary['submitted_date']}',
+      subtitle: summary == null
+          ? 'Verification'
+          : context.tr('Verification · submitted {date}', <String, Object?>{'date': summary['submitted_date']}),
       onBack: () => context.go('/verification'),
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, _) => Center(child: Text(e is ApiException ? e.message : 'The claim cannot be shown now.')),
+        error: (Object e, _) => Center(child: Text(context.tr(e is ApiException ? e.message : 'The claim cannot be shown now.'))),
         data: (Map<String, Object?> d) => _body(d),
       ),
     );
@@ -143,13 +147,13 @@ class _EligibilityDecisionPageState extends ConsumerState<EligibilityDecisionPag
           covered: covered,
           by: ref.read(sessionProvider).value?.displayName ?? '',
           at: '${saved['decided_at']}',
-          reason: saved['reason'] as String?,
+          reason: _reason(saved['reason_code']),
         ),
         if (covered)
           FilledButton.tonalIcon(
             onPressed: () => context.go('/scheduling'),
             icon: const Icon(Icons.calendar_month),
-            label: const Text('Go to Scheduling'),
+            label: Text(context.tr('Go to Scheduling')),
           ),
       ]);
     }

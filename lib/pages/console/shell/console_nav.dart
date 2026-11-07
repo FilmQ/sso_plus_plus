@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../session/session_providers.dart';
 import '../../../session/user_session.dart';
 import '../../../widgets/app_logo.dart';
@@ -79,15 +80,15 @@ class ConsoleNav extends ConsumerWidget {
                 const AppLogo(size: 40),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                    Text('SST Console', style: text.titleMedium, overflow: TextOverflow.ellipsis),
-                    Text('Social Security Office', style: text.bodySmall, overflow: TextOverflow.ellipsis),
+                    Text(context.tr('SST Console'), style: text.titleMedium, overflow: TextOverflow.ellipsis),
+                    Text(context.tr('Social Security Office'), style: text.bodySmall, overflow: TextOverflow.ellipsis),
                   ]),
                 ),
               ]),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(officer ? 'EVALUATION OFFICER' : 'CONSULTANT',
+              child: Text(context.tr(officer ? 'EVALUATION OFFICER' : 'CONSULTANT'),
                   style: text.labelSmall?.copyWith(color: colors.onSurfaceVariant)),
             ),
             for (final ConsoleDestination d in officer ? officerDestinations : consultantDestinations)
@@ -105,11 +106,11 @@ class ConsoleNav extends ConsumerWidget {
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                     Text(session?.displayName ?? '', style: text.titleSmall),
-                    Text(officer ? 'Evaluation Officer' : 'Consultant', style: text.bodySmall),
+                    Text(context.tr(officer ? 'Evaluation Officer' : 'Consultant'), style: text.bodySmall),
                   ]),
                 ),
                 IconButton(
-                  tooltip: 'Sign out',
+                  tooltip: context.tr('Sign out'),
                   icon: const Icon(Icons.logout),
                   onPressed: () => ref.read(sessionProvider.notifier).logout(),
                 ),
@@ -149,7 +150,7 @@ class _NavItem extends StatelessWidget {
             child: Row(spacing: 12, children: <Widget>[
               Icon(destination.icon, color: fg),
               Expanded(
-                child: Text(destination.label,
+                child: Text(context.tr(destination.label),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(color: fg)),
               ),
               if (count != null) Text(count!, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: fg)),

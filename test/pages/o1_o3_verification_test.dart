@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 const String _detail = '/o1/claims/143';
@@ -155,7 +156,7 @@ void main() {
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Confirm Result')).enabled, isFalse);
     await tester.tap(find.byKey(const Key('rejection_reason')));
     await tester.pumpAndSettle();
-    await tapText(tester, 'R02 · ส่งเงินสมทบไม่ครบตามเงื่อนไข');
+    await tapText(tester, 'R02 · Contributions do not meet the conditions');
     await tester.enterText(find.widgetWithText(TextField, 'Message to the user'), 'Please send the receipt.');
     await tapText(tester, 'Confirm Result');
 
@@ -170,7 +171,7 @@ void main() {
       'override_reason': null,
     });
     expect(find.text('Result confirmed: Not covered, claim rejected'), findsOneWidget); // O3-3
-    expect(find.text('Reason: R02 · ส่งเงินสมทบไม่ครบตามเงื่อนไข'), findsOneWidget);
+    expect(find.text('Reason: R02 · Contributions do not meet the conditions'), findsOneWidget);
     expect(find.text('Rejected'), findsOneWidget);
     expect(find.text('Claim rejected. สมชาย ประเสริฐ has been sent the reason and your message.'), findsOneWidget);
   });
@@ -200,11 +201,49 @@ void main() {
     await tapText(tester, 'Not Covered');
     await tester.tap(find.byKey(const Key('rejection_reason')));
     await tester.pumpAndSettle();
-    await tapText(tester, 'R02 · ส่งเงินสมทบไม่ครบตามเงื่อนไข');
+    await tapText(tester, 'R02 · Contributions do not meet the conditions');
     await tapText(tester, 'Confirm Result');
     await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
     await tester.pumpAndSettle();
     expect(find.text('Give a reason, because your decision differs from the automatic result.'), findsOneWidget);
     expect(find.text('Confirm Result'), findsOneWidget);
+  });
+
+  testWidgets('O1 to O3 in Thai: the list, the claim, Not Covered and the result', (WidgetTester tester) async {
+    const List<String> data = <String>[
+      'right wrist',
+      'Right wrist',
+      'Siam Precision Parts Co., Ltd.',
+      'Factory line 3, Bang Phli, Samut Prakan',
+      'Hand caught in a conveyor roller',
+      'medical_record_rama.pdf',
+      'kB',
+    ];
+    final FakeServer server = _server();
+    await signInToConsole(tester, server, language: 'th');
+    expect(find.text(th('Claims waiting for an eligibility decision')), findsOneWidget);
+    expect(find.text('กระดูกหัก, right wrist'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
+
+    await tapText(tester, th('Open'));
+    expect(find.text('1 มิถุนายน 2019 - ปัจจุบัน'), findsOneWidget);
+    expect(find.text(th('Medical Record File')), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
+
+    await tapText(tester, th('Not Covered'));
+    await tester.tap(find.byKey(const Key('rejection_reason')));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'R02 · ส่งเงินสมทบไม่ครบตามเงื่อนไข');
+    await tapText(tester, th('Confirm Result'));
+    expect(find.text(th('Do you confirm the result')), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
+    await tester.tap(find.widgetWithText(FilledButton, th('Confirm')));
+    await tester.pumpAndSettle();
+
+    expect(_body(server, '/o3/claims/143/reject')['reason_code'], 'R02');
+    expect(find.text(th('Result confirmed: Not covered, claim rejected')), findsOneWidget);
+    expect(find.text('เหตุผล: R02 · ส่งเงินสมทบไม่ครบตามเงื่อนไข'), findsOneWidget);
+    expect(find.text('โดย กัญญา วงศ์ศิริ · 6 ตุลาคม 2026 : 10:40'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: data);
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../verification/claim_cards.dart';
 import 'recommended_treatment_field.dart';
@@ -47,7 +48,7 @@ class ReportDraftCard extends StatelessWidget {
     return ConsoleCard(
       title: 'Report',
       trailing: editing
-          ? OutlinedButton.icon(onPressed: onAttach, icon: const Icon(Icons.attach_file), label: const Text('Attach'))
+          ? OutlinedButton.icon(onPressed: onAttach, icon: const Icon(Icons.attach_file), label: Text(context.tr('Attach')))
           : null,
       children: <Widget>[
         if (fileName != null) _fileAttached(context),
@@ -59,21 +60,22 @@ class ReportDraftCard extends StatelessWidget {
             maxLines: 10,
             autofocus: true,
             decoration: InputDecoration(
-              labelText: 'Report text (editing)',
+              labelText: context.tr('Report text (editing)'),
               border: const OutlineInputBorder(),
-              errorText: error,
+              errorText: context.trMaybe(error),
             ),
           ),
         if (fileName == null && !editing)
           InputDecorator(
             decoration: InputDecoration(
-              labelText: 'Report text',
+              labelText: context.tr('Report text'),
               filled: true,
               fillColor: colors.surfaceContainerLow,
               border: const OutlineInputBorder(),
-              errorText: error,
+              errorText: context.trMaybe(error),
             ),
-            child: Text(content ?? 'No report yet. Click Amend the draft to start writing, or attach a report file.'),
+            child: Text(content ??
+                context.tr('No report yet. Click Amend the draft to start writing, or attach a report file.')),
           ),
         RecommendedTreatmentField(
           value: treatment,
@@ -95,14 +97,14 @@ class ReportDraftCard extends StatelessWidget {
         Icon(Icons.attach_file, color: s.success),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-            Text('File Attached', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: s.success)),
+            Text(context.tr('File Attached'), style: Theme.of(context).textTheme.titleSmall?.copyWith(color: s.success)),
             Text(fileName!, style: Theme.of(context).textTheme.bodySmall),
           ]),
         ),
         if (onViewFile != null && !editing)
-          TextButton.icon(onPressed: onViewFile, icon: const Icon(Icons.visibility), label: const Text('View')),
+          TextButton.icon(onPressed: onViewFile, icon: const Icon(Icons.visibility), label: Text(context.tr('View'))),
         if (editing)
-          IconButton(tooltip: 'Remove the file', onPressed: onRemoveFile, icon: const Icon(Icons.close)),
+          IconButton(tooltip: context.tr('Remove the file'), onPressed: onRemoveFile, icon: const Icon(Icons.close)),
       ]),
     );
   }

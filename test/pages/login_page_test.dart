@@ -84,4 +84,15 @@ void main() {
     expect(find.text('กัญญา วงศ์ศิริ'), findsOneWidget);
     expect(find.text('Evaluation Officer'), findsOneWidget);
   });
+
+  testWidgets('L-2 in Thai: the console login labels', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(testApp(FakeServer(), consoleRouterProvider, app: 'console', language: 'th'));
+    await tester.pumpAndSettle();
+    expect(find.text(th('Staff e-mail')), findsOneWidget);
+    expect(find.text(th('Social Security Office')), findsOneWidget);
+    expectNoEnglishLabels(tester);
+  });
 }

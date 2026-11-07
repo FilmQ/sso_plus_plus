@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
 import 'claim_cards.dart';
@@ -22,8 +23,8 @@ class EligibilityPanel extends StatelessWidget {
           children: <Widget>[
             Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              Text(label, style: Theme.of(context).textTheme.titleSmall),
-              Text(value, style: Theme.of(context).textTheme.bodySmall),
+              Text(context.tr(label), style: Theme.of(context).textTheme.titleSmall),
+              Text(context.tr(value), style: Theme.of(context).textTheme.bodySmall),
             ])),
           ],
         );
@@ -32,7 +33,7 @@ class EligibilityPanel extends StatelessWidget {
       subtitle: 'Automatic result from the SSO insured register',
       trailing: e == null ? null : ClaimStatusChip('${e['eligibility_status']}'),
       children: <Widget>[
-        if (e == null) const Text('There is no automatic result for this claim.'),
+        if (e == null) Text(context.tr('There is no automatic result for this claim.')),
         if (e != null) ...<Widget>[
           line(Icons.history, 'Contribution period', '${e['contribution_period'] ?? '-'}'),
           line(
@@ -40,7 +41,8 @@ class EligibilityPanel extends StatelessWidget {
               'Employer in register',
               e['employer_in_register'] == null
                   ? '-'
-                  : '${e['employer_in_register']} · SSO account ${e['sso_account_no']}'),
+                  : context.tr('{employer} · SSO account {account}',
+                      <String, Object?>{'employer': e['employer_in_register'], 'account': e['sso_account_no']})),
           line(Icons.update, 'Register queried', '${e['register_queried'] ?? '-'}'),
         ],
         const Divider(height: 1),
@@ -74,12 +76,12 @@ class DecisionResult extends StatelessWidget {
         Row(spacing: 12, children: <Widget>[
           Icon(covered ? Icons.check_circle : Icons.block, color: fg),
           Expanded(
-            child: Text(covered ? 'Result confirmed: Covered' : 'Result confirmed: Not covered, claim rejected',
+            child: Text(context.tr(covered ? 'Result confirmed: Covered' : 'Result confirmed: Not covered, claim rejected'),
                 style: Theme.of(context).textTheme.titleSmall),
           ),
         ]),
-        Text('By $by · $at', style: Theme.of(context).textTheme.bodySmall),
-        if (reason != null) Text('Reason: $reason', style: Theme.of(context).textTheme.bodySmall),
+        Text(context.tr('By {name} · {date}', <String, Object?>{'name': by, 'date': at}), style: Theme.of(context).textTheme.bodySmall),
+        if (reason != null) Text(context.tr('Reason: {reason}', <String, Object?>{'reason': reason}), style: Theme.of(context).textTheme.bodySmall),
       ]),
     );
   }

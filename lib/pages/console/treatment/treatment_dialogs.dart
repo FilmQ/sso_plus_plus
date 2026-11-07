@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 
 /// The confirmation cards of O5.1-2 and O5.2-1. Gives true for "Confirm".
@@ -11,8 +12,8 @@ Future<bool?> showTreatmentConfirmDialog(BuildContext context, {required String 
       title: Text(title),
       content: SizedBox(width: 400, child: Text(text)),
       actions: <Widget>[
-        TextButton(onPressed: () => Navigator.of(dialog).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(dialog).pop(true), child: const Text('Confirm')),
+        TextButton(onPressed: () => Navigator.of(dialog).pop(false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.of(dialog).pop(true), child: Text(context.tr('Confirm'))),
       ],
     ),
   );
@@ -27,7 +28,7 @@ Future<void> showTreatmentResultDialog(BuildContext context,
       icon: Icon(icon, color: StatusColors.of(dialog).success),
       title: Text(title),
       content: SizedBox(width: 400, child: Text(text)),
-      actions: <Widget>[FilledButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('OK'))],
+      actions: <Widget>[FilledButton(onPressed: () => Navigator.of(dialog).pop(), child: Text(context.tr('OK')))],
     ),
   );
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/status_chip.dart';
 
 /// "Claims to verify" (Figma O1-1): one QO1.1 row a line, with "Open" on the
@@ -27,12 +28,14 @@ class ClaimsTable extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(spacing: 8, children: <Widget>[
             Icon(Icons.fact_check, color: colors.primary),
-            Expanded(child: Text('Claims to verify', style: text.titleMedium)),
-            Text('Showing ${claims.length} of ${claims.length}', style: text.bodySmall),
+            Expanded(child: Text(context.tr('Claims to verify'), style: text.titleMedium)),
+            Text(context.tr('Showing {n} of {total}', <String, Object?>{'n': claims.length, 'total': claims.length}), style: text.bodySmall),
           ]),
         ),
         if (claims.isEmpty)
-          const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 16), child: Text('There are no claims to verify.'))
+          Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Text(context.tr('There are no claims to verify.')))
         else
           LayoutBuilder(
             builder: (BuildContext context, BoxConstraints box) => SingleChildScrollView(
@@ -45,15 +48,15 @@ class ClaimsTable extends StatelessWidget {
                   headingRowColor: WidgetStatePropertyAll<Color>(colors.surfaceContainerLow),
                   dataRowMinHeight: 64,
                   dataRowMaxHeight: 64,
-                  columns: const <DataColumn>[
-                    DataColumn(label: Text('Claim ID')),
-                    DataColumn(label: Text('Claimant')),
-                    DataColumn(label: Text('Injury')),
-                    DataColumn(label: Text('Submitted')),
-                    DataColumn(label: Text('Documents')),
-                    DataColumn(label: Text('Status')),
+                  columns: <DataColumn>[
+                    DataColumn(label: Text(context.tr('Claim ID'))),
+                    DataColumn(label: Text(context.tr('Claimant'))),
+                    DataColumn(label: Text(context.tr('Injury'))),
+                    DataColumn(label: Text(context.tr('Submitted'))),
+                    DataColumn(label: Text(context.tr('Documents'))),
+                    DataColumn(label: Text(context.tr('Status'))),
                     // numeric: the cell content goes to the right.
-                    DataColumn(label: SizedBox.shrink(), numeric: true),
+                    const DataColumn(label: SizedBox.shrink(), numeric: true),
                   ],
                   rows: <DataRow>[
                     for (final Map<String, Object?> row in claims)
@@ -64,16 +67,16 @@ class ClaimsTable extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            Text(s(row, 'injury')),
-                            Text(s(row, 'injury_date'), style: text.bodySmall),
+                            Text(context.tr(s(row, 'injury'))),
+                            Text(context.tr(s(row, 'injury_date')), style: text.bodySmall),
                           ],
                         )),
-                        DataCell(Text(s(row, 'submitted_date'))),
-                        DataCell(Text('${s(row, 'documents_sent')} files')),
+                        DataCell(Text(context.tr(s(row, 'submitted_date')))),
+                        DataCell(Text(context.tr('{n} files', <String, Object?>{'n': s(row, 'documents_sent')}))),
                         DataCell(ClaimStatusChip(s(row, 'verification_status'))),
                         DataCell(FilledButton.tonal(
                           onPressed: () => onOpen(row['claim_id']! as int),
-                          child: const Text('Open'),
+                          child: Text(context.tr('Open')),
                         )),
                       ]),
                   ],

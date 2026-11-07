@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/date_text.dart';
 import '../scheduling/claim_chips.dart';
 import '../shell/console_shell.dart';
@@ -54,8 +55,10 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
     final String user = _fullName(claim);
     final bool? ok = await showTreatmentConfirmDialog(
       context,
-      title: 'Do you confirm to book this treatment at $facility : ${DateText.long(start)} - ${DateText.time(start)}',
-      text: '$type, $duration minutes, for $user (${claim['claim_no']}).',
+      title: context.tr('Do you confirm to book this treatment at {facility} : {date} - {time}',
+          <String, Object?>{'facility': facility, 'date': DateText.long(start), 'time': DateText.time(start)}),
+      text: context.tr('{type}, {n} minutes, for {user} ({claim}).',
+          <String, Object?>{'type': type, 'n': duration, 'user': user, 'claim': claim['claim_no']}),
     );
     if (ok != true || !mounted) return; // Alternate Case 1 [Cancel]
     await _run(() async {
@@ -73,9 +76,11 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
       if (!mounted) return;
       await showTreatmentResultDialog(context,
           icon: Icons.event_available,
-          title: 'Treatment Booked',
-          text: '$type on ${r['treatment_date']} at $facility is booked. $user has been notified and can accept or '
-              'ask for another date.');
+          title: context.tr('Treatment Booked'),
+          text: context.tr(
+              '{type} on {date} at {facility} is booked. {user} has been notified and can accept or ask for another '
+              'date.',
+              <String, Object?>{'type': type, 'date': r['treatment_date'], 'facility': facility, 'user': user}));
     });
   }
 
@@ -85,8 +90,9 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
     final String user = _fullName(claim);
     final bool? ok = await showTreatmentConfirmDialog(
       context,
-      title: 'Do you confirm that no treatment require for user $user',
-      text: 'Claim ${claim['claim_no']} will be closed with the status No treatment required.',
+      title: context.tr('Do you confirm that no treatment require for user {user}', <String, Object?>{'user': user}),
+      text: context.tr('Claim {claim} will be closed with the status No treatment required.',
+          <String, Object?>{'claim': claim['claim_no']}),
     );
     if (ok != true || !mounted) return; // Alternate Case 1 [Cancel]
     await _run(() async {
@@ -94,8 +100,9 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
       if (!mounted) return;
       await showTreatmentResultDialog(context,
           icon: Icons.task_alt,
-          title: 'No Treatment Required',
-          text: 'Claim ${claim['claim_no']} is closed. $user has been notified that no treatment is required.');
+          title: context.tr('No Treatment Required'),
+          text: context.tr('Claim {claim} is closed. {user} has been notified that no treatment is required.',
+              <String, Object?>{'claim': claim['claim_no'], 'user': user}));
     });
   }
 
@@ -112,7 +119,7 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
       _refresh();
       _reset();
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(e.message));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(context.tr(e.message)));
       _refresh();
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -159,10 +166,10 @@ class _ScheduleTreatmentPageState extends ConsumerState<ScheduleTreatmentPage> {
       onNoTreatment: () => clickNoTreatmentRequired(claim!),
     );
     return ConsolePage(
-      title: claim == null ? 'Treatment' : 'Treatment · ${claim['claim_no']}',
+      title: claim == null ? 'Treatment' : context.tr('Treatment · {claim}', <String, Object?>{'claim': claim['claim_no']}),
       subtitle: claim == null
           ? 'There are no claims with a filed report'
-          : '${claim['user_name']} · report signed ${claim['signed_date']}',
+          : context.tr('{user} · report signed {date}', <String, Object?>{'user': claim['user_name'], 'date': claim['signed_date']}),
       body: LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
         final bool wide = box.maxWidth >= 1000;
         return ListView(padding: const EdgeInsets.all(24), children: <Widget>[

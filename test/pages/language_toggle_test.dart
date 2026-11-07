@@ -94,7 +94,7 @@ void main() {
     await signInToConsole(tester, server);
     await _chooseThai(tester);
     expect(_appLanguage(tester), 'th');
-    tester.view.physicalSize = const Size(800, 900);
+    tester.view.physicalSize = const Size(390, 844); // the Figma phone frame
     await tester.pumpAndSettle();
     expect(_toggle, findsNothing);
     final ScaffoldState scaffold = tester.state<ScaffoldState>(find.byType(Scaffold).first);

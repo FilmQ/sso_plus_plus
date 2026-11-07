@@ -9,6 +9,7 @@ import 'package:sso_plus_plus/pages/user/injury_form/upload_section.dart';
 
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 const String _base = '/c2/consultations/520';
@@ -207,5 +208,40 @@ void main() {
     expect(find.textContaining('the claim is back on the Scheduling list'), findsOneWidget);
     await tapText(tester, 'OK');
     expect(find.text('There are no consultations waiting for a report.'), findsOneWidget);
+  });
+
+  testWidgets('C2 in Thai: the report page, the editor, the signature card and the missing message',
+      (WidgetTester tester) async {
+    final FakeServer server = _server()
+      ..json('POST $_base/open', <String, Object?>{'report': _page(content: 'Text')})
+      ..json('POST $_base/file-report', <String, Object?>{
+        'error': 'validation_failed',
+        'fields': <String, String>{'recommended_treatment': 'Choose the recommended treatment.', 'signature': 'Sign the report.'},
+      }, status: 422);
+    await signInToConsole(tester, server, session: consultantSession, language: 'th');
+    await tapText(tester, th('Create Consultation Report'));
+    expect(find.text('ชัยวัฒน์ สุขเจริญ · ยังไม่ได้ลงนาม'), findsOneWidget);
+    expect(find.text('SST-2026-000155 · ชัยวัฒน์ สุขเจริญ · 16 ตุลาคม 2026 : 10:00'), findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['Text']);
+
+    await tapText(tester, th('File the report'));
+    final String list = th('{list} and {last}', <String, Object?>{
+      'list': th('no recommended treatment is chosen'),
+      'last': th('the signature status is Pending'),
+    });
+    expect(
+        find.text(th('The report cannot be filed yet: {list}. Complete the report, then click File the report again.',
+            <String, Object?>{'list': list})),
+        findsOneWidget);
+
+    await tapText(tester, th('Sign the signature'));
+    expect(find.text(th('Draw your signature in the box')), findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['Text']);
+    await tester.tapAt(const Offset(8, 8)); // closes the card
+    await tester.pumpAndSettle();
+
+    await tapText(tester, th('Amend the draft'));
+    expect(find.text(th('Physiotherapy, Occupational therapy or None. Filing needs a choice.')), findsOneWidget);
+    expectNoEnglishLabels(tester);
   });
 }

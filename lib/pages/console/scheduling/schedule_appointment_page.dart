@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/api_exception.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/date_text.dart';
 import '../../../widgets/picker_field.dart';
 import '../shell/console_shell.dart';
@@ -57,8 +58,12 @@ class _ScheduleAppointmentPageState extends ConsumerState<ScheduleAppointmentPag
       context,
       date: dateText,
       time: '${s['slot_time_range']}',
-      details: 'With ${s['consultant_name']} for ${claim['user_name']} (${claim['claim_no']}), '
-          '${s['office_location']}.',
+      details: context.tr('With {consultant} for {user} ({claim}), {office}.', <String, Object?>{
+        'consultant': s['consultant_name'],
+        'user': claim['user_name'],
+        'claim': claim['claim_no'],
+        'office': s['office_location'],
+      }),
     );
     if (ok != true || !mounted) return; // Alternate Case 1 [Cancel]
     setState(() => _busy = true);
@@ -69,12 +74,19 @@ class _ScheduleAppointmentPageState extends ConsumerState<ScheduleAppointmentPag
       if (!mounted) return;
       await showAppointmentScheduledDialog(
         context,
-        'The appointment on ${r['appointment_date']} is reserved. ${claim['user_name']} and '
-        '${s['consultant_name']} have been notified. The user must confirm it by ${r['confirm_by']}.',
+        context.tr(
+            'The appointment on {date} is reserved. {user} and {consultant} have been notified. '
+            'The user must confirm it by {by}.',
+            <String, Object?>{
+              'date': r['appointment_date'],
+              'user': claim['user_name'],
+              'consultant': s['consultant_name'],
+              'by': r['confirm_by'],
+            }),
       );
       setState(() => (selectedSlot = null, claimId = null));
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(e.message));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(context.tr(e.message)));
     } finally {
       ref.invalidate(claimsToScheduleProvider);
       ref.invalidate(availabilityProvider(DateText.iso(slotDate)));
@@ -110,7 +122,7 @@ class _ScheduleAppointmentPageState extends ConsumerState<ScheduleAppointmentPag
       ]),
       slots.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, _) => Text(e is ApiException ? e.message : 'The availability cannot be shown now.'),
+        error: (Object e, _) => Text(context.tr(e is ApiException ? e.message : 'The availability cannot be shown now.')),
         data: (List<Map<String, Object?>> list) => AvailabilityCard(
           slots: list,
           selected: selectedSlot,
@@ -123,7 +135,11 @@ class _ScheduleAppointmentPageState extends ConsumerState<ScheduleAppointmentPag
       title: 'Scheduling',
       subtitle: claim == null
           ? 'There are no claims to schedule'
-          : '${claim['claim_no']} · ${claim['user_name']} · verified ${claim['verified_date'] ?? '-'}',
+          : context.tr('{claim} · {user} · verified {date}', <String, Object?>{
+              'claim': claim['claim_no'],
+              'user': claim['user_name'],
+              'date': claim['verified_date'] ?? '-',
+            }),
       body: LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
         final bool wide = box.maxWidth >= 1000;
         return ListView(padding: const EdgeInsets.all(24), children: <Widget>[

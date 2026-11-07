@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../api/consultant_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/error_banner.dart';
 import '../../../widgets/stored_image.dart';
 import '../../user/injury_form/injury_form_data.dart';
@@ -141,11 +142,12 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
         context: context,
         builder: (BuildContext dialog) => AlertDialog(
           icon: const Icon(Icons.task_alt),
-          title: const Text('Report filed'),
-          content: Text('Consultation report ${ReportShortcutCard.reportNo(page['report_id'])} for '
-              '${page['claim_no']} has been filed. It now appears in the evaluation officer\'s Consultation Reports '
-              'list, where the treatment is booked.'),
-          actions: <Widget>[FilledButton(onPressed: () => Navigator.of(dialog).pop(), child: const Text('OK'))],
+          title: Text(context.tr('Report filed')),
+          content: Text(context.tr(
+              "Consultation report {no} for {claim} has been filed. It now appears in the evaluation officer's "
+              'Consultation Reports list, where the treatment is booked.',
+              <String, Object?>{'no': ReportShortcutCard.reportNo(page['report_id']), 'claim': page['claim_no']})),
+          actions: <Widget>[FilledButton(onPressed: () => Navigator.of(dialog).pop(), child: Text(context.tr('OK')))],
         ),
       );
     });
@@ -174,21 +176,24 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
   }
 
   /// The banner of C2.3-1 from the 422 fields of QC2.7 (and of QC2.6).
-  static String missingMessage(Map<String, Object?> fields) {
+  String missingMessage(Map<String, Object?> fields) {
     final List<String> missing = <String>[
-      if (fields.containsKey('report')) 'there is no report text or file',
-      if (fields.containsKey('recommended_treatment')) 'no recommended treatment is chosen',
-      if (fields.containsKey('signature')) 'the signature status is Pending',
+      if (fields.containsKey('report')) context.tr('there is no report text or file'),
+      if (fields.containsKey('recommended_treatment')) context.tr('no recommended treatment is chosen'),
+      if (fields.containsKey('signature')) context.tr('the signature status is Pending'),
     ];
-    if (missing.isEmpty) return 'The report cannot be signed or filed yet.';
+    if (missing.isEmpty) return context.tr('The report cannot be signed or filed yet.');
     final String list = missing.length == 1
         ? missing.single
-        : '${missing.sublist(0, missing.length - 1).join(', ')} and ${missing.last}';
-    return 'The report cannot be filed yet: $list. Complete the report, then click File the report again.';
+        : context.tr('{list} and {last}',
+            <String, Object?>{'list': missing.sublist(0, missing.length - 1).join(', '), 'last': missing.last});
+    return context.tr(
+        'The report cannot be filed yet: {list}. Complete the report, then click File the report again.',
+        <String, Object?>{'list': list});
   }
 
   void _snack(String text) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(text));
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(context.tr(text)));
   }
 
   @override
@@ -205,7 +210,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
     final Widget chips = ClaimChips(
       title: 'Consultations waiting for a report',
       empty: 'There are no consultations waiting for a report.',
-      countLabel: 'waiting',
+      countLabel: '{n} waiting',
       idKey: 'appointment_id',
       labelOf: (Map<String, Object?> c) => '${c['claim_no']} · ${c['user_name']} · ${c['consultation_datetime']}',
       claims: rows,
@@ -252,7 +257,7 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             signatureImage: signed && page['signature_uri'] != null
                 ? StoredImage(
                     cacheKey: '${page['signature_uri']} ${page['signed_date']}',
-                    label: 'Signature of ${page['consultant_name']}',
+                    label: context.tr('Signature of {name}', <String, Object?>{'name': page['consultant_name']}),
                     load: () => _api.openSignature(appointmentId!),
                   )
                 : null,
@@ -265,10 +270,13 @@ class _CreateReportPageState extends ConsumerState<CreateReportPage> {
             onNoShow: page['report_id'] == null ? clickNoShow : null,
           );
     return ConsolePage(
-      title: page == null ? 'Create Consultation Report' : 'Consultation Report · ${page['claim_no']}',
+      title: page == null
+          ? 'Create Consultation Report'
+          : context.tr('Consultation Report · {claim}', <String, Object?>{'claim': page['claim_no']}),
       subtitle: page == null
           ? 'Consultations waiting for a report'
-          : '${page['user_name']} · ${signed ? 'signed ${page['signed_date']}' : 'not signed yet'}',
+          : context.tr(signed ? '{user} · signed {date}' : '{user} · not signed yet',
+              <String, Object?>{'user': page['user_name'], 'date': page['signed_date']}),
       onBack: () => context.go('/schedule'),
       body: LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
         final bool wide = box.maxWidth >= 1000;

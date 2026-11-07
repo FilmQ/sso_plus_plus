@@ -142,6 +142,9 @@ const Map<String, String> thServerTemplates = <String, String>{
   // The Consultant.office_location and Appointment.location values of the seed.
   'Building {building}, Floor {floor}, Room {room}': 'อาคาร {building} ชั้น {floor} ห้อง {room}',
 
+  // The QO1.5 contribution_period of a coverage that has not ended.
+  '{from} - present': '{from} - ปัจจุบัน',
+
   // The injury text of the queries: the fixed category, then the typed body part.
   'Fracture, {part}': 'กระดูกหัก, {part}',
   'Sprain, {part}': 'ข้อเคล็ด, {part}',

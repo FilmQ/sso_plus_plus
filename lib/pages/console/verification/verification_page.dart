@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../l10n/tr.dart';
 import '../shell/console_shell.dart';
 import 'claims_table.dart';
 import 'verification_providers.dart';
@@ -34,7 +35,7 @@ class VerificationPage extends ConsumerWidget {
               _CountCard(Icons.cloud_off, 'Register unavailable', counts['register_unavailable']),
             ]),
             const SizedBox(height: 16),
-            if (page.hasError) const Text('The claims cannot be shown now. Pull down to try again.'),
+            if (page.hasError) Text(context.tr('The claims cannot be shown now. Pull down to try again.')),
             if (page.isLoading) const Center(child: CircularProgressIndicator()),
             if (page.hasValue) ClaimsTable(claims: claims, onOpen: (int id) => clickOpen(context, id)),
           ],
@@ -66,7 +67,7 @@ class _CountCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 4, children: <Widget>[
         Row(spacing: 8, children: <Widget>[
           Icon(icon, size: 20, color: colors.primary),
-          Text(label, style: Theme.of(context).textTheme.titleSmall),
+          Flexible(child: Text(context.tr(label), style: Theme.of(context).textTheme.titleSmall)),
         ]),
         Text('${count ?? '-'}', style: Theme.of(context).textTheme.displaySmall),
       ]),

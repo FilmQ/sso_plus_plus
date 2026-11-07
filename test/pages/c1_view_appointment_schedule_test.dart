@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 
 FakeServer _server({List<Object> appointments = const <Object>[], List<Object> changes = const <Object>[]}) =>
     FakeServer()
@@ -63,5 +64,36 @@ void main() {
     expect(find.text('You have no confirmed appointments.'), findsOneWidget);
     expect(find.text('No recent changes'), findsOneWidget);
     expect(find.text('0 confirmed'), findsOneWidget);
+  });
+
+  testWidgets('C1 in Thai: the Schedule Page and a recent change', (WidgetTester tester) async {
+    await signInToConsole(
+        tester,
+        _server(appointments: <Object>[
+          <String, Object?>{
+            'appointment_id': 504,
+            'user_name': 'นาย สมชาย ประเสริฐ',
+            'appointment_date': '21 October 2026 : 10:00',
+            'claim_no': 'SST-2026-000143',
+            'injury': 'Fracture, right wrist',
+            'injury_date': '28 September 2026',
+          },
+        ], changes: <Object>[
+          <String, Object?>{
+            'notification_id': 909,
+            'subject': 'Appointment confirmed',
+            'body': 'นาย ประเสริฐ มีสุข (claim SST-2026-000163) confirmed the appointment on 21 October 2026 : 10:00 '
+                'at Building A, Floor 3, Room 305.',
+            'sent_time': '20 October 2026 : 08:00',
+          },
+        ]),
+        session: consultantSession,
+        language: 'th');
+    expect(find.text(th('Recent changes')), findsOneWidget);
+    expect(find.text('นาย ประเสริฐ มีสุข (คำร้อง SST-2026-000163) ยืนยันนัดหมายวันที่ 21 ตุลาคม 2026 : 10:00 '
+        'ที่ อาคาร A ชั้น 3 ห้อง 305'), findsOneWidget);
+    expect(find.text('21 ตุลาคม 2026 : 10:00'), findsOneWidget);
+    expect(find.text(th('{n} confirmed', <String, Object?>{'n': 1})), findsOneWidget);
+    expectNoEnglishLabels(tester, data: <String>['right wrist']);
   });
 }

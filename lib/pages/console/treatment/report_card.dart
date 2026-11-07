@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
 
@@ -31,13 +32,16 @@ class ReportShortcutCard extends StatelessWidget {
         Icon(Icons.description, color: colors.primary),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-            Text('Consultation report ${reportNo(claim['report_id'])}', style: text.titleSmall),
-            Text('By ${claim['report_author']} · signed ${claim['signed_date']}', style: text.bodySmall),
+            Text(context.tr('Consultation report {no}', <String, Object?>{'no': reportNo(claim['report_id'])}), style: text.titleSmall),
+            Text(
+                context.tr('By {author} · signed {date}',
+                    <String, Object?>{'author': claim['report_author'], 'date': claim['signed_date']}),
+                style: text.bodySmall),
           ]),
         ),
         StatusPill(icon: Icons.draw, label: 'Signed', background: s.successContainer, foreground: s.success),
         FilledButton.tonalIcon(
-            onPressed: onView, icon: const Icon(Icons.open_in_new), label: const Text('View Consultant Report')),
+            onPressed: onView, icon: const Icon(Icons.open_in_new), label: Text(context.tr('View Consultant Report'))),
       ]),
     );
   }

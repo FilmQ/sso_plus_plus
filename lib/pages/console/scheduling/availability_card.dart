@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/person_avatar.dart';
 import '../verification/claim_cards.dart';
 import 'scheduling_providers.dart';
@@ -20,7 +21,7 @@ class AvailabilityCard extends StatelessWidget {
     return ConsoleCard(
       title: 'Consultant availability',
       children: <Widget>[
-        if (consultants.isEmpty) const Text('There are no consultants.'),
+        if (consultants.isEmpty) Text(context.tr('There are no consultants.')),
         for (final int id in consultants) _consultant(context, slots.where((s) => s.consultantId == id).toList()),
       ],
     );
@@ -35,7 +36,7 @@ class AvailabilityCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
             Text(name, style: text.titleSmall),
-            Text('${rows.first['office_location']}', style: text.bodySmall),
+            Text(context.tr('${rows.first['office_location']}'), style: text.bodySmall),
           ]),
         ),
       ]),
@@ -46,7 +47,7 @@ class AvailabilityCard extends StatelessWidget {
 
   Widget _slot(BuildContext context, Map<String, Object?> s) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    final String label = '${s['slot_button']}';
+    final String label = context.tr('${s['slot_button']}');
     final Map<String, Object?>? sel = selected;
     final bool chosen = sel != null && sel['consultant_id'] == s['consultant_id'] && sel['slot_at'] == s['slot_at'];
     return switch (s.state) {
@@ -91,7 +92,7 @@ class SlotLegend extends StatelessWidget {
             decoration: BoxDecoration(
                 color: fill, border: Border.all(color: border), borderRadius: BorderRadius.circular(4)),
           ),
-          Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
+          Flexible(child: Text(context.tr(label), style: Theme.of(context).textTheme.bodySmall)),
         ]);
     return Wrap(spacing: 16, runSpacing: 8, children: <Widget>[
       item(colors.surfaceContainerLowest, colors.outline, 'Free'),

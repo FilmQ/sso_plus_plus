@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../l10n/tr.dart';
 import '../scheduling/availability_card.dart';
 import '../verification/claim_cards.dart';
 import 'treatment_providers.dart';
@@ -39,41 +40,45 @@ class TreatmentForm extends StatelessWidget {
       title: 'Treatment to book',
       children: <Widget>[
         Wrap(spacing: 12, runSpacing: 12, children: <Widget>[
-          _menu<String>(
-              const Key('treatment_type'), 'Treatment type', type, TreatmentOptions.types, (String t) => t, onType),
-          _menu<int>(const Key('duration'), 'Duration', duration, TreatmentOptions.durations, (int m) => '$m minutes',
-              onDuration),
-          _menu<String>(const Key('facility'), 'Facility', facility, TreatmentOptions.facilities, (String f) => f,
-              onFacility, width: 300),
+          _menu<String>(context, const Key('treatment_type'), 'Treatment type', type, TreatmentOptions.types,
+              (String t) => context.tr(t), onType),
+          _menu<int>(context, const Key('duration'), 'Duration', duration, TreatmentOptions.durations,
+              (int m) => context.tr('{n} minutes', <String, Object?>{'n': m}), onDuration),
+          _menu<String>(context, const Key('facility'), 'Facility', facility, TreatmentOptions.facilities,
+              (String f) => context.tr(f), onFacility, width: 300),
         ]),
-        Text('Available Times', style: Theme.of(context).textTheme.titleSmall),
+        Text(context.tr('Available Times'), style: Theme.of(context).textTheme.titleSmall),
         _times(context),
         const SlotLegend(busy: 'Busy or does not fit before 12:00 or 17:00, not clickable'),
       ],
     );
   }
 
-  Widget _menu<T>(Key key, String label, T? value, List<T> options, String Function(T) text, ValueChanged<T?> onChanged,
-          {double width = 190}) =>
-      DropdownMenu<T>(
-        key: key,
-        width: width,
-        label: Text(label),
-        initialSelection: value,
-        dropdownMenuEntries: <DropdownMenuEntry<T>>[
-          for (final T o in options) DropdownMenuEntry<T>(value: o, label: text(o)),
-        ],
-        onSelected: onChanged,
+  Widget _menu<T>(BuildContext context, Key key, String label, T? value, List<T> options, String Function(T) text,
+          ValueChanged<T?> onChanged, {double width = 190}) =>
+      // A new language makes a new menu, so the field shows the label in that language.
+      KeyedSubtree(
+        key: ValueKey<(Key, Locale)>((key, Localizations.localeOf(context))),
+        child: DropdownMenu<T>(
+          key: key,
+          width: width,
+          label: Text(context.tr(label)),
+          initialSelection: value,
+          dropdownMenuEntries: <DropdownMenuEntry<T>>[
+            for (final T o in options) DropdownMenuEntry<T>(value: o, label: text(o)),
+          ],
+          onSelected: onChanged,
+        ),
       );
 
   Widget _times(BuildContext context) {
     final AsyncValue<List<Map<String, Object?>>>? s = slots;
-    if (s == null) return const Text('Choose a treatment type, duration and facility first.');
+    if (s == null) return Text(context.tr('Choose a treatment type, duration and facility first.'));
     return s.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (Object e, _) => const Text('The times cannot be shown now.'),
+      error: (Object e, _) => Text(context.tr('The times cannot be shown now.')),
       data: (List<Map<String, Object?>> rows) {
-        if (rows.isEmpty) return const Text('There are no times in the next days.');
+        if (rows.isEmpty) return Text(context.tr('There are no times in the next days.'));
         final List<String> days =
             <String>{for (final Map<String, Object?> r in rows) '${r['slot_at']}'.substring(0, 10)}.toList();
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 12, children: <Widget>[
@@ -90,7 +95,7 @@ class TreatmentForm extends StatelessWidget {
   Widget _slot(BuildContext context, Map<String, Object?> r) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final Key key = ValueKey<String>('time:${r['slot_at']}');
-    final Text label = Text('${r['slot_button']}');
+    final Text label = Text(context.tr('${r['slot_button']}'));
     return switch (r['slot_state']) {
       'mine' => FilledButton(
           key: key,

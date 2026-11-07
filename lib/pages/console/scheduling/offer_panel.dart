@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../verification/claim_cards.dart';
 
 /// "Appointment to offer" (Figma O4-1, right side): the consultant, the
@@ -26,18 +27,18 @@ class OfferPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 8,
           children: <Widget>[
-            Text(title, style: text.titleSmall?.copyWith(color: heading)),
+            Text(context.tr(title), style: text.titleSmall?.copyWith(color: heading)),
             for (final (String label, String value) in rows)
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                SizedBox(width: 108, child: Text(label, style: text.bodyMedium)),
-                Expanded(child: Text(value, style: text.bodyMedium)),
+                SizedBox(width: 108, child: Text(context.tr(label), style: text.bodyMedium)),
+                Expanded(child: Text(context.tr(value), style: text.bodyMedium)),
               ]),
           ],
         );
     return ConsoleCard(
       title: 'Appointment to offer',
       children: <Widget>[
-        if (s == null) const Text('Choose a free hour of a consultant.'),
+        if (s == null) Text(context.tr('Choose a free hour of a consultant.')),
         if (s != null) ...<Widget>[
           section('Consultant details', <(String, String)>[
             ('Name', '${s['consultant_name']}'),
@@ -51,7 +52,7 @@ class OfferPanel extends StatelessWidget {
           const Divider(height: 1),
           section('Location details', <(String, String)>[
             ('Type', 'Onsite'),
-            ('Place', "Consultant's office, ${s['office_location']}"),
+            ('Place', context.tr("Consultant's office, {office}", <String, Object?>{'office': s['office_location']})),
           ]),
           const Divider(height: 1),
         ],
@@ -60,7 +61,7 @@ class OfferPanel extends StatelessWidget {
         FilledButton.icon(
           onPressed: s != null && c != null && !busy ? onOffer : null,
           icon: const Icon(Icons.send),
-          label: const Text('Offer to the Consultant'),
+          label: Text(context.tr('Offer to the Consultant')),
         ),
       ],
     );

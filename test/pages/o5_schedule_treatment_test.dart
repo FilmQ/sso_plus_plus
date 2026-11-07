@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 /// One QO5.2 row of Friday 23 October 2026.
@@ -145,5 +146,38 @@ void main() {
     expect(find.text('Recommended treatment in the report from พญ. มาลี ใจดี: None. No treatment is required for this claim.'),
         findsOneWidget);
     expect(find.text('Recommended'), findsNothing);
+  });
+
+  testWidgets('O5.1 in Thai: the menus, a free time and Treatment Booked', (WidgetTester tester) async {
+    await signInToConsole(tester, _server(), language: 'th');
+    await tapText(tester, th('Treatment'));
+    expect(find.text(th('Treatment · {claim}', <String, Object?>{'claim': 'SST-2026-000143'})), findsOneWidget);
+    await _choose(tester, 'treatment_type', th('Physiotherapy'));
+    await _choose(tester, 'duration', th('{n} minutes', <String, Object?>{'n': 90}));
+    await _choose(tester, 'facility', th('SSO Rehabilitation Center'));
+    await tester.tap(find.text('ศ. 23 ต.ค. - 13:00'));
+    await tester.pumpAndSettle();
+    expect(find.text('วันศุกร์ 23 ตุลาคม 2026'), findsOneWidget);
+    expectNoEnglishLabels(tester);
+
+    // A new language changes the label of a chosen menu entry too.
+    String field(String menu) => tester
+        .widget<EditableText>(find.descendant(of: find.byKey(Key(menu)), matching: find.byType(EditableText)))
+        .controller
+        .text;
+    await tester.tap(find.text('EN'));
+    await tester.pumpAndSettle();
+    expect(field('duration'), '90 minutes');
+    await tester.tap(find.text('ไทย'));
+    await tester.pumpAndSettle();
+    expect(field('duration'), '90 นาที');
+
+    await tapText(tester, th('Book treatment'));
+    expectNoEnglishLabels(tester);
+    await tester.tap(find.widgetWithText(FilledButton, th('Confirm')));
+    await tester.pumpAndSettle();
+    expect(find.text(th('Treatment Booked')), findsOneWidget);
+    expect(find.textContaining('นัดกายภาพบำบัด วันที่ 23 ตุลาคม 2026 : 13:00'), findsOneWidget);
+    expectNoEnglishLabels(tester);
   });
 }

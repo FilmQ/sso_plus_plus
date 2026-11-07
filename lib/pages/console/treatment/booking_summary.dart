@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/date_text.dart';
 import '../verification/claim_cards.dart';
 import 'report_card.dart';
@@ -42,11 +43,11 @@ class BookingSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           spacing: 8,
           children: <Widget>[
-            Text(title, style: text.titleSmall?.copyWith(color: heading)),
+            Text(context.tr(title), style: text.titleSmall?.copyWith(color: heading)),
             for (final (String label, String value) in rows)
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                SizedBox(width: 108, child: Text(label, style: text.bodyMedium)),
-                Expanded(child: Text(value, style: text.bodyMedium)),
+                SizedBox(width: 108, child: Text(context.tr(label), style: text.bodyMedium)),
+                Expanded(child: Text(context.tr(value), style: text.bodyMedium)),
               ]),
           ],
         );
@@ -58,12 +59,13 @@ class BookingSummary extends StatelessWidget {
       children: <Widget>[
         // Figma O5.2-1: the report says that no treatment is required.
         if (none && type == null && duration == null)
-          Text('Recommended treatment in the report from ${c['report_author']}: None. '
-              'No treatment is required for this claim.'),
+          Text(context.tr(
+              'Recommended treatment in the report from {author}: None. No treatment is required for this claim.',
+              <String, Object?>{'author': c['report_author']})),
         if (type != null || duration != null)
           section('Treatment details', <(String, String)>[
             ('Type', type ?? '-'),
-            ('Duration', duration == null ? '-' : '$duration minutes'),
+            ('Duration', duration == null ? '-' : context.tr('{n} minutes', <String, Object?>{'n': duration})),
           ]),
         if (start != null) ...<Widget>[
           const Divider(height: 1),
@@ -87,12 +89,12 @@ class BookingSummary extends StatelessWidget {
         FilledButton.icon(
           onPressed: c != null && s != null && type != null && duration != null && !busy ? onBook : null,
           icon: const Icon(Icons.event_available),
-          label: const Text('Book treatment'),
+          label: Text(context.tr('Book treatment')),
         ),
         OutlinedButton.icon(
           onPressed: c != null && !busy ? onNoTreatment : null,
           icon: const Icon(Icons.block),
-          label: const Text('No treatment require'),
+          label: Text(context.tr('No treatment require')),
         ),
       ],
     );

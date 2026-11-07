@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/status_chip.dart';
 
 /// A card of the console with a title row and a divider (Figma O1-2).
@@ -23,8 +24,8 @@ class ConsoleCard extends StatelessWidget {
         border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 12, children: <Widget>[
-        Row(children: <Widget>[Expanded(child: Text(title, style: text.titleMedium)), ?trailing]),
-        if (subtitle != null) Text(subtitle!, style: text.bodySmall),
+        Row(children: <Widget>[Expanded(child: Text(context.tr(title), style: text.titleMedium)), ?trailing]),
+        if (subtitle != null) Text(context.tr(subtitle!), style: text.bodySmall),
         const Divider(height: 1),
         ...children,
       ]),
@@ -77,8 +78,8 @@ class LabelValue extends StatelessWidget {
   Widget build(BuildContext context) {
     final TextTheme text = Theme.of(context).textTheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 2, children: <Widget>[
-      Text(label, style: text.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-      Text(value, style: text.bodyLarge),
+      Text(context.tr(label), style: text.labelMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      Text(context.tr(value), style: text.bodyLarge),
     ]);
   }
 }
@@ -99,17 +100,17 @@ class DocumentsCard extends StatelessWidget {
     return ConsoleCard(
       title: 'Documents lodged with the claim',
       children: <Widget>[
-        if (documents.isEmpty) const Text('No documents were sent.'),
+        if (documents.isEmpty) Text(context.tr('No documents were sent.')),
         for (final Map<String, Object?> d in documents)
           Row(spacing: 12, children: <Widget>[
             Icon(isImage('${d['file_name']}') ? Icons.image : Icons.description, color: colors.primary),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                Text('${d['document_type'] ?? d['file_name']}', style: Theme.of(context).textTheme.bodyLarge),
+                Text(context.tr('${d['document_type'] ?? d['file_name']}'), style: Theme.of(context).textTheme.bodyLarge),
                 Text('${d['file_name']} · ${d['file_size']}', style: Theme.of(context).textTheme.bodySmall),
               ]),
             ),
-            TextButton.icon(onPressed: () => onView(d), icon: const Icon(Icons.visibility), label: const Text('View')),
+            TextButton.icon(onPressed: () => onView(d), icon: const Icon(Icons.visibility), label: Text(context.tr('View'))),
           ]),
       ],
     );
@@ -130,7 +131,8 @@ class UserIsToldNote extends StatelessWidget {
         Icon(Icons.notifications, size: 20, color: colors.primary),
         Expanded(
           child: Text(
-            'The user sees every status change in the application and receives a message when you confirm the result.',
+            context.tr(
+                'The user sees every status change in the application and receives a message when you confirm the result.'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

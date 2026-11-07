@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'console_nav.dart';
 
+import '../../../l10n/tr.dart';
+
 /// The frame of the officer pages: the navigation on the left on a wide
 /// screen (Figma 1440 x 900), or in a drawer on a narrow screen.
 class ConsoleShell extends StatelessWidget {
@@ -46,15 +48,15 @@ class ConsolePage extends StatelessWidget {
             child: Row(spacing: 8, children: <Widget>[
               if (drawer)
                 IconButton(
-                  tooltip: 'Menu',
+                  tooltip: context.tr('Menu'),
                   icon: const Icon(Icons.menu),
                   onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
-              if (onBack != null) IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back), onPressed: onBack),
+              if (onBack != null) IconButton(tooltip: context.tr('Back'), icon: const Icon(Icons.arrow_back), onPressed: onBack),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                  Text(title, style: text.headlineSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(subtitle, style: text.bodyMedium),
+                  Text(context.tr(title), style: text.headlineSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(context.tr(subtitle), style: text.bodyMedium),
                 ]),
               ),
             ]),

@@ -71,6 +71,10 @@ make console        # terminal 3: the officer and consultant console in Chrome
 
 Keep the two Chrome windows side by side. They have different ports, so each window keeps its own sign-in.
 
+Each application starts in English. The demo steps use the English labels. To show the Thai labels, choose **ไทย** on
+the language toggle (**EN | ไทย**). The toggle is on the Register, Login and Profile pages of the user app, and in the
+navigation of the console. Each window keeps its own choice (D-067).
+
 To show the user app on the Android emulator, use this command for terminal 2 and copy the demo files to the emulator:
 
 ```sh
@@ -192,6 +196,7 @@ docker exec sst-db psql -U sst -d sst -c "UPDATE ConsultationSession SET recomme
 | A list has no appointments or treatments | The data is old. [Reset the demo](#4-reset-the-demo). |
 | The app cannot connect to the server | Make sure that `make server` runs. On the Android emulator, use `http://10.0.2.2:8080`. |
 | A date or time is incorrect | Set the computer and the emulator to Asia/Bangkok. |
+| The labels are in Thai | Choose **EN** on the language toggle. |
 
 ### Demo data
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
+
 /// The confirmation card of O2-2 and O3-2 (O2 and O3 steps 4 to 5). Gives
 /// true for "Confirm", false or null for "Cancel".
 Future<bool?> showConfirmResultDialog(BuildContext context,
@@ -8,15 +10,15 @@ Future<bool?> showConfirmResultDialog(BuildContext context,
   Widget row(String label, String value) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-          SizedBox(width: 92, child: Text(label, style: text.bodyMedium)),
-          Expanded(child: Text(value, style: text.titleSmall)),
+          SizedBox(width: 92, child: Text(context.tr(label), style: text.bodyMedium)),
+          Expanded(child: Text(context.tr(value), style: text.titleSmall)),
         ]),
       );
   return showDialog<bool>(
     context: context,
     builder: (BuildContext dialog) => AlertDialog(
       icon: Icon(Icons.help, color: Theme.of(dialog).colorScheme.primary),
-      title: const Text('Do you confirm the result'),
+      title: Text(context.tr('Do you confirm the result')),
       content: SizedBox(
         width: 400,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 16,
@@ -33,14 +35,14 @@ Future<bool?> showConfirmResultDialog(BuildContext context,
               if (reason != null) row('Reason', reason),
             ]),
           ),
-          Text(covered
+          Text(context.tr(covered
               ? 'The user will be notified and the claim moves to scheduling.'
-              : 'The claim will be rejected and the user receives the reason and your message.'),
+              : 'The claim will be rejected and the user receives the reason and your message.')),
         ]),
       ),
       actions: <Widget>[
-        TextButton(onPressed: () => Navigator.of(dialog).pop(false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.of(dialog).pop(true), child: const Text('Confirm')),
+        TextButton(onPressed: () => Navigator.of(dialog).pop(false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.of(dialog).pop(true), child: Text(context.tr('Confirm'))),
       ],
     ),
   );

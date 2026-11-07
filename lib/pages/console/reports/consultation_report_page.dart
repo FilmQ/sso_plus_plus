@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../api/api_exception.dart';
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
 import '../../../widgets/stored_image.dart';
@@ -50,7 +51,7 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
             () => ref.read(reportApiProvider).openReportFile(widget.reportId));
       }
     } on ApiException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(e.message));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(consoleSnackBar(context.tr(e.message)));
     }
   }
 
@@ -59,13 +60,17 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
     final AsyncValue<Map<String, Object?>> page = ref.watch(reportProvider(widget.reportId));
     final Map<String, Object?>? r = _viewed ?? page.value;
     return ConsolePage(
-      title: r == null ? 'Consultation Report' : 'Consultation Report · ${r['claim_no']}',
-      subtitle: r == null ? '' : '${r['user_name']} · signed ${r['signed_date']}',
+      title: r == null
+          ? 'Consultation Report'
+          : context.tr('Consultation Report · {claim}', <String, Object?>{'claim': r['claim_no']}),
+      subtitle: r == null
+          ? ''
+          : context.tr('{user} · signed {date}', <String, Object?>{'user': r['user_name'], 'date': r['signed_date']}),
       onBack: () => context.go('/reports'),
       body: r != null
           ? _body(r)
           : page.hasError
-              ? Center(child: Text(page.error is ApiException ? (page.error! as ApiException).message : 'Error'))
+              ? Center(child: Text(context.tr(page.error is ApiException ? (page.error! as ApiException).message : 'Error')))
               : const Center(child: CircularProgressIndicator()),
     );
   }
@@ -96,11 +101,11 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
           Icon(fileName(r) == null ? Icons.notes : Icons.description, color: colors.primary),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              Text(fileName(r) == null ? 'Report text' : 'Report file', style: Theme.of(context).textTheme.bodyLarge),
-              Text(fileName(r) ?? 'Written report', style: Theme.of(context).textTheme.bodySmall),
+              Text(context.tr(fileName(r) == null ? 'Report text' : 'Report file'), style: Theme.of(context).textTheme.bodyLarge),
+              Text(context.tr(fileName(r) ?? 'Written report'), style: Theme.of(context).textTheme.bodySmall),
             ]),
           ),
-          TextButton.icon(onPressed: clickView, icon: const Icon(Icons.visibility), label: const Text('View')),
+          TextButton.icon(onPressed: clickView, icon: const Icon(Icons.visibility), label: Text(context.tr('View'))),
         ]),
         // Table 2-66 (D-063).
         if (r['recommended_treatment'] != null) LabelValue('Recommended treatment', '${r['recommended_treatment']}'),
@@ -117,27 +122,30 @@ class _ConsultationReportPageState extends ConsumerState<ConsultationReportPage>
             foreground: signed ? s.success : s.warning,
           ),
         ),
-        if (signed) Text('Signed by ${r['consultant_name']} on ${r['signed_date']}'),
+        if (signed)
+          Text(context.tr('Signed by {name} on {date}', <String, Object?>{'name': r['consultant_name'], 'date': r['signed_date']})),
         if (signed && r['signature_uri'] != null)
           StoredImage(
             cacheKey: '${r['signature_uri']}',
-            label: 'Signature of ${r['consultant_name']}',
+            label: context.tr('Signature of {name}', <String, Object?>{'name': r['consultant_name']}),
             load: () => ref.read(reportApiProvider).openReportSignature(widget.reportId),
           ),
       ]),
       ConsoleCard(title: 'View status', children: <Widget>[
         Align(alignment: Alignment.centerLeft, child: ViewStatusChip('${r['view_status']}')),
-        Text(viewed ? 'Viewed on ${r['viewed_at']}' : 'You have not opened this report yet'),
+        Text(viewed
+            ? context.tr('Viewed on {date}', <String, Object?>{'date': r['viewed_at']})
+            : context.tr('You have not opened this report yet')),
       ]),
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: colors.surfaceContainerLow, borderRadius: BorderRadius.circular(12)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: <Widget>[
-          const Text('After reading the report, book the treatment on the Treatment page.'),
+          Text(context.tr('After reading the report, book the treatment on the Treatment page.')),
           FilledButton.tonalIcon(
             onPressed: () => context.go('/treatment'),
             icon: const Icon(Icons.healing),
-            label: const Text('Go to Treatment'),
+            label: Text(context.tr('Go to Treatment')),
           ),
         ]),
       ),

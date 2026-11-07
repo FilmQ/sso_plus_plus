@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../theme/status_colors.dart';
 import '../../../widgets/status_chip.dart';
 import '../verification/claim_cards.dart';
@@ -63,7 +64,7 @@ class ReportStatusCards extends StatelessWidget {
           ),
         ),
         if (signed && signatureImage != null) signatureImage!,
-        if (!signed) const Text('Sign the report after the text or file is ready.'),
+        if (!signed) Text(context.tr('Sign the report after the text or file is ready.')),
       ]),
       ConsoleCard(title: 'Filing', children: <Widget>[
         filed ? chip(Icons.task_alt, 'Filed', true) : chip(Icons.drafts, 'Not filed', false),
@@ -72,23 +73,23 @@ class ReportStatusCards extends StatelessWidget {
         FilledButton.icon(
           onPressed: busy || filed ? null : onAmend,
           icon: Icon(editing ? Icons.check : Icons.edit),
-          label: Text(editing ? 'Finish the draft' : 'Amend the draft'),
+          label: Text(context.tr(editing ? 'Finish the draft' : 'Amend the draft')),
         ),
         OutlinedButton.icon(
           onPressed: busy || filed || editing ? null : onSign,
           icon: const Icon(Icons.draw),
-          label: const Text('Sign the signature'),
+          label: Text(context.tr('Sign the signature')),
         ),
         FilledButton.tonalIcon(
           onPressed: busy || filed || editing ? null : onFile,
           icon: const Icon(Icons.send),
-          label: const Text('File the report'),
+          label: Text(context.tr('File the report')),
         ),
         if (onNoShow != null)
           OutlinedButton.icon(
             onPressed: busy || filed || editing ? null : onNoShow,
             icon: const Icon(Icons.person_off),
-            label: const Text('User did not attend'),
+            label: Text(context.tr('User did not attend')),
           ),
       ]),
     ]);

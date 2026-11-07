@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../api/consultant_api.dart';
+import '../../../l10n/tr.dart';
 import '../../../widgets/person_avatar.dart';
 import '../shell/console_shell.dart';
 import 'consultant_providers.dart';
@@ -42,15 +43,15 @@ class ConsultantSchedulePage extends ConsumerWidget {
                 padding: const EdgeInsets.all(16),
                 child: Row(spacing: 8, children: <Widget>[
                   Icon(Icons.calendar_month, color: colors.primary),
-                  Expanded(child: Text('Upcoming appointments', style: text.titleMedium)),
-                  Text('${rows.length} confirmed', style: text.bodySmall),
+                  Expanded(child: Text(context.tr('Upcoming appointments'), style: text.titleMedium)),
+                  Text(context.tr('{n} confirmed', <String, Object?>{'n': rows.length}), style: text.bodySmall),
                 ]),
               ),
               if (list.isLoading) const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
               if (list.hasError)
-                const Padding(padding: EdgeInsets.all(16), child: Text('The appointments cannot be shown now.')),
+                Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('The appointments cannot be shown now.'))),
               if (list.hasValue && rows.isEmpty)
-                const Padding(padding: EdgeInsets.all(16), child: Text('You have no confirmed appointments.')),
+                Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('You have no confirmed appointments.'))),
               if (rows.isNotEmpty)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -58,12 +59,12 @@ class ConsultantSchedulePage extends ConsumerWidget {
                     headingRowColor: WidgetStatePropertyAll<Color>(colors.surfaceContainerLow),
                     dataRowMinHeight: 64,
                     dataRowMaxHeight: 64,
-                    columns: const <DataColumn>[
-                      DataColumn(label: Text('User')),
-                      DataColumn(label: Text('Appointment date')),
-                      DataColumn(label: Text('Claim ID')),
-                      DataColumn(label: Text('Injury')),
-                      DataColumn(label: Text('Injury date')),
+                    columns: <DataColumn>[
+                      DataColumn(label: Text(context.tr('User'))),
+                      DataColumn(label: Text(context.tr('Appointment date'))),
+                      DataColumn(label: Text(context.tr('Claim ID'))),
+                      DataColumn(label: Text(context.tr('Injury'))),
+                      DataColumn(label: Text(context.tr('Injury date'))),
                     ],
                     rows: <DataRow>[
                       for (final Map<String, Object?> r in rows)
@@ -72,10 +73,10 @@ class ConsultantSchedulePage extends ConsumerWidget {
                             PersonAvatar('${r['user_name']}'),
                             Text('${r['user_name']}'),
                           ])),
-                          DataCell(Text('${r['appointment_date']}', style: text.titleSmall)),
+                          DataCell(Text(context.tr('${r['appointment_date']}'), style: text.titleSmall)),
                           DataCell(Text('${r['claim_no']}')),
-                          DataCell(Text('${r['injury']}')),
-                          DataCell(Text('${r['injury_date']}')),
+                          DataCell(Text(context.tr('${r['injury']}'))),
+                          DataCell(Text(context.tr('${r['injury_date']}'))),
                         ]),
                     ],
                   ),

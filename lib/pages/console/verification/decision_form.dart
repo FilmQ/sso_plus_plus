@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
+
 /// The officer's choice in the right panel of O1-2 (O2 and O3 step 3).
 class Decision {
   String? result; // 'Covered' (Confirm) or 'Not covered'
@@ -38,13 +40,15 @@ class DecisionForm extends StatelessWidget {
   final VoidCallback onChanged;
   final VoidCallback onConfirmResult;
 
-  static String reasonLabel(Map<String, Object?> r) => '${r['reason_code']} · ${r['name_th']}';
+  /// The code and the name of a QO1.6 row. The name is Thai data, with English in English mode.
+  static String reasonLabel(BuildContext context, Map<String, Object?> r) =>
+      '${r['reason_code']} · ${context.tr('${r['name_th']}')}';
 
   @override
   Widget build(BuildContext context) {
     final bool notCovered = decision.result == 'Not covered';
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 12, children: <Widget>[
-      Text('Officer decision', style: Theme.of(context).textTheme.titleSmall),
+      Text(context.tr('Officer decision'), style: Theme.of(context).textTheme.titleSmall),
       RadioGroup<String>(
         groupValue: decision.result,
         onChanged: (String? v) {
@@ -57,21 +61,25 @@ class DecisionForm extends StatelessWidget {
         ]),
       ),
       if (notCovered) ...<Widget>[
-        DropdownMenu<String>(
-          key: const Key('rejection_reason'),
-          expandedInsets: EdgeInsets.zero,
-          label: const Text('Rejection reason'),
-          hintText: 'Choose a reason',
-          initialSelection: decision.reasonCode,
-          errorText: errors['reason_code'] as String?,
-          dropdownMenuEntries: <DropdownMenuEntry<String>>[
-            for (final Map<String, Object?> r in reasons)
-              DropdownMenuEntry<String>(value: '${r['reason_code']}', label: reasonLabel(r)),
-          ],
-          onSelected: (String? code) {
-            decision.reasonCode = code;
-            onChanged();
-          },
+        // A new language makes a new menu, so the field shows the label in that language.
+        KeyedSubtree(
+          key: ValueKey<Locale>(Localizations.localeOf(context)),
+          child: DropdownMenu<String>(
+            key: const Key('rejection_reason'),
+            expandedInsets: EdgeInsets.zero,
+            label: Text(context.tr('Rejection reason')),
+            hintText: context.tr('Choose a reason'),
+            initialSelection: decision.reasonCode,
+            errorText: context.trMaybe(errors['reason_code'] as String?),
+            dropdownMenuEntries: <DropdownMenuEntry<String>>[
+              for (final Map<String, Object?> r in reasons)
+                DropdownMenuEntry<String>(value: '${r['reason_code']}', label: reasonLabel(context, r)),
+            ],
+            onSelected: (String? code) {
+              decision.reasonCode = code;
+              onChanged();
+            },
+          ),
         ),
         TextField(
           controller: decision.message,
@@ -79,9 +87,9 @@ class DecisionForm extends StatelessWidget {
           maxLines: 5,
           maxLength: 1000,
           decoration: InputDecoration(
-            labelText: 'Message to the user',
+            labelText: context.tr('Message to the user'),
             border: const OutlineInputBorder(),
-            errorText: errors['officer_message'] as String?,
+            errorText: context.trMaybe(errors['officer_message'] as String?),
           ),
         ),
       ],
@@ -89,16 +97,16 @@ class DecisionForm extends StatelessWidget {
         controller: decision.overrideReason,
         maxLength: 255,
         decoration: InputDecoration(
-          labelText: 'Override reason (required if your decision differs)',
-          hintText: 'Why your decision differs from the automatic result',
+          labelText: context.tr('Override reason (required if your decision differs)'),
+          hintText: context.tr('Why your decision differs from the automatic result'),
           border: const OutlineInputBorder(),
-          errorText: errors['override_reason'] as String?,
+          errorText: context.trMaybe(errors['override_reason'] as String?),
         ),
       ),
       FilledButton.icon(
         onPressed: decision.ready && !busy ? onConfirmResult : null,
         icon: const Icon(Icons.check),
-        label: const Text('Confirm Result'),
+        label: Text(context.tr('Confirm Result')),
       ),
     ]);
   }
@@ -114,7 +122,7 @@ class DecisionForm extends StatelessWidget {
         side: BorderSide(color: chosen ? colors.primary : colors.outlineVariant),
       ),
       clipBehavior: Clip.antiAlias,
-      child: RadioListTile<String>(value: value, title: Text(title), subtitle: Text(subtitle)),
+      child: RadioListTile<String>(value: value, title: Text(context.tr(title)), subtitle: Text(context.tr(subtitle))),
     );
   }
 }

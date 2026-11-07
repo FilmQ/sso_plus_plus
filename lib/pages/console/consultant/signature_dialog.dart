@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
 import '../../../widgets/dashed_border.dart';
 
 /// The strokes of a drawn signature: each stroke is a list of points.
@@ -27,7 +28,7 @@ class _SignatureDialogState extends State<_SignatureDialog> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     return AlertDialog(
       icon: Icon(Icons.draw, color: colors.primary),
-      title: const Text('Sign the report'),
+      title: Text(context.tr('Sign the report')),
       content: SizedBox(
         width: 480,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 8,
@@ -49,18 +50,18 @@ class _SignatureDialogState extends State<_SignatureDialog> {
               ),
             ),
           ),
-          Text('Draw your signature in the box', style: Theme.of(context).textTheme.bodySmall),
+          Text(context.tr('Draw your signature in the box'), style: Theme.of(context).textTheme.bodySmall),
         ]),
       ),
       actions: <Widget>[
         TextButton.icon(
           onPressed: () => setState(_strokes.clear),
           icon: const Icon(Icons.delete),
-          label: const Text('Delete'),
+          label: Text(context.tr('Delete')),
         ),
         FilledButton(
           onPressed: _strokes.isEmpty ? null : () => Navigator.of(context).pop(_strokes),
-          child: const Text('Confirm'),
+          child: Text(context.tr('Confirm')),
         ),
       ],
     );

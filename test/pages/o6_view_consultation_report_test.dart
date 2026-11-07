@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../support/console_app.dart';
 import '../support/fake_server.dart';
+import '../support/thai_check.dart';
 import '../support/user_app.dart';
 
 /// A QO6.2 row of report 87 with [view].
@@ -100,5 +101,26 @@ void main() {
     expect(server.requests.any((http.Request r) => r.url.path == '/o6/reports/87/file'), isTrue);
     expect(find.text('Download'), findsOneWidget);
     await tapText(tester, 'Close');
+  });
+
+  testWidgets('O6 in Thai: the list, the report page and the report text', (WidgetTester tester) async {
+    await signInToConsole(tester, _server(), language: 'th');
+    await tapText(tester, th('Consultation Reports'));
+    expect(find.text(th('{n} not viewed', <String, Object?>{'n': 1})), findsOneWidget);
+    expect(find.text(th('Viewed')), findsOneWidget);
+    expectNoEnglishLabels(tester);
+
+    await tester.ensureVisible(find.widgetWithText(FilledButton, th('Open')).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, th('Open')).first);
+    await tester.pumpAndSettle();
+    expect(find.text('สมชาย ประเสริฐ · ลงนามวันที่ 16 ตุลาคม 2026'), findsOneWidget);
+    expect(find.text(th('Signature signed')), findsOneWidget);
+    expectNoEnglishLabels(tester);
+
+    await tapText(tester, th('View'));
+    expect(find.text('16 ตุลาคม 2026 : 10:00 · นพ. ธนา ศรีสุข'), findsOneWidget);
+    expectNoEnglishLabels(tester,
+        data: <String>['Closed fracture of the distal radius, right wrist. Physiotherapy is recommended.']);
   });
 }

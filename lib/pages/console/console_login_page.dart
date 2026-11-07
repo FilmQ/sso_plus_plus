@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/tr.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/language_toggle.dart';
 import '../shared/login_form.dart';
@@ -34,17 +35,17 @@ class ConsoleLoginPage extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                          Text('SST Console', style: text.titleMedium),
-                          Text('Social Security Office',
+                          Text(context.tr('SST Console'), style: text.titleMedium),
+                          Text(context.tr('Social Security Office'),
                               style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant)),
                         ]),
                       ),
                       const LanguageToggle(),
                     ]),
                     const SizedBox(height: 28),
-                    Text('Sign in', style: text.headlineMedium),
+                    Text(context.tr('Sign in'), style: text.headlineMedium),
                     const SizedBox(height: 20),
-                    Text('For evaluation officers and consultants of the SSO Rehabilitation Center',
+                    Text(context.tr('For evaluation officers and consultants of the SSO Rehabilitation Center'),
                         style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant)),
                     const SizedBox(height: 20),
                     const LoginForm(loginLabel: 'Staff e-mail'),

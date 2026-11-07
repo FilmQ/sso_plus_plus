@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/tr.dart';
+
 /// "Recommended treatment" of the Report card (Figma component
 /// `Field · Recommended treatment`, C2.1, R-050). The consultant chooses
 /// while editing; filing needs a choice (QC2.7).
@@ -23,17 +25,18 @@ class RecommendedTreatmentField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (BuildContext context, BoxConstraints box) => DropdownMenu<String>(
-          key: ValueKey<String>('recommended_treatment_${editing}_$value'),
+          // The language is in the key, so the field shows the label in that language.
+          key: ValueKey<String>('recommended_treatment_${editing}_${value}_${Localizations.localeOf(context)}'),
           width: box.maxWidth,
           enabled: editing,
           initialSelection: value,
-          label: const Text('Recommended treatment'),
-          hintText: editing ? 'Choose the treatment' : 'Choose after Amend the draft',
-          helperText: 'Physiotherapy, Occupational therapy or None. Filing needs a choice.',
-          errorText: error,
+          label: Text(context.tr('Recommended treatment')),
+          hintText: context.tr(editing ? 'Choose the treatment' : 'Choose after Amend the draft'),
+          helperText: context.tr('Physiotherapy, Occupational therapy or None. Filing needs a choice.'),
+          errorText: context.trMaybe(error),
           onSelected: onChanged,
           dropdownMenuEntries: <DropdownMenuEntry<String>>[
-            for (final String c in choices) DropdownMenuEntry<String>(value: c, label: c),
+            for (final String c in choices) DropdownMenuEntry<String>(value: c, label: context.tr(c)),
           ],
         ),
       );
