@@ -68,7 +68,7 @@ void main() {
         final ic = await row('SELECT * FROM InjuryClaim WHERE claim_id = :id', {'id': claimId});
         final employer = await row('SELECT * FROM Employer WHERE employer_id = :id', {'id': ic['employer_id']});
         expect(employer['sso_account_no'], '1000678901', reason: 'Q1.4 added the employer of the register (Q1.1)');
-        expect(employer['employer_name'], 'Rangsit Auto Parts Co., Ltd.');
+        expect(employer['employer_name'], 'บริษัท รังสิตออโต้พาร์ท จำกัด');
         final docs = await ClaimRepository(db).findDocuments(claimId);
         expect(docs.map((d) => d['file_uri']), contains('/claims/$claimId/id_card_front.jpg'));
         expect(File('${storageDir.path}/claims/$claimId/id_card_front.jpg').existsSync(), isTrue);

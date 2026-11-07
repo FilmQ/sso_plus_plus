@@ -39,18 +39,19 @@ WITH stage (ord, stage, claims, slot_group) AS (VALUES
     (ROW_NUMBER() OVER (PARTITION BY s.stage IN ('treat_pending', 'treat_accepted') ORDER BY s.ord, g) - 1)::int AS t
   FROM stage s CROSS JOIN LATERAL generate_series(1, s.claims) g
 ), scenario (s, place, cause, body_part, category, findings, diagnosis) AS (VALUES
-  (0, 'Assembly line 4, Rangsit, Pathum Thani', 'Hand caught between two metal parts', 'left hand', 'Crush injury', 'Swelling and bruises on the left hand', 'Crush injury of the left hand'),
-  (1, 'Warehouse 5, Bang Na, Bangkok', 'Fell from a forklift step', 'right knee', 'Sprain', 'Pain and swelling of the right knee', 'Sprain of the right knee'),
-  (2, 'Welding bay 2, Bang Pu, Samut Prakan', 'Hot metal hit the arm', 'right forearm', 'Burn', 'Healing burn, no infection', 'Second-degree burn, right forearm'),
-  (3, 'Packing line 1, Pak Kret, Nonthaburi', 'Cut by a box cutter', 'left thumb', 'Cut', 'Closed wound with stitches', 'Deep cut of the left thumb'),
-  (4, 'Loading dock, Khlong Luang, Pathum Thani', 'Lifted a heavy pallet', 'lower back', 'Back strain', 'Muscle spasm in the lower back', 'Lumbar muscle strain'),
-  (5, 'Machine shop, Bang Phli, Samut Prakan', 'Struck by a falling tool', 'right foot', 'Fracture', 'Limited movement of the right foot', 'Metatarsal fracture, right foot'),
-  (6, 'Cold storage 3, Lat Krabang, Bangkok', 'Slipped on an icy floor', 'left ankle', 'Sprain', 'Swelling of the left ankle', 'Sprain of the left ankle'),
-  (7, 'Paint line, Bang Bo, Samut Prakan', 'Chemical splash on the skin', 'left arm', 'Burn', 'Red skin, healing well', 'Chemical burn, left arm'),
-  (8, 'Stamping line 2, Si Racha, Chon Buri', 'Finger pressed in a stamping machine', 'right index finger', 'Fracture', 'Stiff right index finger', 'Fracture of the right index finger'),
-  (9, 'Warehouse 2, Lam Luk Ka, Pathum Thani', 'Fell from a ladder', 'left shoulder', 'Other', 'Pain when the left shoulder moves', 'Rotator cuff strain, left shoulder'),
-  (10, 'Timber yard, Bang Bua Thong, Nonthaburi', 'Cut by a saw blade', 'right palm', 'Cut', 'Healing wound of the right palm', 'Deep cut of the right palm'),
-  (11, 'Delivery bay, Bang Khen, Bangkok', 'Twisted the back while lifting', 'middle back', 'Back strain', 'Pain when the back bends', 'Thoracic muscle strain')
+  -- The typed text is Thai (D-068). The category stays English, because it is a value of the U1 list.
+  (0, 'สายการประกอบที่ 4 รังสิต จ.ปทุมธานี', 'มือติดระหว่างชิ้นส่วนโลหะ', 'มือซ้าย', 'Crush injury', 'มือซ้ายบวมและมีรอยช้ำ', 'การบาดเจ็บจากการถูกทับที่มือซ้าย'),
+  (1, 'คลังสินค้า 5 บางนา กรุงเทพฯ', 'ตกจากบันไดรถยก', 'เข่าขวา', 'Sprain', 'เข่าขวาปวดและบวม', 'เข่าขวาแพลง'),
+  (2, 'แผนกเชื่อมที่ 2 บางปู จ.สมุทรปราการ', 'โลหะร้อนกระเด็นโดนแขน', 'แขนท่อนล่างขวา', 'Burn', 'แผลไหม้กำลังหาย ไม่มีการติดเชื้อ', 'แผลไหม้ระดับ 2 ที่แขนท่อนล่างขวา'),
+  (3, 'ไลน์บรรจุที่ 1 ปากเกร็ด จ.นนทบุรี', 'ถูกคัตเตอร์บาด', 'นิ้วโป้งซ้าย', 'Cut', 'แผลปิดแล้วหลังเย็บ', 'แผลลึกที่นิ้วโป้งซ้าย'),
+  (4, 'ท่าขนสินค้า คลองหลวง จ.ปทุมธานี', 'ยกพาเลทที่หนัก', 'หลังส่วนล่าง', 'Back strain', 'กล้ามเนื้อหลังส่วนล่างเกร็ง', 'กล้ามเนื้อหลังส่วนเอวอักเสบ'),
+  (5, 'โรงกลึง บางพลี จ.สมุทรปราการ', 'ถูกเครื่องมือหล่นใส่', 'เท้าขวา', 'Fracture', 'เท้าขวาขยับได้น้อย', 'กระดูกฝ่าเท้าขวาหัก'),
+  (6, 'ห้องเย็น 3 ลาดกระบัง กรุงเทพฯ', 'ลื่นบนพื้นที่มีน้ำแข็ง', 'ข้อเท้าซ้าย', 'Sprain', 'ข้อเท้าซ้ายบวม', 'ข้อเท้าซ้ายแพลง'),
+  (7, 'ไลน์พ่นสี บางบ่อ จ.สมุทรปราการ', 'สารเคมีกระเด็นโดนผิวหนัง', 'แขนซ้าย', 'Burn', 'ผิวหนังแดง แผลหายดี', 'แผลไหม้จากสารเคมีที่แขนซ้าย'),
+  (8, 'ไลน์ปั๊มโลหะที่ 2 ศรีราชา จ.ชลบุรี', 'นิ้วถูกเครื่องปั๊มโลหะกดทับ', 'นิ้วชี้ขวา', 'Fracture', 'นิ้วชี้ขวาติดแข็ง', 'กระดูกนิ้วชี้ขวาหัก'),
+  (9, 'คลังสินค้า 2 ลำลูกกา จ.ปทุมธานี', 'ตกจากบันได', 'ไหล่ซ้าย', 'Other', 'ปวดเมื่อขยับไหล่ซ้าย', 'เอ็นหุ้มข้อไหล่ซ้ายอักเสบ'),
+  (10, 'ลานไม้ บางบัวทอง จ.นนทบุรี', 'ถูกใบเลื่อยบาด', 'ฝ่ามือขวา', 'Cut', 'แผลที่ฝ่ามือขวากำลังหาย', 'แผลลึกที่ฝ่ามือขวา'),
+  (11, 'จุดส่งสินค้า บางเขน กรุงเทพฯ', 'บิดหลังขณะยกของ', 'หลังส่วนกลาง', 'Back strain', 'ปวดเมื่อก้มหลัง', 'กล้ามเนื้อหลังส่วนอกอักเสบ')
 ), planned AS (
   SELECT n.*, sc.place, sc.cause, sc.body_part, sc.category, sc.findings, sc.diagnosis,
     164 + n.i AS claim_id, 110 + n.i AS insured_id, 210 + n.i AS coverage_id,
@@ -103,11 +104,11 @@ LEFT JOIN demo_day x ON x.n = p.day_n + 2;
 
 -- The register stub, the employers and the people.
 INSERT INTO Employer (employer_id, sso_account_no, employer_name, branch_name, phone_no, address) OVERRIDING SYSTEM VALUE VALUES
-  (16, '1000700001', 'Rangsit Food Products Co., Ltd.', 'สำนักงานใหญ่', '025160011', '77 ม.3 ต.คลองหก อ.คลองหลวง จ.ปทุมธานี 12120'),
-  (17, '1000700002', 'Samut Prakan Metal Works Co., Ltd.', 'สาขาบางบ่อ', '023380022', '150 ม.8 ต.บางบ่อ อ.บางบ่อ จ.สมุทรปราการ 10560'),
-  (18, '1000700003', 'Laem Chabang Auto Parts Co., Ltd.', 'สาขาศรีราชา', '038490033', '210 ม.6 ต.ทุ่งสุขลา อ.ศรีราชา จ.ชลบุรี 20230'),
-  (19, '1000700004', 'Nonthaburi Timber Co., Ltd.', 'สำนักงานใหญ่', '029230044', '35 ม.2 ต.บางบัวทอง อ.บางบัวทอง จ.นนทบุรี 11110'),
-  (20, '1000700005', 'Lat Krabang Cold Storage Co., Ltd.', 'สำนักงานใหญ่', '023260055', '19 ถ.ฉลองกรุง แขวงลำปลาทิว เขตลาดกระบัง กรุงเทพฯ 10520');
+  (16, '1000700001', 'บริษัท รังสิตฟู้ดโปรดักส์ จำกัด', 'สำนักงานใหญ่', '025160011', '77 ม.3 ต.คลองหก อ.คลองหลวง จ.ปทุมธานี 12120'),
+  (17, '1000700002', 'บริษัท สมุทรปราการเมทัลเวิร์คส์ จำกัด', 'สาขาบางบ่อ', '023380022', '150 ม.8 ต.บางบ่อ อ.บางบ่อ จ.สมุทรปราการ 10560'),
+  (18, '1000700003', 'บริษัท แหลมฉบังออโต้พาร์ท จำกัด', 'สาขาศรีราชา', '038490033', '210 ม.6 ต.ทุ่งสุขลา อ.ศรีราชา จ.ชลบุรี 20230'),
+  (19, '1000700004', 'บริษัท นนทบุรีค้าไม้ จำกัด', 'สำนักงานใหญ่', '029230044', '35 ม.2 ต.บางบัวทอง อ.บางบัวทอง จ.นนทบุรี 11110'),
+  (20, '1000700005', 'บริษัท ลาดกระบังห้องเย็น จำกัด', 'สำนักงานใหญ่', '023260055', '19 ถ.ฉลองกรุง แขวงลำปลาทิว เขตลาดกระบัง กรุงเทพฯ 10520');
 
 INSERT INTO master_table (national_id, title_name, first_name, last_name, coverage_status, employer_account_no, employer_name, registration_date, contribution_start, contribution_end, contribution_months)
 SELECT '17777' || LPAD(p.i::text, 8, '0'), p.title_name, p.first_name, p.last_name, 'ACTIVE', e.sso_account_no, e.employer_name,
@@ -208,10 +209,10 @@ WHERE p.stage IN ('draft', 'noshow', 'filed', 'treat_pending', 'treat_accepted',
 -- The reports. A draft has no signature. Half of the filed reports with no treatment are not viewed yet.
 INSERT INTO ConsultationReport (session_id, consultant_id, version_no, report_content, signature_uri, signed_at, delivered_at, read_at, is_superseded)
 SELECT s.session_id, p.consultant_id, 1,
-  p.diagnosis || '. ' || CASE p.recommended
-    WHEN 'None' THEN 'Healing well. No further treatment required.'
-    WHEN 'Physiotherapy' THEN 'Physiotherapy twice a week for 4 weeks.'
-    ELSE 'Occupational therapy twice a week for 6 weeks.'
+  p.diagnosis || ' ' || CASE p.recommended
+    WHEN 'None' THEN 'แผลหายดี ไม่ต้องรับการรักษาเพิ่มเติม'
+    WHEN 'Physiotherapy' THEN 'ทำกายภาพบำบัดสัปดาห์ละ 2 ครั้ง เป็นเวลา 4 สัปดาห์'
+    ELSE 'ทำกิจกรรมบำบัดสัปดาห์ละ 2 ครั้ง เป็นเวลา 6 สัปดาห์'
   END,
   CASE WHEN p.stage <> 'draft' THEN '/reports/' || (ARRAY[301, 302, 303, 306])[1 + p.i % 4] || '/signature.png' END,
   CASE WHEN p.stage <> 'draft' THEN p.appt_at + INTERVAL '3 hours' END,

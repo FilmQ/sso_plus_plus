@@ -82,7 +82,7 @@ void main() {
   test('QO1.3 findClaimSummary of SST-2026-000143', () async {
     final row = await repo.findClaimSummary(143);
     expect(row, containsPair('user_name', 'สมชาย ประเสริฐ'));
-    expect(row, containsPair('employer_on_claim', 'Siam Precision Parts Co., Ltd.'));
+    expect(row, containsPair('employer_on_claim', 'บริษัท สยามพรีซิชั่นพาร์ท จำกัด'));
     expect(row, containsPair('date_of_injury', '28 September 2026'));
   });
 

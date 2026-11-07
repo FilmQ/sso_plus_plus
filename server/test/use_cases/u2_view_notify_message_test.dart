@@ -59,7 +59,7 @@ void main() {
         expect(claim['claim_no'], 'SST-2026-000151');
         expect(claim['first_name'], 'วิภา');
         expect(claim['claim_status'], 'Rejected');
-        expect(claim['injury'], 'Sprain, left ankle');
+        expect(claim['injury'], 'Sprain, ข้อเท้าซ้าย');
         expect(claim['submitted_time'], '3 October 2026 : 11:05');
         expect(claim['officer_checked_time'], '6 October 2026 : 10:40');
         expect(claim['appointment_status'], isNull);

@@ -29,7 +29,7 @@ void main() {
         expect(page['claim_no'], 'SST-2026-000143');
         expect(page['signature_status'], 'Signature signed');
         expect(page['view_status'], 'Pending');
-        expect(page['report_content'], startsWith('Closed fracture of the distal radius'));
+        expect(page['report_content'], startsWith('กระดูกเรเดียสส่วนปลาย'));
         expect(page['user_age'], isA<int>());
         expect(page['recommended_treatment'], 'Physiotherapy', reason: 'Table 2-66 (D-063)');
 

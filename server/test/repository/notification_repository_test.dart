@@ -48,7 +48,7 @@ void main() {
         expect(await repo.insertRejectionNotice(151), 1);
         final newest = (await repo.findNotifications(104)).first;
         expect(newest['subject'], 'Application rejected');
-        expect(newest['body'], contains('The register shows your contributions ended in May 2026.'));
+        expect(newest['body'], contains('ทะเบียนผู้ประกันตนแสดงว่าการส่งเงินสมทบของท่านสิ้นสุดในเดือนพฤษภาคม 2026'));
       }));
 
   test('QN.3 insertAppointmentNotices: one to the user, one to the consultant', () => inRollback(db, () async {

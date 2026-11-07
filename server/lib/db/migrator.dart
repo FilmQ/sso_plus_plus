@@ -8,7 +8,8 @@ import 'db_connector.dart';
 /// 1. `docs/spec/database/schema.sql` (migration 001, the report's schema),
 /// 2. `server/db/migrations/*.sql` (infrastructure tables),
 /// 3. `docs/spec/database/seed.sql` (the report's sample rows),
-/// 4. `server/db/seeds/*.sql` (seed rows for infrastructure tables).
+/// 4. `server/db/seeds/*.sql` (seed rows for infrastructure tables, and the
+///    Thai text of the seed rows, D-068).
 class Migrator {
   Migrator(this.db, {String? repoRoot}) : root = repoRoot ?? findRepoRoot();
 

@@ -32,7 +32,7 @@ void main() {
           'office_location': 'Building C, Floor 1, Room 104',
           'appointment_date': '${dayText(40)} : 09:00',
           'claim_no': 'SST-2026-000160',
-          'injury': 'Laceration, left forearm',
+          'injury': 'Laceration, แขนท่อนล่างซ้าย',
           'injury_date': '7 October 2026',
           'appointment_status': 'Pending',
           'claim_id': 160,
