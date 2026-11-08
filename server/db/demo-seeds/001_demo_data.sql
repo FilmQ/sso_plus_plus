@@ -14,7 +14,8 @@ WHERE EXTRACT(ISODOW FROM d) < 6;
 
 -- One row for each claim. Each later statement reads this plan and takes the rows that its stage needs.
 -- Appointment slots are unique in each group. Hour 09:00 stays free, and the slots do not use the seed rows
--- 510, 512 and 513. Treatment hours do not use 10:00, the hour of seed treatment 403.
+-- 510, 512 and 513. Treatment hours do not use 10:00, the hour of seed treatment 403. 000_shift_seed_dates.sql moves
+-- the other seed rows near the load day, so the "slot" and "treat_slot" lists skip a slot that a seed row uses.
 CREATE TABLE demo_plan AS
 WITH stage (ord, stage, claims, slot_group) AS (VALUES
   (1, 'verify', 12, NULL),            -- O1 to O3: Verification list
@@ -38,6 +39,30 @@ WITH stage (ord, stage, claims, slot_group) AS (VALUES
     (ROW_NUMBER() OVER (PARTITION BY s.slot_group ORDER BY s.ord, g) - 1)::int AS j,
     (ROW_NUMBER() OVER (PARTITION BY s.stage IN ('treat_pending', 'treat_accepted') ORDER BY s.ord, g) - 1)::int AS t
   FROM stage s CROSS JOIN LATERAL generate_series(1, s.claims) g
+), slot AS (
+  -- The appointment slots of each group in order, without the slots of the active seed appointments.
+  SELECT c.grp, (ROW_NUMBER() OVER (PARTITION BY c.grp ORDER BY c.k) - 1)::int AS j, c.day_n, c.appt_time, c.consultant_id
+  FROM (
+    SELECT grp, k, CASE grp WHEN 'future' THEN 2 + k / 5 ELSE -(2 + k / 5) END AS day_n,
+      make_time((ARRAY[10, 11, 13, 14, 15])[1 + k % 5], 0, 0) AS appt_time,
+      CASE WHEN k % 2 = 0 THEN 1 ELSE 2 + (k / 2) % 4 END AS consultant_id
+    FROM unnest(ARRAY['future', 'past']) grp CROSS JOIN generate_series(0, 99) k
+  ) c
+  JOIN demo_day d ON d.n = c.day_n
+  WHERE NOT EXISTS (SELECT 1 FROM Appointment a WHERE a.consultant_id = c.consultant_id AND a.schedule_date = d.d
+    AND a.schedule_time = c.appt_time AND a.appointment_status IN ('Pending', 'Confirmed'))
+), treat_slot AS (
+  -- The treatment slots in order (3 for each day), without a slot that overlaps an active seed treatment.
+  -- A demo treatment is 60 minutes or less.
+  SELECT (ROW_NUMBER() OVER (ORDER BY c.k) - 1)::int AS t, d.d AS treat_date, c.treat_time
+  FROM (
+    SELECT k, 2 + k / 3 AS day_n, make_time((ARRAY[9, 11, 13, 14, 15, 16])[1 + k % 6], 0, 0) AS treat_time
+    FROM generate_series(0, 99) k
+  ) c
+  JOIN demo_day d ON d.n = c.day_n
+  WHERE NOT EXISTS (SELECT 1 FROM Treatment tr WHERE tr.treatment_status IN ('Pending', 'Accepted')
+    AND tr.scheduled_date = d.d AND c.treat_time < tr.scheduled_time + make_interval(mins => tr.duration_minutes)
+    AND tr.scheduled_time < c.treat_time + INTERVAL '60 minutes')
 ), scenario (s, place, cause, body_part, category, findings, diagnosis) AS (VALUES
   -- The typed text is Thai (D-068). The category stays English, because it is a value of the U1 list.
   (0, 'สายการประกอบที่ 4 รังสิต จ.ปทุมธานี', 'มือติดระหว่างชิ้นส่วนโลหะ', 'มือซ้าย', 'Crush injury', 'มือซ้ายบวมและมีรอยช้ำ', 'การบาดเจ็บจากการถูกทับที่มือซ้าย'),
@@ -56,9 +81,7 @@ WITH stage (ord, stage, claims, slot_group) AS (VALUES
   SELECT n.*, sc.place, sc.cause, sc.body_part, sc.category, sc.findings, sc.diagnosis,
     164 + n.i AS claim_id, 110 + n.i AS insured_id, 210 + n.i AS coverage_id,
     11 + n.i % 10 AS employer_id, 1 + n.i % 5 AS officer_id,
-    CASE WHEN n.j % 2 = 0 THEN 1 ELSE 2 + (n.j / 2) % 4 END AS consultant_id,
-    CASE n.slot_group WHEN 'future' THEN 2 + n.j / 5 WHEN 'past' THEN -(2 + n.j / 5) END AS day_n,
-    make_time((ARRAY[10, 11, 13, 14, 15])[1 + n.j % 5], 0, 0) AS appt_time,
+    sl.consultant_id, sl.day_n, sl.appt_time,
     CASE n.i % 3 WHEN 0 THEN 'นาย' WHEN 1 THEN 'นาง' ELSE 'นางสาว' END AS title_name,
     CASE n.i % 3 WHEN 0 THEN 'M' ELSE 'F' END AS gender,
     CASE WHEN n.i % 3 = 0
@@ -76,6 +99,7 @@ WITH stage (ord, stage, claims, slot_group) AS (VALUES
       WHEN 'confirmed' THEN LOCALTIMESTAMP - INTERVAL '3 days' - n.k * INTERVAL '5 hours'
     END) AS recent_submit
   FROM numbered n JOIN scenario sc ON sc.s = n.i % 12
+  LEFT JOIN slot sl ON sl.grp = n.slot_group AND sl.j = n.j
 )
 SELECT p.*, c.office_location AS location,
   CONCAT_WS(' ', c.title_name, c.first_name, c.last_name) AS consultant_name,
@@ -93,13 +117,12 @@ SELECT p.*, c.office_location AS location,
     WHEN p.i % 2 = 0 THEN 'Physiotherapy'
     ELSE 'Occupational therapy'
   END AS recommended,
-  CASE WHEN p.stage = 'treat_cancelled' THEN x.d ELSE f.d END AS treat_date,
-  CASE WHEN p.stage = 'treat_cancelled' THEN TIME '10:00'
-       ELSE make_time((ARRAY[9, 11, 13, 14, 15, 16])[1 + p.t % 6], 0, 0) END AS treat_time
+  CASE WHEN p.stage = 'treat_cancelled' THEN x.d ELSE ts.treat_date END AS treat_date,
+  CASE WHEN p.stage = 'treat_cancelled' THEN TIME '10:00' ELSE ts.treat_time END AS treat_time
 FROM planned p
 LEFT JOIN Consultant c ON c.consultant_id = p.consultant_id AND p.slot_group IS NOT NULL
 LEFT JOIN demo_day a ON a.n = p.day_n
-LEFT JOIN demo_day f ON f.n = 2 + p.t / 3
+LEFT JOIN treat_slot ts ON ts.t = p.t
 LEFT JOIN demo_day x ON x.n = p.day_n + 2;
 
 -- The register stub, the employers and the people.

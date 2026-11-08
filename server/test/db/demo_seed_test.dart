@@ -34,10 +34,10 @@ void main() {
 
   test('appointments and treatments are on weekdays in the allowed hours', () async {
     expect(await count('''
-      SELECT COUNT(*)::int FROM Appointment WHERE appointment_id > 513 AND (EXTRACT(ISODOW FROM schedule_date) > 5
-        OR schedule_time NOT IN (TIME '09:00', TIME '10:00', TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00'))'''), 0);
+      SELECT COUNT(*)::int FROM Appointment WHERE EXTRACT(ISODOW FROM schedule_date) > 5
+        OR schedule_time NOT IN (TIME '09:00', TIME '10:00', TIME '11:00', TIME '13:00', TIME '14:00', TIME '15:00')'''), 0);
     expect(await count('''
-      SELECT COUNT(*)::int FROM Treatment WHERE treatment_id > 403 AND (EXTRACT(ISODOW FROM scheduled_date) > 5
+      SELECT COUNT(*)::int FROM Treatment WHERE (EXTRACT(ISODOW FROM scheduled_date) > 5
         OR scheduled_date + scheduled_time + make_interval(mins => duration_minutes)
            > scheduled_date + CASE WHEN scheduled_time < TIME '12:00' THEN TIME '12:00' ELSE TIME '17:00' END)'''), 0);
   });
@@ -84,6 +84,19 @@ void main() {
     expect(await count('''
       SELECT COUNT(*)::int FROM Notification
       WHERE consultant_id = 1 AND sent_at >= NOW() - INTERVAL '14 days' '''), lessThanOrEqualTo(12));
+  });
+
+  test('the seed dates move near the load day, also in the message text (D-069)', () async {
+    expect(await count('''
+      SELECT COUNT(*)::int FROM InjuryClaim
+      WHERE claim_id = 161 AND submitted_at BETWEEN NOW() - INTERVAL '14 days' AND NOW()'''), 1);
+    const dateText = '''TO_CHAR(a.schedule_date + a.schedule_time, 'FMDD FMMonth YYYY" : "HH24:MI')''';
+    expect(await count('''
+      SELECT COUNT(*)::int FROM Notification n JOIN Appointment a ON a.appointment_id = 504
+      WHERE n.notification_id IN (902, 903) AND n.body LIKE '%on ' || $dateText || '%' '''), 2);
+    expect(await count('''
+      SELECT COUNT(*)::int FROM Notification n JOIN Appointment a ON a.appointment_id = 510
+      WHERE n.notification_id IN (907, 908) AND n.body LIKE '%on ' || $dateText || ' at%' '''), 2);
   });
 
   test('each list of the demo has rows', () async {

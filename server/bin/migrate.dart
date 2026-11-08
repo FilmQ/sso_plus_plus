@@ -8,7 +8,7 @@ import 'package:sst_server/db/migrator.dart';
 ///
 ///   dart run bin/migrate.dart          the dev database (DB_NAME)
 ///   dart run bin/migrate.dart --test   the test database (TEST_DB_NAME)
-///   dart run bin/migrate.dart --demo   the dev database and the extra demo rows (D-066)
+///   dart run bin/migrate.dart --demo   the dev database, the extra demo rows (D-066) and the seed dates near today (D-069)
 ///
 /// For the dev database it also copies the demo files of the seed documents
 /// (`server/db/demo-files/`) into the file storage (D-056).
@@ -24,7 +24,7 @@ Future<void> main(List<String> args) async {
     print('Loaded ${migrator.files.length} files into ${db.url}');
     if (demo) {
       await migrator.loadDemoData();
-      print('Loaded ${migrator.demoFiles.length} demo data file');
+      print('Loaded ${migrator.demoFiles.length} demo data files');
     }
     if (!test) {
       final copied = await _copyDemoFiles(p.join(migrator.root, 'server/db/demo-files'), config.storageDir);
