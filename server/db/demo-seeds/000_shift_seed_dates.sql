@@ -2,13 +2,14 @@
 -- loads this file, because the tests expect the exact dates of seed.sql. It loads before 001_demo_data.sql, so the
 -- demo rows do not use the slots of the moved seed rows.
 -- The dates move by whole weeks, so each row keeps its weekday. The last seed day, Monday 19 October 2026, moves to
--- the last Monday on or before the load day (9 November 2026 for a load from 9 to 15 November 2026).
+-- the Monday of the load week. The week starts on Sunday, so a Sunday load gets the next day (9 November 2026 for a
+-- load from 8 to 14 November 2026).
 -- The rows that seed.sql already dates from the load day do not move: appointments 510, 512 and 513, the date of
 -- treatment 403, and messages 907, 908 and 909 (but a weekend date of appointment 510 moves to Monday, see below).
 -- Birth, register and contribution dates do not move.
 
 CREATE TABLE seed_shift AS
-SELECT 7 * ((CURRENT_DATE - DATE '2026-10-19') / 7) AS days, 7 * ((CURRENT_DATE - DATE '2026-10-19') / 7) * INTERVAL '1 day' AS shift,
+SELECT 7 * ((CURRENT_DATE + 1 - DATE '2026-10-19') / 7) AS days, 7 * ((CURRENT_DATE + 1 - DATE '2026-10-19') / 7) * INTERVAL '1 day' AS shift,
   CASE EXTRACT(ISODOW FROM CURRENT_DATE + 5) WHEN 6 THEN 2 WHEN 7 THEN 1 ELSE 0 END AS appt_510_days;
 
 UPDATE InsuredPerson SET created_at = created_at + s.shift FROM seed_shift s;
@@ -66,8 +67,9 @@ UPDATE Notification SET body = REPLACE(REPLACE(body,
     TO_CHAR(CURRENT_DATE + 4 + s.appt_510_days + TIME '09:00', 'FMDD FMMonth YYYY" : "HH24:MI'))
 FROM seed_shift s WHERE notification_id IN (907, 908);
 
--- On a Monday, the rows of 19 October move to the load day. A time later than now (treatment 403 is booked at
--- 11:00, message 905 is sent at 00:05) becomes now, so no event is in the future.
+-- On a Monday, the rows of 19 October move to the load day (on a Sunday, to the next day). A time later than now
+-- (treatment 403 is booked at 11:00, message 905 is sent at 00:05) becomes now, so no event is in the future.
+-- shortcut: on a Sunday load, the Cancelled treatment 402 has the date of the next day; load on a weekday for the demo.
 UPDATE Treatment SET created_at = LOCALTIMESTAMP WHERE created_at > LOCALTIMESTAMP;
 UPDATE Notification SET sent_at = LOCALTIMESTAMP WHERE sent_at > LOCALTIMESTAMP;
 

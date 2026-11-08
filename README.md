@@ -47,7 +47,7 @@ the console. Do the parts in order. The passwords and the other accounts are in 
 
 Seed the data **on the day of the demo**. The seed calculates the appointment and treatment dates from the day that
 you load it, so old data can show no future appointments. `make db-demo` also moves the fixed dates of `seed.sql` by
-whole weeks, so the last seed day is the last Monday on or before the load day (D-069).
+whole weeks, so the last seed day is the Monday of the load week. The week starts on Sunday (D-069).
 
 > **Caution:** `make db-demo` deletes all data in the dev database.
 
@@ -206,7 +206,7 @@ docker exec sst-db psql -U sst -d sst -c "UPDATE ConsultationSession SET recomme
 password of each account is `Password123`.
 
 Before it adds these rows, `server/db/demo-seeds/000_shift_seed_dates.sql` moves the fixed dates of the seed rows near
-the load day (D-069). For a load on Monday 9 November 2026, the dates move 21 days: for example, claim
+the load day (D-069). For a load from Sunday 8 to Saturday 14 November 2026, the dates move 21 days: for example, claim
 SST-2026-000161 waits for verification from 4 November 2026, and the treatment 401 of claim SST-2026-000143 is on
 Friday 13 November 2026. `make db-reset` and the tests do not move the dates.
 
