@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../api/api_exception.dart';
 import '../../../l10n/tr.dart';
+import '../../../platform/pdf_view.dart';
 import '../../../platform/save_file.dart';
 import 'claim_cards.dart';
 
@@ -74,9 +75,11 @@ class _DocumentDialogState extends State<_DocumentDialog> {
                   return Center(child: Text(context.tr(e is ApiException ? e.message : 'The file cannot be opened.')));
                 }
                 if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                return DocumentsCard.isImage(_name)
-                    ? InteractiveViewer(child: Image.memory(snap.data!.bytes, fit: BoxFit.contain))
-                    : Center(
+                if (DocumentsCard.isImage(_name)) {
+                  return InteractiveViewer(child: Image.memory(snap.data!.bytes, fit: BoxFit.contain));
+                }
+                return (_name.toLowerCase().endsWith('.pdf') ? pdfView(snap.data!.bytes) : null) ??
+                    Center(
                         child: Text(
                             context.tr('The app cannot show a preview of this file type. Use Download to open it.')));
               },
