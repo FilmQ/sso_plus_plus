@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../l10n/tr.dart';
 import '../../../session/session_providers.dart';
 import '../../../widgets/centered_body.dart';
+import '../../../widgets/date_text.dart';
 import '../../../widgets/info_card.dart';
 import '../../../widgets/key_value.dart';
 import '../treatment/open_treatment.dart';
@@ -42,6 +43,10 @@ class HomePage extends ConsumerWidget {
 class _HomeBody extends ConsumerWidget {
   const _HomeBody();
 
+  /// True when the day of [time] (a Q2.4 time text) is before today.
+  static bool _beforeToday(String time) =>
+      DateText.parseDateTime(time)?.isBefore(DateUtils.dateOnly(DateTime.now())) ?? false;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final TextTheme text = Theme.of(context).textTheme;
@@ -59,8 +64,10 @@ class _HomeBody extends ConsumerWidget {
           Text(context.tr('Claim {no} · {injury}', {'no': claim['claim_no'], 'injury': claim['injury']}),
               style: text.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ClaimProgressCard(claim: claim),
-          // After U4.3 a past Confirmed appointment is still in Q2.4 (D-064).
-          if (claim['appointment_time'] != null && claim['claim_status'] != 'Withdrawn')
+          // Q2.4 also gives a past Confirmed appointment (D-064). The card shows it up to its day (D-070).
+          if (claim['appointment_time'] != null &&
+              claim['claim_status'] != 'Withdrawn' &&
+              !_beforeToday(claim['appointment_time']! as String))
             InfoCard(
               icon: Icons.event,
               title: 'Next appointment',

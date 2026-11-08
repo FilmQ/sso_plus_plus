@@ -27,4 +27,13 @@ abstract final class DateText {
 
   /// 'yyyy-MM-dd', for the server.
   static String iso(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
+
+  /// Reads 'FMDD FMMonth YYYY : HH24:MI' (for example '16 October 2026 : 10:00') as a local time.
+  /// Gives null for other text.
+  static DateTime? parseDateTime(String text) {
+    final Match? m = RegExp(r'^(\d{1,2}) (\w+) (\d{4}) : (\d{2}):(\d{2})$').firstMatch(text);
+    final int month = m == null ? -1 : _months.indexOf(m[2]!);
+    if (m == null || month < 0) return null;
+    return DateTime(int.parse(m[3]!), month + 1, int.parse(m[1]!), int.parse(m[4]!), int.parse(m[5]!));
+  }
 }

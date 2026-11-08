@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:sso_plus_plus/routing/user_router.dart';
+import 'package:sso_plus_plus/widgets/date_text.dart';
 
 import '../support/fake_server.dart';
 import '../support/thai_check.dart';
@@ -15,6 +16,9 @@ Map<String, Object?> _message(int id, String subject, String body, {bool read = 
       'sent_time': '5 October 2026 : 09:20',
       'is_read': read,
     };
+
+/// A Q2.4 appointment time 7 days after the test day, so the "Next appointment" card shows it (D-070).
+final String _nextWeek = '${DateText.long(DateTime.now().add(const Duration(days: 7)))} : 10:00';
 
 /// A fake server for U2. [messages] is the Q2.2 list; opening one marks it read.
 FakeServer _server(List<Map<String, Object?>> messages,
@@ -33,7 +37,7 @@ FakeServer _server(List<Map<String, Object?>> messages,
           'submitted_time': '2 October 2026 : 14:32',
           'officer_checked_time': '5 October 2026 : 09:15',
           'appointment_status': status == 'Covered' ? 'Pending' : null,
-          'appointment_time': status == 'Covered' ? '16 October 2026 : 10:00' : pastAppointment,
+          'appointment_time': pastAppointment ?? (status == 'Covered' ? _nextWeek : null),
           'consultant_name': status == 'Covered' ? 'นพ. ธนา ศรีสุข' : null,
           'office_location': status == 'Covered' ? 'Building A, Floor 3, Room 305' : null,
           'treatment_status': treatment,
@@ -143,6 +147,14 @@ void main() {
     expect(find.text('Consultation finished'), findsOneWidget);
     expect(find.text('You did not accept the date in time; the claim is withdrawn'), findsOneWidget);
     expect(find.text('You could not attend; the claim is withdrawn'), findsNothing);
+    expect(find.text('Next appointment'), findsNothing);
+  });
+
+  testWidgets('U2-1 Home with an accepted treatment: no past appointment (D-070)', (WidgetTester tester) async {
+    await _signIn(tester,
+        _server(<Map<String, Object?>>[], treatment: 'Accepted', pastAppointment: '6 November 2026 : 10:00'));
+    expect(find.text('Consultation finished'), findsOneWidget);
+    expect(find.text('Treatment date accepted'), findsOneWidget);
     expect(find.text('Next appointment'), findsNothing);
   });
 
